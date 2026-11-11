@@ -1,15 +1,38 @@
 <?php
 
 require __DIR__ . '/bootstrap.php';
-foreach (['Driver/Driver', 'Driver/OpManager/ClientException', 'Ticketing/SyncLock', 'Ticketing/TicketRequestStore', 'Webhook/Receiver'] as $f) {
+foreach (['Driver/Driver', 'Driver/OpManager/ClientException', 'Ticketing/SyncLock', 'Ticketing/TicketRequestStore', 'Webhook/Receiver', 'Connection/Connection'] as $f) {
     require OPM_ROOT . "/src/{$f}.php";
 }
 
+use GlpiPlugin\Nms\Connection\Connection;
 use GlpiPlugin\Nms\Driver\Driver;
 use GlpiPlugin\Nms\Driver\OpManager\ClientException;
 use GlpiPlugin\Nms\Ticketing\SyncLock;
 use GlpiPlugin\Nms\Ticketing\TicketRequestStore;
 use GlpiPlugin\Nms\Webhook\Receiver;
+
+/** Minimal GLPIKey stub: encrypt/decrypt are reversible, no real crypto. */
+if (!class_exists('\GLPIKey', false)) {
+    class GLPIKey
+    {
+        public function encrypt(string $value): string
+        {
+            return base64_encode('enc:' . $value);
+        }
+        public function decrypt($value)
+        {
+            if (!is_string($value)) {
+                return false;
+            }
+            $dec = base64_decode($value, true);
+            if ($dec === false || !str_starts_with($dec, 'enc:')) {
+                return false;
+            }
+            return substr($dec, 4);
+        }
+    }
+}
 
 final class Src implements Driver
 {
@@ -41,16 +64,38 @@ final class Req implements TicketRequestStore
     public function purgeBefore(string $b): void {}
 }
 
+function mkConn(string $token = 'secret-token'): Connection
+{
+    return new Connection([
+        'name'            => 'test-conn',
+        'brand'           => 'opmanager',
+        'entities_id'     => 0,
+        'is_recursive'    => 1,
+        'url'             => 'https://opm.example.test',
+        'api_key'         => '',
+        'username'        => '',
+        'password'        => '',
+        'verify_tls'      => 1,
+        'is_active'       => 1,
+        'writeback_enabled' => 1,
+        'tickets_enabled' => 1,
+        'webhook_token'   => (new \GLPIKey())->encrypt($token),
+        'settings'        => '{}',
+        'date_creation'   => '',
+        'date_mod'        => '',
+    ]);
+}
+
 $alarm  = ['alarm_key' => '10000003244', 'entity_key' => '10000024830', 'severity' => 1];
 $runs   = [];
 $runner = function (array $a) use (&$runs) { $runs[] = $a['alarm_key']; return ['created' => 1]; };
-$mk     = static fn ($answer, string $token = 'secret-token') => [new Receiver($token, $s = new Src($answer), $l = new Lock(), $runner), $s, $l, $s->lock = $l];
+$mk     = static fn ($answer, string $token = 'secret-token') => [new Receiver(mkConn($token), $s = new Src($answer), $l = new Lock(), $runner), $s, $l, $s->lock = $l];
 $body   = json_encode(['alarm_id' => '10000003244', 'entity' => '10000024830']);
 
 [$r, $s, $l] = $mk($alarm);
 check('GET refused', $r->handle('GET', 'secret-token', $body)['status'] === 405);
-check('wrong token refused', $r->handle('POST', 'nope', $body)['status'] === 401 && $runs === []);
-check('empty token refused', $r->handle('POST', '', $body)['status'] === 401);
+check('wrong token refused', $r->handle('POST', 'nope', $body)['status'] === 403 && $runs === []);
+check('empty token refused', $r->handle('POST', '', $body)['status'] === 403);
 check('oversized body refused', $r->handle('POST', 'secret-token', str_repeat('x', Receiver::MAX_BODY + 1))['status'] === 413);
 check('invalid JSON refused', $r->handle('POST', 'secret-token', '{nope')['status'] === 400);
 check('missing entity refused', $r->handle('POST', 'secret-token', '{"alarm_id":"1"}')['status'] === 400);
@@ -63,7 +108,7 @@ check('lock taken and released', $l->held === 1 && $l->released === 1);
 check('alarm fetched while holding the lock (no stale snapshot)', $s->locked === [true]);
 
 [$r] = $mk($alarm, '');
-check('webhook disabled when no token configured', $r->handle('POST', '', $body)['status'] === 401);
+check('webhook disabled when no token configured', $r->handle('POST', '', $body)['status'] === 403);
 
 $runs = [];
 [$r] = $mk(['alarm_key' => '99999', 'entity_key' => '10000024830', 'severity' => 1]);
@@ -83,7 +128,7 @@ check('lock released after an api failure', $l->held === 1 && $l->released === 1
 [$r] = $mk(null);
 check('deferred answer names the alarm', ($r->handle('POST', 'secret-token', $body)['body']['alarm_id'] ?? null) === '10000003244');
 [$r, , $l] = $mk($alarm);
-$boom = new Receiver('secret-token', new Src($alarm), $l, function () { throw new RuntimeException('engine down'); });
+$boom = new Receiver(mkConn('secret-token'), new Src($alarm), $l, function () { throw new RuntimeException('engine down'); });
 check('engine exception still releases the lock', $boom->handle('POST', 'secret-token', $body)['status'] === 500 && $l->released === 1);
 
 // 0.4.1: real OpManager entities can hold '/', spaces and exceed 64 chars (interfaces).
@@ -107,26 +152,26 @@ check('400 answer carries what was received, one line', $res['status'] === 400 &
 
 // v1.1.0 (D32): every 202 leaves a request for the next AlarmSync run; 200/4xx do not.
 $req = new Req();
-$mkr = static fn ($answer) => new Receiver('secret-token', new Src($answer), new Lock(), $runner, $req);
+$mkr = static fn ($answer, string $token = 'secret-token') => new Receiver(mkConn($token), new Src($answer), new Lock(), $runner, $req);
 $mkr(null)->handle('POST', 'secret-token', $body);
 $mkr(new ClientException('down'))->handle('POST', 'secret-token', $body);
 $busy = new Lock(); $busy->free = false;
-(new Receiver('secret-token', new Src($alarm), $busy, $runner, $req))->handle('POST', 'secret-token', $body);
+(new Receiver(mkConn('secret-token'), new Src($alarm), $busy, $runner, $req))->handle('POST', 'secret-token', $body);
 check('each 202 records a request', $req->rec === array_fill(0, 3, '10000003244@10000024830'));
 $req->rec = [];
 $mkr($alarm)->handle('POST', 'secret-token', $body);
 $mkr($alarm)->handle('POST', 'nope', $body);
-check('200 and 401 record nothing', $req->rec === []);
+check('200 and 403 record nothing', $req->rec === []);
 $req->boom = true;
 check('a failing request store still answers 202', $mkr(null)->handle('POST', 'secret-token', $body)['status'] === 202);
 
 // Final review I1/M5: a failed run leaves a request (still 500); an unsaved request is visible.
 $req = new Req();
 $thrower = function () { throw new RuntimeException('no service user'); };
-$res = (new Receiver('secret-token', new Src($alarm), new Lock(), $thrower, $req))->handle('POST', 'secret-token', $body);
+$res = (new Receiver(mkConn('secret-token'), new Src($alarm), new Lock(), $thrower, $req))->handle('POST', 'secret-token', $body);
 check('500 records a request', $res['status'] === 500 && $req->rec === ['10000003244@10000024830'] && !isset($res['body']['request_not_saved']));
 $req->boom = true;
-$res = (new Receiver('secret-token', new Src($alarm), new Lock(), $thrower, $req))->handle('POST', 'secret-token', $body);
+$res = (new Receiver(mkConn('secret-token'), new Src($alarm), new Lock(), $thrower, $req))->handle('POST', 'secret-token', $body);
 check('500 with a failing store is still 500, flagged', $res['status'] === 500 && ($res['body']['request_not_saved'] ?? false) === true);
 $res = $mkr(null)->handle('POST', 'secret-token', $body);
 check('202 with a failing store carries request_not_saved', $res['status'] === 202 && ($res['body']['request_not_saved'] ?? false) === true);

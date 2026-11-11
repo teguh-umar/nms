@@ -2,6 +2,7 @@
 
 namespace GlpiPlugin\Nms\Webhook;
 
+use GlpiPlugin\Nms\Connection\Connection;
 use GlpiPlugin\Nms\Driver\Driver;
 use GlpiPlugin\Nms\Ticketing\SyncLock;
 use GlpiPlugin\Nms\Ticketing\TicketRequestStore;
@@ -28,7 +29,7 @@ final class Receiver
     private $runner;
 
     public function __construct(
-        private string $token,
+        private Connection $conn,
         private Driver $source,
         private SyncLock $lock,
         callable $runner,
@@ -43,8 +44,9 @@ final class Receiver
         if (strtoupper($method) !== 'POST') {
             return self::reply(405, 'method not allowed');
         }
-        if ($this->token === '' || $header_token === '' || !hash_equals($this->token, $header_token)) {
-            return self::reply(401, 'unauthorized');
+        $stored = $this->conn->secret('webhook_token');
+        if ($stored === '' || $header_token === '' || !hash_equals($stored, $header_token)) {
+            return self::reply(403, 'unauthorized');
         }
         if (strlen($raw_body) > self::MAX_BODY) {
             return self::reply(413, 'payload too large');
