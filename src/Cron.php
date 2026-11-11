@@ -1,0 +1,223 @@
+<?php
+
+namespace GlpiPlugin\Opmanager;
+
+use GlpiPlugin\Opmanager\Matching\DbAssetLookup;
+use GlpiPlugin\Opmanager\Matching\Matcher;
+use GlpiPlugin\Opmanager\OpManager\Client;
+use GlpiPlugin\Opmanager\OpManager\ClientException;
+use GlpiPlugin\Opmanager\Outbound\DbOutboxStore;
+use GlpiPlugin\Opmanager\Outbound\Hooks;
+use GlpiPlugin\Opmanager\Outbound\Sender;
+use GlpiPlugin\Opmanager\Ticketing\AddressingRanges;
+use GlpiPlugin\Opmanager\Ticketing\AlarmAssetResolver;
+use GlpiPlugin\Opmanager\Ticketing\AlarmSync;
+use GlpiPlugin\Opmanager\Ticketing\DbAlarmStore;
+use GlpiPlugin\Opmanager\Ticketing\DbDeviceIndex;
+use GlpiPlugin\Opmanager\Ticketing\DbSyncLock;
+use GlpiPlugin\Opmanager\Ticketing\DbTicketRequestStore;
+use GlpiPlugin\Opmanager\Ticketing\GlpiTicketGateway;
+use GlpiPlugin\Opmanager\Ticketing\RangeProductionCheck;
+
+final class Cron extends \CommonGLPI
+{
+    public static function getTypeName($nb = 0)
+    {
+        return 'OpManager';
+    }
+
+    public static function cronInfo($name)
+    {
+        return match ($name) {
+            'DeviceSync' => ['description' => __('Sync OpManager devices and match them to GLPI assets', 'opmanager')],
+            'AlarmSync'  => ['description' => __('Pull active OpManager alarms and create/update tickets', 'opmanager')],
+            'OutboxSend' => ['description' => __('Send queued notes and clears to OpManager', 'opmanager')],
+            'HygieneCheck' => ['description' => __('NMS hygiene: liveness of unmanaged devices, classification, weekly tickets', 'opmanager')],
+            default      => [],
+        };
+    }
+
+    public static function cronDeviceSync(\CronTask $task): int
+    {
+        $now     = (string) \Session::getCurrentTime();
+        $lookup  = new DbAssetLookup(Config::assetItemtypes());
+        $missing = $lookup->missingItemtypes();
+
+        // Review Focus 5: an asset type we cannot load here must not silently turn
+        // its devices into "not found". Refresh device data, keep earlier pairings,
+        // and keep the problem visible in Setup (never cleared below).
+        $status = DeviceSync::statusMessage($missing);
+        if ($status !== '') {
+            $task->log($status);
+            \Toolbox::logInFile('opmanager', 'DeviceSync: ' . $status . "\n");
+        }
+
+        try {
+            $client = new Client(Config::get('opm_url'), Config::apiKey(), Config::get('opm_verify_ssl') === '1');
+            $stats  = DeviceSync::run($client, new DbDeviceStore(), new Matcher($lookup), Config::get('match_mode'), $now, $missing === []);
+        } catch (ClientException $e) {
+            Config::set(['last_device_sync_error' => $e->getMessage()]);
+            \Toolbox::logInFile('opmanager', 'DeviceSync: ' . $e->getMessage() . "\n");
+            $task->log($e->getMessage());
+            return 0;
+        }
+
+        Config::set(['last_device_sync' => $now, 'last_device_sync_error' => $status]);
+        $task->addVolume($stats['fetched']);
+        $task->log(sprintf(
+            'fetched %d, matched %d, needs review %d, not found %d, pinned %d, matching skipped %d',
+            $stats['fetched'],
+            $stats['matched'],
+            $stats['review'],
+            $stats['unmatched'],
+            $stats['manual'],
+            $stats['skipped']
+        ));
+        return 1;
+    }
+
+    public static function cronAlarmSync(\CronTask $task): int
+    {
+        $now = (string) \Session::getCurrentTime();
+        $cfg = Config::ticketingConfig();
+
+        if ($cfg['service_user'] <= 0) {
+            $msg = 'no service user configured in Setup; alarm tickets would have no author';
+            Config::set(['last_alarm_sync_error' => $msg]);
+            $task->log($msg);
+            return 0;
+        }
+
+        $ranges = AddressingRanges::load($cfg['production_addressings']);
+
+        try {
+            $client = new Client(Config::get('opm_url'), Config::apiKey(), Config::get('opm_verify_ssl') === '1');
+            $sync   = new AlarmSync(
+                $client,
+                new DbAlarmStore(),
+                new GlpiTicketGateway($cfg),
+                new AlarmAssetResolver(new DbDeviceIndex(), new Matcher(new DbAssetLookup(Config::assetItemtypes())), Config::get('match_mode')),
+                new RangeProductionCheck($ranges, [AddressingRanges::class, 'assetIps']),
+                $cfg,
+                new DbTicketRequestStore()
+            );
+            $lock = new DbSyncLock();
+            if (!$lock->acquire(60)) {
+                $task->log('another alarm sync (webhook) is running; skipped this run');
+                return 0;
+            }
+            try {
+                $stats = $sync->run($now);
+            } finally {
+                $lock->release();
+            }
+        } catch (ClientException $e) {
+            Config::set(['last_alarm_sync_error' => $e->getMessage()]);
+            \Toolbox::logInFile('opmanager', 'AlarmSync: ' . $e->getMessage() . "\n");
+            $task->log($e->getMessage());
+            return 0;
+        }
+
+        // Keep every problem of this run visible in Setup (hub §4: a run that half
+        // failed must not look successful).
+        $problems = [];
+        if ($ranges === [] && ($cfg['ticket_source'] === 'webhook' || $cfg['ticket_severities'] !== [])) {
+            $problems[] = 'no production IP range selected in Setup: alarms are stored but no ticket is created';
+        }
+        if ($stats['pending'] > 0) {
+            $problems[] = sprintf('%d alarm ticket(s) could not be created (see files/_log/opmanager.log); retried next run', $stats['pending']);
+        }
+        foreach ($sync->lastErrors() as $error) {
+            \Toolbox::logInFile('opmanager', 'AlarmSync: ' . $error . "\n");
+        }
+        if ($stats['errors'] > 0) {
+            $problems[] = sprintf('%d alarm(s) failed: %s', $stats['errors'], implode('; ', array_slice($sync->lastErrors(), 0, 3)));
+        }
+        Config::set(['last_alarm_sync' => $now, 'last_alarm_sync_error' => substr(implode(' | ', $problems), 0, 1000)]);
+        $task->addVolume($stats['fetched']);
+        $task->log(implode(', ', array_map(fn ($k, $v) => "{$k} {$v}", array_keys($stats), $stats)));
+        return 1;
+    }
+
+    /** D34: daily NMS hygiene; tickets every hygiene_frequency_days (spec §7). */
+    public static function cronHygieneCheck(\CronTask $task): int
+    {
+        $now = (string) \Session::getCurrentTime();
+        $cfg = Config::hygieneConfig();
+        $tcf = Config::ticketingConfig();
+
+        $last = Config::get('last_hygiene_ticket_run');
+        $due  = $last === '' || strtotime($now) >= strtotime($last) + $cfg['frequency_days'] * 86400;
+        if ($due && $cfg['enabled'] && $tcf['service_user'] <= 0) {
+            $msg = 'no service user configured in Setup; hygiene tickets would have no author';
+            Config::set(['last_hygiene_error' => $msg]);
+            $task->log($msg);
+            return 0;
+        }
+
+        $run = new \GlpiPlugin\Opmanager\Hygiene\HygieneRun(
+            new \GlpiPlugin\Opmanager\Hygiene\DbHygieneStore(),
+            \GlpiPlugin\Opmanager\Hygiene\Providers::all($cfg),
+            new \GlpiPlugin\Opmanager\Hygiene\GlpiHygieneGateway([
+                'service_user'   => $tcf['service_user'],
+                'entity_default' => $tcf['entity_default'],
+                'itil_category'  => $cfg['itil_category'],
+            ]),
+            $cfg + [
+                'service_user'   => $tcf['service_user'],
+                'entity_default' => $tcf['entity_default'],
+                'list_url'       => Device::getSearchURL(true),
+                // Final review #3: no ticket run on stale OpManager data.
+                'device_data_fresh' => Config::get('last_device_sync_error') === ''
+                    && Config::get('last_device_sync') !== ''
+                    && strtotime($now) - strtotime(Config::get('last_device_sync')) <= 60 * max(1, (int) Config::get('stale_warning_minutes')),
+            ]
+        );
+        $stats = $run->run($now, $due);
+
+        foreach ($stats['errors'] as $error) {
+            \Toolbox::logInFile('opmanager', 'HygieneCheck: ' . $error . "\n");
+        }
+        $values = ['last_hygiene_run' => $now, 'last_hygiene_error' => substr(implode(' | ', $stats['errors']), 0, 1000)];
+        // Review Focus 4: a failed ticket run is retried tomorrow, not in a week; a broken
+        // liveness provider is logged but does not hold the weekly gate (final review #2).
+        if ($due && $cfg['enabled'] && $stats['ticket_errors'] === []) {
+            $values['last_hygiene_ticket_run'] = $now;
+        }
+        Config::set($values);
+        $task->addVolume($stats['classified']);
+        $task->log(sprintf(
+            'classified %d, liveness checked %d, tickets created %d, followups %d, errors %d',
+            $stats['classified'],
+            $stats['probed'],
+            $stats['tickets_created'],
+            $stats['followups'],
+            count($stats['errors'])
+        ));
+        return 1;
+    }
+
+    /** Plan 3: retries what the GLPI hooks could not send at once (spec §8). */
+    public static function cronOutboxSend(\CronTask $task): int
+    {
+        $now    = (string) \Session::getCurrentTime();
+        $cfg    = Config::ticketingConfig();
+        $client = new Client(Config::get('opm_url'), Config::apiKey(), Config::get('opm_verify_ssl') === '1');
+        $sender = new Sender(new DbOutboxStore(), $client, $cfg['outbound_max_attempts']);
+        $lock   = new DbSyncLock(Hooks::OUTBOX_LOCK);
+        if (!$lock->acquire(0)) {
+            $task->log('a technician save is sending to OpManager; skipped this run');
+            return 0;
+        }
+        try {
+            $stats = $sender->run($now, 200);
+        } finally {
+            $lock->release();
+        }
+        foreach ($sender->lastErrors() as $error) {
+            $task->log('Outbound: ' . $error);
+        }
+        $task->addVolume($stats['sent']);
+        return ($stats['sent'] + $stats['retried'] + $stats['failed']) > 0 ? 1 : 0;
+    }
+}
