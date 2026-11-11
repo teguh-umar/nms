@@ -142,6 +142,20 @@ final class SuiteConfig
         echo '<div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="opm_verify_ssl" value="1" id="opm_verify_ssl' . $sfx . '"'
             . (Config::get('opm_verify_ssl') === '1' ? ' checked' : '') . $disabled . '>';
         echo '<label class="form-check-label" for="opm_verify_ssl' . $sfx . '">' . __s('Verify the OpManager TLS certificate', 'nms') . '</label></div>';
+
+        // Task 8: one-click migration from opmanager (shown only when opmanager tables exist).
+        if (\GlpiPlugin\Nms\Migration\FromOpmanager::isInstalled($GLOBALS['DB'])) {
+            echo '<div class="mt-3">';
+            echo '<form method="post" action="' . htmlescape(\Html::getPrefixedUrl('/plugins/opmanager/front/config.php')) . '">';
+            echo \Html::hidden(self::FROM_SUITE_FIELD, ['value' => 1]);
+            echo \Html::submit(__('Copy from opmanager again', 'nms'), [
+                'name' => 'migrate_from_opmanager',
+                'class' => 'btn btn-outline-warning',
+            ] . $disabled);
+            echo '<div class="form-hint">' . __s('Copies devices, alarms and settings from opmanager into a disabled connection; safe to repeat.', 'nms') . '</div>';
+            \Html::closeForm();
+            echo '</div>';
+        }
     }
 
     private static function tabMatching(string $sfx, string $disabled, bool $canedit): void

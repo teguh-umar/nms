@@ -2,6 +2,7 @@
 
 use GlpiPlugin\Nms\Config;
 use GlpiPlugin\Nms\Cron;
+use GlpiPlugin\Nms\Migration\FromOpmanager;
 use GlpiPlugin\Nms\RightDefinition;
 use GlpiPlugin\Nms\RightSeeder;
 
@@ -307,6 +308,9 @@ function plugin_nms_install()
         'state'   => CronTask::STATE_WAITING,
         'comment' => 'OpManager NMS hygiene: liveness, classification, tickets',
     ]);
+
+    // Task 8: migrate from opmanager if present (idempotent, creates a disabled connection).
+    \GlpiPlugin\Nms\Migration\FromOpmanager::run($DB, date('Y-m-d H:i:s'));
 
     return true;
 }

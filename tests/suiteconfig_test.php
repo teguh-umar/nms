@@ -72,6 +72,7 @@ namespace {
     require OPM_ROOT . '/src/Outbound/DbOutboxStore.php';
     require OPM_ROOT . '/src/SetupStatus.php';
     require OPM_ROOT . '/src/SuiteConfig.php';
+    require OPM_ROOT . '/src/Migration/FromOpmanager.php';
 
     use GlpiPlugin\Nms\RightDefinition as R;
     use GlpiPlugin\Nms\SuiteConfig;

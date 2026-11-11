@@ -1,6 +1,7 @@
 <?php
 
 use GlpiPlugin\Nms\Config;
+use GlpiPlugin\Nms\Migration\FromOpmanager;
 use GlpiPlugin\Nms\RightDefinition;
 use GlpiPlugin\Nms\SuiteConfig;
 use GlpiPlugin\Pgnsuite\ConfigTab;
@@ -39,6 +40,25 @@ if (isset($_POST['update'])) {
         Session::addMessageAfterRedirect(__s('Settings saved', 'nms'));
     }
 
+    if (!empty($_POST[SuiteConfig::FROM_SUITE_FIELD])) {
+        Html::redirect(ConfigTab::getReturnUrl(SuiteConfig::SECTION));
+    }
+    Html::back();
+}
+
+if (isset($_POST['migrate_from_opmanager'])) {
+    Session::checkRight(RightDefinition::CONFIG, UPDATE);
+    global $DB;
+    $result = FromOpmanager::run($DB, date('Y-m-d H:i:s'));
+    if (array_key_exists('skipped', $result)) {
+        Session::addMessageAfterRedirect(__s('OpManager not installed: ' . $result['skipped'], 'nms'), false, ERROR);
+    } else {
+        $msg = __s('Migration complete: connection id ', 'nms') . (int) $result['connections_id'];
+        foreach ($result['counts'] as $table => $n) {
+            $msg .= '; ' . $table . ': ' . $n;
+        }
+        Session::addMessageAfterRedirect($msg);
+    }
     if (!empty($_POST[SuiteConfig::FROM_SUITE_FIELD])) {
         Html::redirect(ConfigTab::getReturnUrl(SuiteConfig::SECTION));
     }
