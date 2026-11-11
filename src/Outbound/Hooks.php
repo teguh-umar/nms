@@ -37,7 +37,7 @@ final class Hooks
                 return;
             }
             $tickets_id = (int) $followup->fields['items_id'];
-            $store      = new DbOutboxStore();
+            $store      = new DbOutboxStore(0);
             $rows = Planner::forFollowup(
                 $tickets_id,
                 (int) ($followup->fields['is_private'] ?? 0) === 1,
@@ -75,7 +75,7 @@ final class Hooks
                 'ORDER'  => 'id DESC',
                 'LIMIT'  => 1,
             ])->current();
-            $store = new DbOutboxStore();
+            $store = new DbOutboxStore(0);
             $rows  = Planner::forStatus(
                 $tickets_id,
                 (int) ($ticket->oldvalues['status'] ?? 0),
@@ -102,7 +102,7 @@ final class Hooks
             return;
         }
         $now   = (string) \Session::getCurrentTime();
-        $store = new DbOutboxStore();
+        $store = new DbOutboxStore(0);
         foreach ($rows as $row) {
             $store->enqueue($row, $now);
         }

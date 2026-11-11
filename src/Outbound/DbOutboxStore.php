@@ -6,11 +6,16 @@ final class DbOutboxStore implements OutboxStore
 {
     public const TABLE = 'glpi_plugin_nms_outbox';
 
+    public function __construct(private int $connections_id = 0)
+    {
+    }
+
     public function enqueue(array $row, string $now): void
     {
         global $DB;
 
         $DB->insert(self::TABLE, $row + [
+            'connections_id'    => $this->connections_id,
             'state'         => 'pending',
             'attempts'      => 0,
             'next_try_at'   => $now,
@@ -27,7 +32,7 @@ final class DbOutboxStore implements OutboxStore
             'FROM'  => self::TABLE,
             // Only a waiting clear blocks a new one: after a sent clear the same alarmId can
             // come back (AlarmSync REOPEN) and must be clearable again (final review I-1).
-            'WHERE' => ['alarm_key' => $alarm_key, 'action' => 'clear', 'state' => 'pending'],
+            'WHERE' => ['alarm_key' => $alarm_key, 'action' => 'clear', 'state' => 'pending', 'connections_id' => $this->connections_id],
             'LIMIT' => 1,
         ])) > 0;
     }
@@ -38,7 +43,7 @@ final class DbOutboxStore implements OutboxStore
 
         return count($DB->request([
             'FROM'  => self::TABLE,
-            'WHERE' => ['alarm_key' => $alarm_key, 'action' => 'ack', 'state' => 'pending'],
+            'WHERE' => ['alarm_key' => $alarm_key, 'action' => 'ack', 'state' => 'pending', 'connections_id' => $this->connections_id],
             'LIMIT' => 1,
         ])) > 0;
     }
@@ -51,7 +56,7 @@ final class DbOutboxStore implements OutboxStore
         foreach ($DB->request([
             'SELECT' => ['id', 'alarm_key', 'entity_key', 'action', 'payload', 'attempts', 'next_try_at'],
             'FROM'   => self::TABLE,
-            'WHERE'  => ['state' => 'pending'],
+            'WHERE'  => ['state' => 'pending', 'connections_id' => $this->connections_id],
             'ORDER'  => 'id',
             'LIMIT'  => $limit,
         ]) as $r) {
@@ -72,21 +77,21 @@ final class DbOutboxStore implements OutboxStore
     {
         global $DB;
 
-        $DB->update(self::TABLE, ['state' => 'sent', 'last_error' => '', 'date_mod' => $now], ['id' => $id]);
+        $DB->update(self::TABLE, ['state' => 'sent', 'last_error' => '', 'date_mod' => $now], ['id' => $id, 'connections_id' => $this->connections_id]);
     }
 
     public function markRetry(int $id, int $attempts, string $next_try_at, string $error, string $now): void
     {
         global $DB;
 
-        $DB->update(self::TABLE, ['attempts' => $attempts, 'next_try_at' => $next_try_at, 'last_error' => $error, 'date_mod' => $now], ['id' => $id]);
+        $DB->update(self::TABLE, ['attempts' => $attempts, 'next_try_at' => $next_try_at, 'last_error' => $error, 'date_mod' => $now], ['id' => $id, 'connections_id' => $this->connections_id]);
     }
 
     public function markFailed(int $id, int $attempts, string $error, string $now): void
     {
         global $DB;
 
-        $DB->update(self::TABLE, ['state' => 'failed', 'attempts' => $attempts, 'last_error' => $error, 'date_mod' => $now], ['id' => $id]);
+        $DB->update(self::TABLE, ['state' => 'failed', 'attempts' => $attempts, 'last_error' => $error, 'date_mod' => $now], ['id' => $id, 'connections_id' => $this->connections_id]);
     }
 
     public function summary(): array
@@ -96,11 +101,11 @@ final class DbOutboxStore implements OutboxStore
         if (!$DB->tableExists(self::TABLE)) {
             return ['pending' => 0, 'failed' => 0, 'last_error' => ''];
         }
-        $count = static fn (string $state): int => count($DB->request(['FROM' => self::TABLE, 'WHERE' => ['state' => $state]]));
+        $count = static fn (string $state): int => count($DB->request(['FROM' => self::TABLE, 'WHERE' => ['state' => $state, 'connections_id' => $this->connections_id]]));
         $last  = $DB->request([
             'SELECT' => ['last_error'],
             'FROM'   => self::TABLE,
-            'WHERE'  => ['state' => ['pending', 'failed'], 'NOT' => ['last_error' => '']],
+            'WHERE'  => ['state' => ['pending', 'failed'], 'NOT' => ['last_error' => ''], 'connections_id' => $this->connections_id],
             'ORDER'  => 'date_mod DESC',
             'LIMIT'  => 1,
         ])->current();

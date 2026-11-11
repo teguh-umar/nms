@@ -10,12 +10,16 @@ final class DbHygieneStore implements HygieneStore
     public const TICKETS    = 'glpi_plugin_nms_hygienetickets';
     public const ITEMS      = 'glpi_plugin_nms_hygieneitems';
 
+    public function __construct(private int $connections_id = 0)
+    {
+    }
+
     public function devices(): array
     {
         global $DB;
         $out = [];
         // Oldest liveness check first, so a spent probe budget skips different devices each day (final review #4b).
-        foreach ($DB->request(['FROM' => self::DEVICES, 'ORDER' => ['liveness_checked_at ASC', 'id']]) as $row) {
+        foreach ($DB->request(['FROM' => self::DEVICES, 'WHERE' => ['connections_id' => $this->connections_id], 'ORDER' => ['liveness_checked_at ASC', 'id']]) as $row) {
             $row['id']       = (int) $row['id'];
             $row['items_id'] = (int) $row['items_id'];
             if ($row['match_state'] === 'matched' && $row['itemtype'] !== '' && $row['items_id'] > 0) {
@@ -33,7 +37,7 @@ final class DbHygieneStore implements HygieneStore
     {
         global $DB;
         $keys = [];
-        foreach ($DB->request(['SELECT' => ['device_key'], 'FROM' => self::EXCEPTIONS, 'WHERE' => ['is_active' => 1]]) as $row) {
+        foreach ($DB->request(['SELECT' => ['device_key'], 'FROM' => self::EXCEPTIONS, 'WHERE' => ['is_active' => 1, 'connections_id' => $this->connections_id]]) as $row) {
             $keys[] = (string) $row['device_key'];
         }
         return $keys;
@@ -48,13 +52,13 @@ final class DbHygieneStore implements HygieneStore
                 $fields[$key] = $f[$key];
             }
         }
-        $DB->update(self::DEVICES, $fields, ['id' => $id]);
+        $DB->update(self::DEVICES, $fields, ['id' => $id, 'connections_id' => $this->connections_id]);
     }
 
     public function latestTicket(string $flow): ?array
     {
         global $DB;
-        $row = $DB->request(['FROM' => self::TICKETS, 'WHERE' => ['flow' => $flow], 'ORDER' => 'id DESC', 'LIMIT' => 1])->current();
+        $row = $DB->request(['FROM' => self::TICKETS, 'WHERE' => ['flow' => $flow, 'connections_id' => $this->connections_id], 'ORDER' => 'id DESC', 'LIMIT' => 1])->current();
         return $row ? ['id' => (int) $row['id'], 'tickets_id' => (int) $row['tickets_id']] : null;
     }
 
@@ -71,7 +75,7 @@ final class DbHygieneStore implements HygieneStore
     public function recordTicket(string $flow, int $tickets_id, string $now): int
     {
         global $DB;
-        $DB->insert(self::TICKETS, ['flow' => $flow, 'tickets_id' => $tickets_id, 'last_report_at' => $now, 'date_creation' => $now, 'date_mod' => $now]);
+        $DB->insert(self::TICKETS, ['connections_id' => $this->connections_id, 'flow' => $flow, 'tickets_id' => $tickets_id, 'last_report_at' => $now, 'date_creation' => $now, 'date_mod' => $now]);
         return (int) $DB->insertId();
     }
 
@@ -103,7 +107,7 @@ final class DbHygieneStore implements HygieneStore
         foreach ($DB->request([
             'SELECT' => ['hygiene_state', 'COUNT' => 'id AS n'],
             'FROM'   => self::DEVICES,
-            'WHERE'  => ['NOT' => ['hygiene_state' => '']],
+            'WHERE'  => ['NOT' => ['hygiene_state' => ''], 'connections_id' => $this->connections_id],
             'GROUPBY' => 'hygiene_state',
         ]) as $row) {
             $out[(string) $row['hygiene_state']] = (int) $row['n'];

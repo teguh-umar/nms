@@ -10,13 +10,17 @@ final class DbCoverageSource
     /** @var array<string, string> */
     private array $names = [];
 
+    public function __construct(private int $connections_id = 0)
+    {
+    }
+
     /** @return list<array<string, mixed>> */
     public function devices(): array
     {
         global $DB;
 
         $out = [];
-        foreach ($DB->request(['FROM' => Device::getTable(), 'ORDER' => 'display_name']) as $r) {
+        foreach ($DB->request(['FROM' => Device::getTable(), 'WHERE' => ['connections_id' => $this->connections_id], 'ORDER' => 'display_name']) as $r) {
             $out[] = [
                 'id'           => (int) $r['id'],
                 'device_key'   => (string) $r['device_key'],
@@ -111,7 +115,7 @@ final class DbCoverageSource
         foreach ($DB->request([
             'SELECT'  => ['severity_label', 'COUNT' => 'id AS cpt'],
             'FROM'    => \GlpiPlugin\Nms\Alarm::getTable(),
-            'WHERE'   => ['state' => 'active'],
+            'WHERE'   => ['state' => 'active', 'connections_id' => $this->connections_id],
             'GROUPBY' => 'severity_label',
         ]) as $r) {
             $out[(string) $r['severity_label']] = (int) $r['cpt'];
@@ -130,7 +134,7 @@ final class DbCoverageSource
             'FROM'       => $alarms,
             'INNER JOIN' => ['glpi_tickets' => ['ON' => [$alarms => 'tickets_id', 'glpi_tickets' => 'id']]],
             // glpi_tickets has no is_recursive column: never ask for recursion here.
-            'WHERE'      => getEntitiesRestrictCriteria('glpi_tickets', '', '', false) + ['glpi_tickets.is_deleted' => 0, 'NOT' => ['glpi_tickets.status' => [5, 6]]],
+            'WHERE'      => getEntitiesRestrictCriteria('glpi_tickets', '', '', false) + ['glpi_tickets.is_deleted' => 0, 'NOT' => ['glpi_tickets.status' => [5, 6]], 'connections_id' => $this->connections_id],
         ])->current();
         return (int) ($row['cpt'] ?? 0);
     }

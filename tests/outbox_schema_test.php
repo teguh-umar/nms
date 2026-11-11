@@ -10,8 +10,8 @@ check('outbox table created', (bool) preg_match('/glpi_plugin_nms_outbox.*?`acti
 check('outbox send cron registered every minute', (bool) preg_match("/CronTask::register\(Cron::class, 'OutboxSend', MINUTE_TIMESTAMP/", $install));
 check('outbox dropped on uninstall', str_contains($uninstall, 'glpi_plugin_nms_outbox'));
 check('store: pending oldest first', (bool) preg_match("/function pending.*?'state' => 'pending'.*?'ORDER'\\s+=> 'id',/s", $store));
-check('store: clear dedupe counts only pending clears (reopened alarm can be cleared again)', (bool) preg_match("/function hasClear.*?'action' => 'clear', 'state' => 'pending'\]/s", $store));
+check('store: clear dedupe counts only pending clears (reopened alarm can be cleared again)', (bool) preg_match("/function hasClear.*?'action' => 'clear', 'state' => 'pending'/s", $store));
 
-check('store: pending acknowledge check', (bool) preg_match("/function hasPendingAck.*?'action' => 'ack', 'state' => 'pending'\]/s", $store));
+check('store: pending acknowledge check', (bool) preg_match("/function hasPendingAck.*?'action' => 'ack', 'state' => 'pending'/s", $store));
 
 done();

@@ -78,7 +78,7 @@ final class Cron extends \CommonGLPI
 
         try {
             $driver = self::opmDriver();
-            $stats  = DeviceSync::run($driver, new DbDeviceStore(), new Matcher($lookup), Config::get('match_mode'), $now, $missing === []);
+            $stats  = DeviceSync::run($driver, new DbDeviceStore(0), new Matcher($lookup), Config::get('match_mode'), $now, $missing === []);
         } catch (\Throwable $e) {
             Config::set(['last_device_sync_error' => $e->getMessage()]);
             \Toolbox::logInFile('nms', 'DeviceSync: ' . $e->getMessage() . "\n");
@@ -118,12 +118,12 @@ final class Cron extends \CommonGLPI
             $driver = self::opmDriver();
             $sync   = new AlarmSync(
                 $driver,
-                new DbAlarmStore(),
+                new DbAlarmStore(0),
                 new GlpiTicketGateway($cfg),
-                new AlarmAssetResolver(new DbDeviceIndex(), new Matcher(new DbAssetLookup(Config::assetItemtypes())), Config::get('match_mode')),
+                new AlarmAssetResolver(new DbDeviceIndex(0), new Matcher(new DbAssetLookup(Config::assetItemtypes())), Config::get('match_mode')),
                 new RangeProductionCheck($ranges, [AddressingRanges::class, 'assetIps']),
                 $cfg,
-                new DbTicketRequestStore()
+                new DbTicketRequestStore(0)
             );
             $lock = new DbSyncLock();
             if (!$lock->acquire(60)) {
@@ -180,7 +180,7 @@ final class Cron extends \CommonGLPI
         }
 
         $run = new \GlpiPlugin\Nms\Hygiene\HygieneRun(
-            new \GlpiPlugin\Nms\Hygiene\DbHygieneStore(),
+            new \GlpiPlugin\Nms\Hygiene\DbHygieneStore(0),
             \GlpiPlugin\Nms\Hygiene\Providers::all($cfg),
             new \GlpiPlugin\Nms\Hygiene\GlpiHygieneGateway([
                 'service_user'   => $tcf['service_user'],
@@ -227,7 +227,7 @@ final class Cron extends \CommonGLPI
         $now    = (string) \Session::getCurrentTime();
         $cfg    = Config::ticketingConfig();
         $driver = self::opmDriver();
-        $sender = new Sender(new DbOutboxStore(), $driver, $cfg['outbound_max_attempts']);
+        $sender = new Sender(new DbOutboxStore(0), $driver, $cfg['outbound_max_attempts']);
         $lock   = new DbSyncLock(Hooks::OUTBOX_LOCK);
         if (!$lock->acquire(0)) {
             $task->log('a technician save is sending to OpManager; skipped this run');

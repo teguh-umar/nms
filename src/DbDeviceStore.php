@@ -4,12 +4,17 @@ namespace GlpiPlugin\Nms;
 
 final class DbDeviceStore implements DeviceStore
 {
+    public function __construct(private int $connections_id = 0)
+    {
+    }
+
     public function upsert(array $device, string $now): array
     {
         global $DB;
 
         $table  = Device::getTable();
         $fields = [
+            'connections_id'    => $this->connections_id,
             'name'            => $device['name'],
             'display_name'    => $device['display_name'],
             'ip_address'      => $device['ip_address'],
@@ -23,12 +28,12 @@ final class DbDeviceStore implements DeviceStore
         $row = $DB->request([
             'SELECT' => ['id', 'is_manual'],
             'FROM'   => $table,
-            'WHERE'  => ['device_key' => $device['device_key']],
+            'WHERE'  => ['device_key' => $device['device_key'], 'connections_id' => $this->connections_id],
             'LIMIT'  => 1,
         ])->current();
 
         if ($row) {
-            $DB->update($table, $fields, ['id' => (int) $row['id']]);
+            $DB->update($table, $fields, ['id' => (int) $row['id'], 'connections_id' => $this->connections_id]);
             return ['id' => (int) $row['id'], 'is_manual' => (bool) $row['is_manual']];
         }
 
@@ -47,6 +52,6 @@ final class DbDeviceStore implements DeviceStore
             'match_source' => $result['source'],
             'itemtype'     => $result['itemtype'],
             'items_id'     => $result['items_id'],
-        ], ['id' => $id, 'is_manual' => 0]);
+        ], ['id' => $id, 'is_manual' => 0, 'connections_id' => $this->connections_id]);
     }
 }

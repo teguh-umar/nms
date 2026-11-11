@@ -18,6 +18,7 @@ function plugin_nms_install()
     if (!$DB->tableExists($table)) {
         $DB->doQuery("CREATE TABLE `$table` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `connections_id` INT UNSIGNED NOT NULL DEFAULT 0,
             `device_key` VARCHAR(255) NOT NULL DEFAULT '',
             `name` VARCHAR(255) NOT NULL DEFAULT '',
             `display_name` VARCHAR(255) NOT NULL DEFAULT '',
@@ -39,7 +40,8 @@ function plugin_nms_install()
             `date_creation` TIMESTAMP NULL DEFAULT NULL,
             `date_mod` TIMESTAMP NULL DEFAULT NULL,
             PRIMARY KEY (`id`),
-            UNIQUE KEY `device_key` (`device_key`),
+            UNIQUE KEY `device_key` (`connections_id`, `device_key`),
+            KEY `connections_id` (`connections_id`),
             KEY `item` (`itemtype`, `items_id`),
             KEY `match_state` (`match_state`),
             KEY `hygiene_state` (`hygiene_state`)
@@ -67,6 +69,7 @@ function plugin_nms_install()
     if (!$DB->tableExists($table)) {
         $DB->doQuery("CREATE TABLE `$table` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `connections_id` INT UNSIGNED NOT NULL DEFAULT 0,
             `alarm_key` VARCHAR(255) NOT NULL DEFAULT '',
             `entity_key` VARCHAR(255) NOT NULL DEFAULT '',
             `device_name` VARCHAR(255) NOT NULL DEFAULT '',
@@ -94,7 +97,8 @@ function plugin_nms_install()
             `date_creation` TIMESTAMP NULL DEFAULT NULL,
             `date_mod` TIMESTAMP NULL DEFAULT NULL,
             PRIMARY KEY (`id`),
-            UNIQUE KEY `alarm_key` (`alarm_key`),
+            UNIQUE KEY `alarm_key` (`connections_id`, `alarm_key`),
+            KEY `connections_id` (`connections_id`),
             KEY `state` (`state`),
             KEY `device_name` (`device_name`),
             KEY `tickets_id` (`tickets_id`),
@@ -107,12 +111,14 @@ function plugin_nms_install()
     if (!$DB->tableExists($table)) {
         $DB->doQuery("CREATE TABLE `$table` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `connections_id` INT UNSIGNED NOT NULL DEFAULT 0,
             `tickets_id` INT UNSIGNED NOT NULL DEFAULT 0,
             `alarm_count` INT UNSIGNED NOT NULL DEFAULT 0,
             `started_at` TIMESTAMP NULL DEFAULT NULL,
             `last_hit_at` TIMESTAMP NULL DEFAULT NULL,
             `ended_at` TIMESTAMP NULL DEFAULT NULL,
             PRIMARY KEY (`id`),
+            KEY `connections_id` (`connections_id`),
             KEY `tickets_id` (`tickets_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=$charset COLLATE=$collation");
     }
@@ -122,6 +128,7 @@ function plugin_nms_install()
     if (!$DB->tableExists($table)) {
         $DB->doQuery("CREATE TABLE `$table` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `connections_id` INT UNSIGNED NOT NULL DEFAULT 0,
             `alarm_key` VARCHAR(255) NOT NULL DEFAULT '',
             `entity_key` VARCHAR(255) NOT NULL DEFAULT '',
             `tickets_id` INT UNSIGNED NOT NULL DEFAULT 0,
@@ -135,6 +142,7 @@ function plugin_nms_install()
             `date_creation` TIMESTAMP NULL DEFAULT NULL,
             `date_mod` TIMESTAMP NULL DEFAULT NULL,
             PRIMARY KEY (`id`),
+            KEY `connections_id` (`connections_id`),
             KEY `due` (`state`, `next_try_at`),
             KEY `alarm_key` (`alarm_key`)
         ) ENGINE=InnoDB DEFAULT CHARSET=$charset COLLATE=$collation");
@@ -145,11 +153,13 @@ function plugin_nms_install()
     if (!$DB->tableExists($table)) {
         $DB->doQuery("CREATE TABLE `$table` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `connections_id` INT UNSIGNED NOT NULL DEFAULT 0,
             `alarm_key` VARCHAR(255) NOT NULL DEFAULT '',
             `entity_key` VARCHAR(255) NOT NULL DEFAULT '',
             `date_creation` TIMESTAMP NULL DEFAULT NULL,
             `date_mod` TIMESTAMP NULL DEFAULT NULL,
             PRIMARY KEY (`id`),
+            KEY `connections_id` (`connections_id`),
             UNIQUE KEY `alarm_key` (`alarm_key`),
             KEY `date_mod` (`date_mod`)
         ) ENGINE=InnoDB DEFAULT CHARSET=$charset COLLATE=$collation");
@@ -160,6 +170,7 @@ function plugin_nms_install()
     if (!$DB->tableExists($table)) {
         $DB->doQuery("CREATE TABLE `$table` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `connections_id` INT UNSIGNED NOT NULL DEFAULT 0,
             `device_key` VARCHAR(255) NOT NULL DEFAULT '',
             `reason` TEXT NULL,
             `users_id` INT UNSIGNED NOT NULL DEFAULT 0,
@@ -169,6 +180,7 @@ function plugin_nms_install()
             `date_creation` TIMESTAMP NULL DEFAULT NULL,
             `date_mod` TIMESTAMP NULL DEFAULT NULL,
             PRIMARY KEY (`id`),
+            KEY `connections_id` (`connections_id`),
             KEY `device_key` (`device_key`),
             KEY `is_active` (`is_active`)
         ) ENGINE=InnoDB DEFAULT CHARSET=$charset COLLATE=$collation");
@@ -178,12 +190,14 @@ function plugin_nms_install()
     if (!$DB->tableExists($table)) {
         $DB->doQuery("CREATE TABLE `$table` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `connections_id` INT UNSIGNED NOT NULL DEFAULT 0,
             `flow` VARCHAR(8) NOT NULL DEFAULT '',
             `tickets_id` INT UNSIGNED NOT NULL DEFAULT 0,
             `last_report_at` TIMESTAMP NULL DEFAULT NULL,
             `date_creation` TIMESTAMP NULL DEFAULT NULL,
             `date_mod` TIMESTAMP NULL DEFAULT NULL,
             PRIMARY KEY (`id`),
+            KEY `connections_id` (`connections_id`),
             KEY `flow` (`flow`),
             KEY `tickets_id` (`tickets_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=$charset COLLATE=$collation");

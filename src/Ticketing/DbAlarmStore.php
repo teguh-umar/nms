@@ -9,6 +9,10 @@ final class DbAlarmStore implements AlarmStore
 {
     private const STORMS = 'glpi_plugin_nms_storms';
 
+    public function __construct(private int $connections_id = 0)
+    {
+    }
+
     public function find(string $alarm_key): ?array
     {
         global $DB;
@@ -16,7 +20,7 @@ final class DbAlarmStore implements AlarmStore
         $row = $DB->request([
             'SELECT' => ['id', 'tickets_id', 'severity', 'message', 'state', 'last_followup_at'],
             'FROM'   => Alarm::getTable(),
-            'WHERE'  => ['alarm_key' => $alarm_key],
+            'WHERE'  => ['alarm_key' => $alarm_key, 'connections_id' => $this->connections_id],
             'LIMIT'  => 1,
         ])->current();
 
@@ -36,6 +40,7 @@ final class DbAlarmStore implements AlarmStore
 
         $table  = Alarm::getTable();
         $fields = [
+            'connections_id'    => $this->connections_id,
             'entity_key'                  => $alarm['entity_key'],
             'device_name'                 => $alarm['device_name'],
             'display_name'                => $alarm['display_name'],
@@ -57,7 +62,7 @@ final class DbAlarmStore implements AlarmStore
         $existing = $DB->request([
             'SELECT' => ['id', 'severity', 'message', 'state'],
             'FROM'   => $table,
-            'WHERE'  => ['alarm_key' => $alarm['alarm_key']],
+            'WHERE'  => ['alarm_key' => $alarm['alarm_key'], 'connections_id' => $this->connections_id],
             'LIMIT'  => 1,
         ])->current();
 
@@ -74,7 +79,7 @@ final class DbAlarmStore implements AlarmStore
             if ($state === 'active') {
                 $fields['cleared_at'] = null;
             }
-            $DB->update($table, $fields, ['id' => (int) $existing['id']]);
+            $DB->update($table, $fields, ['id' => (int) $existing['id'], 'connections_id' => $this->connections_id]);
             return (int) $existing['id'];
         }
 
@@ -96,26 +101,26 @@ final class DbAlarmStore implements AlarmStore
             'ticket_role'       => $role,
             'ticket_pending'    => 0,
             'ticket_created_at' => $now,
-        ], ['id' => $id]);
+        ], ['id' => $id, 'connections_id' => $this->connections_id]);
     }
 
     public function moveTicket(int $id, int $tickets_id): void
     {
         global $DB;
-        $DB->update(Alarm::getTable(), ['tickets_id' => $tickets_id], ['id' => $id]);
+        $DB->update(Alarm::getTable(), ['tickets_id' => $tickets_id], ['id' => $id, 'connections_id' => $this->connections_id]);
     }
 
     public function markPending(int $id): void
     {
         global $DB;
-        $DB->update(Alarm::getTable(), ['ticket_pending' => 1], ['id' => $id]);
+        $DB->update(Alarm::getTable(), ['ticket_pending' => 1], ['id' => $id, 'connections_id' => $this->connections_id]);
     }
 
     public function activeNotSeen(array $alarm_keys): array
     {
         global $DB;
 
-        $where = ['state' => 'active'];
+        $where = ['state' => 'active', 'connections_id' => $this->connections_id];
         if ($alarm_keys !== []) {
             $where['NOT'] = ['alarm_key' => $alarm_keys];
         }
@@ -135,7 +140,7 @@ final class DbAlarmStore implements AlarmStore
             'SELECT'   => ['tickets_id'],
             'DISTINCT' => true,
             'FROM'     => Alarm::getTable(),
-            'WHERE'    => ['device_name' => $device_name, 'tickets_id' => ['>', 0], 'ticket_role' => ['own', 'joined']],
+            'WHERE'    => ['device_name' => $device_name, 'tickets_id' => ['>', 0], 'ticket_role' => ['own', 'joined'], 'connections_id' => $this->connections_id],
             'ORDER'    => 'tickets_id DESC',
         ]) as $row) {
             $out[] = (int) $row['tickets_id'];
@@ -150,7 +155,7 @@ final class DbAlarmStore implements AlarmStore
         return (int) $DB->request([
             'COUNT' => 'cpt',
             'FROM'  => Alarm::getTable(),
-            'WHERE' => ['tickets_id' => $tickets_id, 'state' => ['<>', 'cleared']],
+            'WHERE' => ['tickets_id' => $tickets_id, 'state' => ['<>', 'cleared'], 'connections_id' => $this->connections_id],
         ])->current()['cpt'] === 0;
     }
 
@@ -182,7 +187,7 @@ final class DbAlarmStore implements AlarmStore
         return (int) $DB->request([
             'COUNT' => 'cpt',
             'FROM'  => Alarm::getTable(),
-            'WHERE' => ['ticket_role' => 'own', 'ticket_created_at' => ['>=', $since]],
+            'WHERE' => ['ticket_role' => 'own', 'ticket_created_at' => ['>=', $since], 'connections_id' => $this->connections_id],
         ])->current()['cpt'];
     }
 
@@ -200,6 +205,7 @@ final class DbAlarmStore implements AlarmStore
                 'alarm_code'  => $alarm_code,
                 'tickets_id'  => ['>', 0],
                 'NOT'         => ['tickets_id' => $exclude_tickets_id],
+                'connections_id' => $this->connections_id,
             ],
             'ORDER'    => 'tickets_id DESC',
         ]) as $row) {
@@ -215,7 +221,7 @@ final class DbAlarmStore implements AlarmStore
         $row = $DB->request([
             'SELECT' => ['id', 'tickets_id', 'last_hit_at'],
             'FROM'   => self::STORMS,
-            'WHERE'  => ['ended_at' => null],
+            'WHERE'  => ['ended_at' => null, 'connections_id' => $this->connections_id],
             'ORDER'  => 'id DESC',
             'LIMIT'  => 1,
         ])->current();
@@ -224,7 +230,7 @@ final class DbAlarmStore implements AlarmStore
         }
         $idle_since = date('Y-m-d H:i:s', (int) strtotime($now) - $window_minutes * 60);
         if ((string) $row['last_hit_at'] < $idle_since) {
-            $DB->update(self::STORMS, ['ended_at' => $now], ['id' => (int) $row['id']]);
+            $DB->update(self::STORMS, ['ended_at' => $now], ['id' => (int) $row['id'], 'connections_id' => $this->connections_id]);
             return 0;
         }
         return (int) $row['tickets_id'];
@@ -233,19 +239,19 @@ final class DbAlarmStore implements AlarmStore
     public function startStorm(int $tickets_id, string $now): void
     {
         global $DB;
-        $DB->insert(self::STORMS, ['tickets_id' => $tickets_id, 'alarm_count' => 1, 'started_at' => $now, 'last_hit_at' => $now]);
+        $DB->insert(self::STORMS, ['connections_id' => $this->connections_id, 'tickets_id' => $tickets_id, 'alarm_count' => 1, 'started_at' => $now, 'last_hit_at' => $now]);
     }
 
     public function endStorm(int $tickets_id, string $now): void
     {
         global $DB;
-        $DB->update(self::STORMS, ['ended_at' => $now], ['tickets_id' => $tickets_id, 'ended_at' => null]);
+        $DB->update(self::STORMS, ['ended_at' => $now], ['tickets_id' => $tickets_id, 'ended_at' => null, 'connections_id' => $this->connections_id]);
     }
 
     public function markFollowup(int $id, string $now): void
     {
         global $DB;
-        $DB->update(Alarm::getTable(), ['last_followup_at' => $now], ['id' => $id]);
+        $DB->update(Alarm::getTable(), ['last_followup_at' => $now], ['id' => $id, 'connections_id' => $this->connections_id]);
     }
 
     public function hitStorm(int $tickets_id, string $now): void
@@ -254,6 +260,6 @@ final class DbAlarmStore implements AlarmStore
         $DB->update(self::STORMS, [
             'last_hit_at' => $now,
             'alarm_count' => new QueryExpression($DB->quoteName('alarm_count') . ' + 1'),
-        ], ['tickets_id' => $tickets_id, 'ended_at' => null]);
+        ], ['tickets_id' => $tickets_id, 'ended_at' => null, 'connections_id' => $this->connections_id]);
     }
 }

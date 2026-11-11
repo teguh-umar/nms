@@ -26,7 +26,6 @@ foreach ($tables as [, $table, $body]) {
         }
     }
 }
-check('devices.device_key is UNIQUE', (bool) preg_match('/UNIQUE KEY `device_key` \(`device_key`\)/', $src));
 
 foreach (['glpi_plugin_nms_alarms', 'glpi_plugin_nms_storms'] as $t) {
     check("install creates {$t}", in_array($t, array_column($tables, 1), true));
@@ -37,6 +36,14 @@ check('uninstall drops the new tables', str_contains((string) file_get_contents(
     && str_contains((string) file_get_contents(OPM_ROOT . '/install/uninstall.php'), 'glpi_plugin_nms_storms'));
 
 check('alarms track last followup time', str_contains($src, '`last_followup_at` TIMESTAMP'));
+
+// Task 4: every data table is scoped by connections_id.
+foreach (['glpi_plugin_nms_devices', 'glpi_plugin_nms_alarms', 'glpi_plugin_nms_outbox', 'glpi_plugin_nms_storms', 'glpi_plugin_nms_ticketrequests', 'glpi_plugin_nms_deviceexceptions', 'glpi_plugin_nms_hygienetickets'] as $t) {
+    check("{$t} has connections_id column", str_contains($src, "`connections_id` INT UNSIGNED NOT NULL DEFAULT 0"));
+    check("{$t} has connections_id key", (bool) preg_match("/KEY `connections_id` \(`connections_id`\)/", $src));
+}
+check('devices unique key is (connections_id, device_key)', (bool) preg_match('/UNIQUE KEY `device_key` \(`connections_id`, `device_key`\)/', $src));
+check('alarms unique key is (connections_id, alarm_key)', (bool) preg_match('/UNIQUE KEY `alarm_key` \(`connections_id`, `alarm_key`\)/', $src));
 
 // v1.1.0 (D32): deferred webhook requests.
 check('install creates glpi_plugin_nms_ticketrequests', in_array('glpi_plugin_nms_ticketrequests', array_column($tables, 1), true));
