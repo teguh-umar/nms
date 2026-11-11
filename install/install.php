@@ -205,6 +205,36 @@ function plugin_nms_install()
         ) ENGINE=InnoDB DEFAULT CHARSET=$charset COLLATE=$collation");
     }
 
+    // One row per NMS instance. Credentials are encrypted at rest via secured_fields.
+    $table = 'glpi_plugin_nms_connections';
+    if (!$DB->tableExists($table)) {
+        $DB->doQuery("CREATE TABLE `$table` (
+            `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `name` VARCHAR(255) NOT NULL DEFAULT '',
+            `brand` VARCHAR(32) NOT NULL DEFAULT '',
+            `entities_id` INT UNSIGNED NOT NULL DEFAULT 0,
+            `is_recursive` TINYINT NOT NULL DEFAULT 1,
+            `url` VARCHAR(255) NOT NULL DEFAULT '',
+            `api_key` VARCHAR(255) NOT NULL DEFAULT '',
+            `username` VARCHAR(255) NOT NULL DEFAULT '',
+            `password` TEXT NOT NULL DEFAULT '',
+            `verify_tls` TINYINT NOT NULL DEFAULT 1,
+            `is_active` TINYINT NOT NULL DEFAULT 0,
+            `writeback_enabled` TINYINT NOT NULL DEFAULT 0,
+            `tickets_enabled` TINYINT NOT NULL DEFAULT 0,
+            `webhook_token` TEXT NOT NULL DEFAULT '',
+            `settings` LONGTEXT NOT NULL DEFAULT '',
+            `last_device_sync` TIMESTAMP NULL DEFAULT NULL,
+            `last_alarm_sync` TIMESTAMP NULL DEFAULT NULL,
+            `last_status` VARCHAR(16) NOT NULL DEFAULT '',
+            `last_error` TEXT NOT NULL DEFAULT '',
+            `date_creation` TIMESTAMP NULL DEFAULT NULL,
+            `date_mod` TIMESTAMP NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `name` (`name`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=$charset COLLATE=$collation");
+    }
+
     Config::setDefaults();
 
     // setDefaults() never touches a stored value, so move an untouched old default

@@ -62,6 +62,14 @@ function plugin_init_nms()
     // Core encrypts these on write (GLPIKey::getConfigs maps them to plugin:nms).
     $PLUGIN_HOOKS['secured_configs']['nms'] = \GlpiPlugin\Nms\Config::SECURED;
 
+    // Per-connection table secrets are encrypted/decrypted by the plugin with GLPIKey,
+    // listed here so core re-encrypts them on GLPI key rotation.
+    $PLUGIN_HOOKS['secured_fields']['nms'] = [
+        'glpi_plugin_nms_connections.api_key',
+        'glpi_plugin_nms_connections.password',
+        'glpi_plugin_nms_connections.webhook_token',
+    ];
+
     // GLPI -> OpManager (Plan 3): human actions only, decided in Outbound\Planner (D24).
     $PLUGIN_HOOKS['item_add']['nms'] = [\ITILFollowup::class => [\GlpiPlugin\Nms\Outbound\Hooks::class, 'followupAdded']];
     $PLUGIN_HOOKS['item_update']['nms'] = [\Ticket::class => [\GlpiPlugin\Nms\Outbound\Hooks::class, 'ticketUpdated']];
