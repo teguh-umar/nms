@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Outbound;
+namespace GlpiPlugin\Nms\Outbound;
 
 /** Queue of notes/clears waiting to be sent to OpManager (Plan 3, spec §8). */
 interface OutboxStore

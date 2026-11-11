@@ -1,8 +1,8 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Hygiene;
+namespace GlpiPlugin\Nms\Hygiene;
 
-use GlpiPlugin\Opmanager\Config;
+use GlpiPlugin\Nms\Config;
 
 /**
  * One NMS hygiene pass (spec §2-§4, D34): liveness for unmanaged devices,

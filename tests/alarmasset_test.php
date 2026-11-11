@@ -5,10 +5,10 @@ foreach (['Matching/AssetLookup', 'Matching/Matcher', 'Ticketing/DeviceIndex', '
     require OPM_ROOT . "/src/{$f}.php";
 }
 
-use GlpiPlugin\Opmanager\Matching\AssetLookup;
-use GlpiPlugin\Opmanager\Matching\Matcher;
-use GlpiPlugin\Opmanager\Ticketing\AlarmAssetResolver;
-use GlpiPlugin\Opmanager\Ticketing\DeviceIndex;
+use GlpiPlugin\Nms\Matching\AssetLookup;
+use GlpiPlugin\Nms\Matching\Matcher;
+use GlpiPlugin\Nms\Ticketing\AlarmAssetResolver;
+use GlpiPlugin\Nms\Ticketing\DeviceIndex;
 
 final class FakeIndex implements DeviceIndex
 {

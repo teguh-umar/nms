@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Outbound;
+namespace GlpiPlugin\Nms\Outbound;
 
 /**
  * Decides what goes to OpManager for a GLPI action (spec §8, D24-D26). Pure: the hooks

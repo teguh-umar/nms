@@ -1,13 +1,13 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Ticketing;
+namespace GlpiPlugin\Nms\Ticketing;
 
 use Glpi\DBAL\QueryExpression;
-use GlpiPlugin\Opmanager\Alarm;
+use GlpiPlugin\Nms\Alarm;
 
 final class DbAlarmStore implements AlarmStore
 {
-    private const STORMS = 'glpi_plugin_opmanager_storms';
+    private const STORMS = 'glpi_plugin_nms_storms';
 
     public function find(string $alarm_key): ?array
     {
@@ -47,7 +47,7 @@ final class DbAlarmStore implements AlarmStore
             'severity_label'              => $alarm['severity_label'],
             'message'                     => $alarm['message'],
             'state'                       => $state,
-            'plugin_opmanager_devices_id' => $asset['devices_id'],
+            'plugin_nms_devices_id' => $asset['devices_id'],
             'itemtype'                    => $asset['itemtype'],
             'items_id'                    => $asset['items_id'],
             'mod_time'                    => $alarm['mod_time'] !== '' ? $alarm['mod_time'] : null,

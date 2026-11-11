@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\OpManager;
+namespace GlpiPlugin\Nms\Driver\OpManager;
 
 /**
  * Turns an OpManager device-list response into plain rows. Format verified on

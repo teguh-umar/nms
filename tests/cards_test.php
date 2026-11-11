@@ -14,15 +14,15 @@ namespace {
     require OPM_ROOT . '/src/Coverage/Report.php';
     require OPM_ROOT . '/src/Coverage/Cards.php';
 
-    use GlpiPlugin\Opmanager\Coverage\Cards;
-    use GlpiPlugin\Opmanager\RightDefinition as R;
+    use GlpiPlugin\Nms\Coverage\Cards;
+    use GlpiPlugin\Nms\RightDefinition as R;
 
     check('no monitoring right: no card offered', Cards::cards(['core' => []]) === ['core' => []]);
     check('no monitoring right: provider returns zero, never data', Cards::coverage()['number'] === 0 && Cards::matching()['data'] === []);
 
     $GLOBALS['RIGHTS'] = [R::MONITORING => READ];
     $cards = Cards::cards(['core' => []]);
-    $mine  = array_filter($cards, fn ($k) => str_starts_with($k, 'plugin_opmanager_'), ARRAY_FILTER_USE_KEY);
+    $mine  = array_filter($cards, fn ($k) => str_starts_with($k, 'plugin_nms_'), ARRAY_FILTER_USE_KEY);
     check('eight cards registered, existing kept', count($mine) === 8 && isset($cards['core']));
     $ok = true;
     foreach ($mine as $card) {
@@ -45,7 +45,7 @@ namespace {
     check('cache keyed (per entity set)', $calls === 3);
 
     $setup = (string) file_get_contents(OPM_ROOT . '/setup.php');
-    check('dashboard hook registered with a Class::method string', str_contains($setup, "\$PLUGIN_HOOKS['dashboard_cards']['opmanager'] = 'GlpiPlugin\\\\Opmanager\\\\Coverage\\\\Cards::cards';"));
+    check('dashboard hook registered with a Class::method string', str_contains($setup, "\$PLUGIN_HOOKS['dashboard_cards']['nms'] = 'GlpiPlugin\\\\Nms\\\\Coverage\\\\Cards::cards';"));
 
     done();
 }

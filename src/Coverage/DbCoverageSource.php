@@ -1,8 +1,8 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Coverage;
+namespace GlpiPlugin\Nms\Coverage;
 
-use GlpiPlugin\Opmanager\Device;
+use GlpiPlugin\Nms\Device;
 
 /** Reads what the Coverage page compares (spec §15.1). Runs in a user request: entity-scoped. */
 final class DbCoverageSource
@@ -110,7 +110,7 @@ final class DbCoverageSource
         $out = [];
         foreach ($DB->request([
             'SELECT'  => ['severity_label', 'COUNT' => 'id AS cpt'],
-            'FROM'    => \GlpiPlugin\Opmanager\Alarm::getTable(),
+            'FROM'    => \GlpiPlugin\Nms\Alarm::getTable(),
             'WHERE'   => ['state' => 'active'],
             'GROUPBY' => 'severity_label',
         ]) as $r) {
@@ -124,7 +124,7 @@ final class DbCoverageSource
     {
         global $DB;
 
-        $alarms = \GlpiPlugin\Opmanager\Alarm::getTable();
+        $alarms = \GlpiPlugin\Nms\Alarm::getTable();
         $row    = $DB->request([
             'SELECT'     => ['COUNT DISTINCT' => 'glpi_tickets.id AS cpt'],
             'FROM'       => $alarms,

@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Ticketing;
+namespace GlpiPlugin\Nms\Ticketing;
 
 /** Pure D14: asset entity -> most specific IPv4 GLPI IP network -> default. */
 final class EntityResolver

@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Ticketing;
+namespace GlpiPlugin\Nms\Ticketing;
 
 /**
  * Which alarms may open a NEW ticket (user decision 2026-10-01): an alarm matches when its
@@ -61,14 +61,14 @@ final class AlarmFilter
     {
         global $DB;
 
-        if (!$DB->tableExists('glpi_plugin_opmanager_alarms')) {
+        if (!$DB->tableExists('glpi_plugin_nms_alarms')) {
             return [];
         }
         $out = [];
         foreach ($DB->request([
             'SELECT'   => ['event_type'],
             'DISTINCT' => true,
-            'FROM'     => 'glpi_plugin_opmanager_alarms',
+            'FROM'     => 'glpi_plugin_nms_alarms',
             'WHERE'    => ['NOT' => ['event_type' => '']],
             'ORDER'    => 'event_type',
         ]) as $row) {

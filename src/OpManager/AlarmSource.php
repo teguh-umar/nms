@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\OpManager;
+namespace GlpiPlugin\Nms\Driver\OpManager;
 
 interface AlarmSource
 {

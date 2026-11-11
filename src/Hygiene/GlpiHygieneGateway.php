@@ -1,10 +1,10 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Hygiene;
+namespace GlpiPlugin\Nms\Hygiene;
 
-use GlpiPlugin\Opmanager\Ticketing\GlpiTicketGateway;
-use GlpiPlugin\Opmanager\Ticketing\TicketBuilder;
-use GlpiPlugin\Opmanager\Ticketing\TicketGateway;
+use GlpiPlugin\Nms\Ticketing\GlpiTicketGateway;
+use GlpiPlugin\Nms\Ticketing\TicketBuilder;
+use GlpiPlugin\Nms\Ticketing\TicketGateway;
 
 /**
  * Hygiene Request tickets on GLPI core objects (hub §5: every write through ->add()).
@@ -61,12 +61,12 @@ final class GlpiHygieneGateway implements HygieneGateway
 
         $missing = TicketBuilder::missingMandatory($input, $mandatory);
         if ($missing !== []) {
-            \Toolbox::logInFile('opmanager', sprintf("HygieneCheck: ticket \"%s\" not created, template %d mandatory field(s) not filled: %s\n", $title, $tt_id, implode(', ', $missing)));
+            \Toolbox::logInFile('nms', sprintf("HygieneCheck: ticket \"%s\" not created, template %d mandatory field(s) not filled: %s\n", $title, $tt_id, implode(', ', $missing)));
             return 0;
         }
         $id = (int) (new \Ticket())->add($input);
         if ($id <= 0) {
-            \Toolbox::logInFile('opmanager', sprintf("HygieneCheck: ticket \"%s\" not created by GLPI\n", $title));
+            \Toolbox::logInFile('nms', sprintf("HygieneCheck: ticket \"%s\" not created by GLPI\n", $title));
             return 0;
         }
         // rc6: technicians only after the add. With a technician in the add input, Behaviors
@@ -74,7 +74,7 @@ final class GlpiHygieneGateway implements HygieneGateway
         // technician's first group. Its update counterpart is a separate setting, off on production.
         foreach (array_values(array_unique(array_filter(array_map('intval', $assign_users)))) as $user) {
             if (!(new \Ticket_User())->add(['tickets_id' => $id, 'users_id' => $user, 'type' => \CommonITILActor::ASSIGN])) {
-                \Toolbox::logInFile('opmanager', sprintf("HygieneCheck: technician %d not assigned to ticket %d\n", $user, $id));
+                \Toolbox::logInFile('nms', sprintf("HygieneCheck: technician %d not assigned to ticket %d\n", $user, $id));
             }
         }
         return $id;

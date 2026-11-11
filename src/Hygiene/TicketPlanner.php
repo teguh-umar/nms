@@ -1,8 +1,8 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Hygiene;
+namespace GlpiPlugin\Nms\Hygiene;
 
-use GlpiPlugin\Opmanager\Ticketing\TicketGateway;
+use GlpiPlugin\Nms\Ticketing\TicketGateway;
 
 /**
  * Pure: what one hygiene flow does this run (spec §4). One ticket per flow; while it

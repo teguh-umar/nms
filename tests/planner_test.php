@@ -3,7 +3,7 @@
 require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/Outbound/Planner.php';
 
-use GlpiPlugin\Opmanager\Outbound\Planner as P;
+use GlpiPlugin\Nms\Outbound\Planner as P;
 
 check('logged-in technician is human', P::isHuman(7, false, 3, false));
 check('no login is not human (cron/webhook)', !P::isHuman(false, false, 3, false));

@@ -24,6 +24,6 @@ check('mergedInto reads Ticket_Ticket SON_OF', (bool) preg_match("/function merg
 
 require OPM_ROOT . '/src/Ticketing/TicketGateway.php';
 require OPM_ROOT . '/src/Ticketing/GlpiTicketGateway.php';
-check('html escapes and keeps lines', \GlpiPlugin\Opmanager\Ticketing\GlpiTicketGateway::html("a<b>\nc") === "a&lt;b&gt;<br />\nc");
+check('html escapes and keeps lines', \GlpiPlugin\Nms\Ticketing\GlpiTicketGateway::html("a<b>\nc") === "a&lt;b&gt;<br />\nc");
 
 done();

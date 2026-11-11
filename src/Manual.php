@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager;
+namespace GlpiPlugin\Nms;
 
 /**
  * The user manual, linked from inside the plugin (suite rule 2026-11-09, hub §4; v1.3.0-rc4).
@@ -61,19 +61,19 @@ final class Manual
     {
         if ($markdown === null) {
             return '<div class="alert alert-info">'
-                . htmlescape(__('The user manual is not installed with this copy of the plugin.', 'opmanager'))
+                . htmlescape(__('The user manual is not installed with this copy of the plugin.', 'nms'))
                 . '</div>';
         }
         $version = self::versionOf($markdown);
         $out     = '';
         if (self::lags($version, $plugin_version)) {
             $out .= '<div class="alert alert-warning">' . htmlescape(sprintf(
-                __('This manual documents version %1$s; the installed plugin is %2$s. Some screens may differ.', 'opmanager'),
+                __('This manual documents version %1$s; the installed plugin is %2$s. Some screens may differ.', 'nms'),
                 $version,
                 $plugin_version
             )) . '</div>';
         } elseif ($version !== '') {
-            $out .= '<p class="text-muted small">' . htmlescape(sprintf(__('Manual for version %s', 'opmanager'), $version)) . '</p>';
+            $out .= '<p class="text-muted small">' . htmlescape(sprintf(__('Manual for version %s', 'nms'), $version)) . '</p>';
         }
         return $out . '<div class="markdown">' . self::render($markdown) . '</div>';
     }

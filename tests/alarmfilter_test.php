@@ -3,7 +3,7 @@
 require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/Ticketing/AlarmFilter.php';
 
-use GlpiPlugin\Opmanager\Ticketing\AlarmFilter;
+use GlpiPlugin\Nms\Ticketing\AlarmFilter;
 
 $a = static fn (string $type, string $msg = 'Device down') => ['event_type' => $type, 'message' => $msg];
 

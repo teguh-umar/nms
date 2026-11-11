@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Hygiene;
+namespace GlpiPlugin\Nms\Hygiene;
 
 /**
  * Liveness provider registry (spec §3, user 2026-11-06: not closed to Mist).

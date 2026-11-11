@@ -5,11 +5,11 @@ foreach (['OpManager/ClientException', 'OpManager/AlarmSource', 'Ticketing/SyncL
     require OPM_ROOT . "/src/{$f}.php";
 }
 
-use GlpiPlugin\Opmanager\OpManager\AlarmSource;
-use GlpiPlugin\Opmanager\OpManager\ClientException;
-use GlpiPlugin\Opmanager\Ticketing\SyncLock;
-use GlpiPlugin\Opmanager\Ticketing\TicketRequestStore;
-use GlpiPlugin\Opmanager\Webhook\Receiver;
+use GlpiPlugin\Nms\Driver\OpManager\AlarmSource;
+use GlpiPlugin\Nms\Driver\OpManager\ClientException;
+use GlpiPlugin\Nms\Ticketing\SyncLock;
+use GlpiPlugin\Nms\Ticketing\TicketRequestStore;
+use GlpiPlugin\Nms\Webhook\Receiver;
 
 final class Src implements AlarmSource
 {

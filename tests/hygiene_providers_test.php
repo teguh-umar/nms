@@ -5,10 +5,10 @@ foreach (['Cidr', 'Liveness', 'TcpProber', 'AgentProvider', 'MistProvider', 'Pro
     require OPM_ROOT . "/src/Hygiene/{$c}.php";
 }
 
-use GlpiPlugin\Opmanager\Hygiene\AgentProvider;
-use GlpiPlugin\Opmanager\Hygiene\ProbeProvider;
-use GlpiPlugin\Opmanager\Hygiene\Providers;
-use GlpiPlugin\Opmanager\Hygiene\TcpProber;
+use GlpiPlugin\Nms\Hygiene\AgentProvider;
+use GlpiPlugin\Nms\Hygiene\ProbeProvider;
+use GlpiPlugin\Nms\Hygiene\Providers;
+use GlpiPlugin\Nms\Hygiene\TcpProber;
 
 $alive = static fn (array $d, string $now): ?array => ['verdict' => 'alive', 'detail' => 'seen by FortiCloud'];
 $cfg   = ['agent_stale_days' => 7, 'mist_stale_days' => 7, 'probe_cidrs' => [], 'probe_ports' => [22], 'probe_timeout_ms' => 200];

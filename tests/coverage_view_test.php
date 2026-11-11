@@ -3,7 +3,7 @@
 require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/Coverage/View.php';
 
-use GlpiPlugin\Opmanager\Coverage\View;
+use GlpiPlugin\Nms\Coverage\View;
 
 $report = ['kpi' => ['devices' => 5, 'matched' => 2, 'not_in_glpi' => 2, 'ambiguous' => 1, 'assets' => 4, 'monitored' => 2, 'not_monitored' => 2, 'coverage_pct' => 50],
     'lists' => [

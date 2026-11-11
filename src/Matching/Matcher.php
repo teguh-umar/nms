@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Matching;
+namespace GlpiPlugin\Nms\Matching;
 
 /**
  * Pure matching of one OpManager device to one GLPI asset (spec §5).

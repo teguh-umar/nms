@@ -1,8 +1,8 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Coverage;
+namespace GlpiPlugin\Nms\Coverage;
 
-use GlpiPlugin\Opmanager\RightDefinition;
+use GlpiPlugin\Nms\RightDefinition;
 
 /** Menu anchor for the Coverage page (D28). */
 final class Page extends \CommonGLPI
@@ -11,7 +11,7 @@ final class Page extends \CommonGLPI
 
     public static function getTypeName($nb = 0)
     {
-        return __('Coverage', 'opmanager');
+        return __('Coverage', 'nms');
     }
 
     public static function getIcon()

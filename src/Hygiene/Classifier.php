@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Hygiene;
+namespace GlpiPlugin\Nms\Hygiene;
 
 /**
  * Pure: the NMS hygiene condition of one OpManager device (spec §2, D34).
@@ -30,14 +30,14 @@ final class Classifier
     public static function labels(): array
     {
         return [
-            self::GLPI_MISSING    => __('Monitored, not in GLPI', 'opmanager'),
-            self::GLPI_REVIEW     => __('Monitored, needs manual pairing', 'opmanager'),
-            self::NMS_DEAD        => __('Unmanaged, dead: remove from OpManager', 'opmanager'),
-            self::NMS_UNKNOWN     => __('Unmanaged, liveness unknown: check manually', 'opmanager'),
-            self::UNMANAGED_ALIVE => __('Unmanaged, still alive', 'opmanager'),
-            self::OK              => __('Monitored and in GLPI', 'opmanager'),
-            self::EXCEPTED        => __('Excluded from hygiene tickets', 'opmanager'),
-            self::NONE            => __('Not classified', 'opmanager'),
+            self::GLPI_MISSING    => __('Monitored, not in GLPI', 'nms'),
+            self::GLPI_REVIEW     => __('Monitored, needs manual pairing', 'nms'),
+            self::NMS_DEAD        => __('Unmanaged, dead: remove from OpManager', 'nms'),
+            self::NMS_UNKNOWN     => __('Unmanaged, liveness unknown: check manually', 'nms'),
+            self::UNMANAGED_ALIVE => __('Unmanaged, still alive', 'nms'),
+            self::OK              => __('Monitored and in GLPI', 'nms'),
+            self::EXCEPTED        => __('Excluded from hygiene tickets', 'nms'),
+            self::NONE            => __('Not classified', 'nms'),
         ];
     }
 

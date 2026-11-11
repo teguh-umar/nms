@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Coverage;
+namespace GlpiPlugin\Nms\Coverage;
 
 /**
  * Pure HTML for the Coverage page (spec §15.1): KPI cards, filters, one tab per follow-up
@@ -23,12 +23,12 @@ final class View
         $html = '<div class="container-fluid">';
 
         $cards = [
-            [__('Coverage', 'opmanager'), $k['coverage_pct'] . '%', sprintf(__('%1$d of %2$d GLPI assets monitored', 'opmanager'), $k['monitored'], $k['assets'])],
-            [__('GLPI assets in scope', 'opmanager'), (string) $k['assets'], __('selected types, status, with an IP', 'opmanager')],
-            [__('OpManager devices', 'opmanager'), (string) $k['devices'], sprintf(__('%d matched to a GLPI asset', 'opmanager'), $k['matched'])],
-            [__('Not in GLPI', 'opmanager'), (string) $k['not_in_glpi'], __('monitored but not registered', 'opmanager')],
-            [__('Not monitored', 'opmanager'), (string) $k['not_monitored'], __('registered but not in OpManager', 'opmanager')],
-            [__('Ambiguous', 'opmanager'), (string) $k['ambiguous'], __('needs a manual pairing', 'opmanager')],
+            [__('Coverage', 'nms'), $k['coverage_pct'] . '%', sprintf(__('%1$d of %2$d GLPI assets monitored', 'nms'), $k['monitored'], $k['assets'])],
+            [__('GLPI assets in scope', 'nms'), (string) $k['assets'], __('selected types, status, with an IP', 'nms')],
+            [__('OpManager devices', 'nms'), (string) $k['devices'], sprintf(__('%d matched to a GLPI asset', 'nms'), $k['matched'])],
+            [__('Not in GLPI', 'nms'), (string) $k['not_in_glpi'], __('monitored but not registered', 'nms')],
+            [__('Not monitored', 'nms'), (string) $k['not_monitored'], __('registered but not in OpManager', 'nms')],
+            [__('Ambiguous', 'nms'), (string) $k['ambiguous'], __('needs a manual pairing', 'nms')],
         ];
         $html .= '<div class="row row-cards mb-3">';
         foreach ($cards as [$label, $value, $hint]) {
@@ -44,12 +44,12 @@ final class View
         $html .= '<form method="get" action="' . htmlescape($base_url) . '" class="d-flex flex-wrap align-items-center gap-3 mb-3">'
             . '<input type="hidden" name="list" value="' . htmlescape($state['list']) . '">'
             . '<label class="form-check mb-0"><input class="form-check-input" type="checkbox" name="production_only" value="1"' . ($state['production_only'] ? ' checked' : '') . '>'
-            . '<span class="form-check-label">' . htmlescape(__('Production IP ranges only', 'opmanager')) . '</span></label>'
-            . '<select class="form-select w-auto" name="category"><option value="">' . htmlescape(__('All categories', 'opmanager')) . '</option>';
+            . '<span class="form-check-label">' . htmlescape(__('Production IP ranges only', 'nms')) . '</span></label>'
+            . '<select class="form-select w-auto" name="category"><option value="">' . htmlescape(__('All categories', 'nms')) . '</option>';
         foreach ($report['categories'] as $cat) {
             $html .= '<option value="' . htmlescape($cat) . '"' . ($cat === $state['category'] ? ' selected' : '') . '>' . htmlescape($cat) . '</option>';
         }
-        $html .= '</select><button type="submit" class="btn btn-primary">' . htmlescape(__('Apply', 'opmanager')) . '</button></form>';
+        $html .= '</select><button type="submit" class="btn btn-primary">' . htmlescape(__('Apply', 'nms')) . '</button></form>';
 
         // Tabs
         $titles = self::titles();
@@ -79,19 +79,19 @@ final class View
             $html .= '</tr>';
         }
         if ($rows === []) {
-            $html .= '<tr><td colspan="' . count($cols) . '" class="text-muted">' . htmlescape(__('Nothing to follow up', 'opmanager')) . '</td></tr>';
+            $html .= '<tr><td colspan="' . count($cols) . '" class="text-muted">' . htmlescape(__('Nothing to follow up', 'nms')) . '</td></tr>';
         }
         $html .= '</tbody></table></div></div><div class="card-footer d-flex justify-content-between align-items-center">';
         $html .= '<div>';
         if ($page > 1) {
             $html .= '<a class="btn btn-sm btn-outline-secondary me-1" href="' . htmlescape(self::url($base_url, ['page' => $page - 1] + $state)) . '">&lsaquo;</a>';
         }
-        $html .= '<span class="mx-2">' . htmlescape(sprintf(__('Page %1$d of %2$d', 'opmanager'), $page, $pages)) . '</span>';
+        $html .= '<span class="mx-2">' . htmlescape(sprintf(__('Page %1$d of %2$d', 'nms'), $page, $pages)) . '</span>';
         if ($page < $pages) {
             $html .= '<a class="btn btn-sm btn-outline-secondary ms-1" href="' . htmlescape(self::url($base_url, ['page' => $page + 1] + $state)) . '">&rsaquo;</a>';
         }
         $html .= '</div><a class="btn btn-sm btn-outline-primary" href="' . htmlescape(self::url($base_url, ['export' => 'csv'] + $state)) . '">'
-            . '<i class="ti ti-file-spreadsheet me-1"></i>' . htmlescape(__('Export CSV', 'opmanager')) . '</a></div></div></div>';
+            . '<i class="ti ti-file-spreadsheet me-1"></i>' . htmlescape(__('Export CSV', 'nms')) . '</a></div></div></div>';
 
         return $html;
     }
@@ -114,11 +114,11 @@ final class View
     private static function titles(): array
     {
         return [
-            'not_in_glpi'   => __('Not in GLPI', 'opmanager'),
-            'not_monitored' => __('Not monitored', 'opmanager'),
-            'ambiguous'     => __('Ambiguous', 'opmanager'),
-            'name_differs'  => __('Name differs', 'opmanager'),
-            'stale'         => __('Stale', 'opmanager'),
+            'not_in_glpi'   => __('Not in GLPI', 'nms'),
+            'not_monitored' => __('Not monitored', 'nms'),
+            'ambiguous'     => __('Ambiguous', 'nms'),
+            'name_differs'  => __('Name differs', 'nms'),
+            'stale'         => __('Stale', 'nms'),
         ];
     }
 
@@ -126,11 +126,11 @@ final class View
     private static function columns(string $list): array
     {
         return match ($list) {
-            'not_monitored' => [__('GLPI asset', 'opmanager'), __('Type', 'opmanager'), __('Entity', 'opmanager'), __('IP addresses', 'opmanager'), __('Status', 'opmanager')],
-            'ambiguous'     => [__('Device', 'opmanager'), __('IP address', 'opmanager'), __('Category', 'opmanager')],
-            'name_differs'  => [__('Device name', 'opmanager'), __('GLPI asset name', 'opmanager'), __('IP address', 'opmanager')],
-            'stale'         => [__('Device', 'opmanager'), __('IP address', 'opmanager'), __('Last seen', 'opmanager')],
-            default         => [__('Device', 'opmanager'), __('IP address', 'opmanager'), __('Category', 'opmanager'), __('Type', 'opmanager'), __('Last seen', 'opmanager')],
+            'not_monitored' => [__('GLPI asset', 'nms'), __('Type', 'nms'), __('Entity', 'nms'), __('IP addresses', 'nms'), __('Status', 'nms')],
+            'ambiguous'     => [__('Device', 'nms'), __('IP address', 'nms'), __('Category', 'nms')],
+            'name_differs'  => [__('Device name', 'nms'), __('GLPI asset name', 'nms'), __('IP address', 'nms')],
+            'stale'         => [__('Device', 'nms'), __('IP address', 'nms'), __('Last seen', 'nms')],
+            default         => [__('Device', 'nms'), __('IP address', 'nms'), __('Category', 'nms'), __('Type', 'nms'), __('Last seen', 'nms')],
         };
     }
 
@@ -142,7 +142,7 @@ final class View
     {
         $esc    = static fn ($v) => $html ? htmlescape((string) $v) : (string) $v;
         $device = (string) (($r['display_name'] ?? '') !== '' ? $r['display_name'] : ($r['name'] ?? ''));
-        $dev    = $html ? self::link('GlpiPlugin\\Opmanager\\Device', (int) ($r['id'] ?? 0), $device) : $device;
+        $dev    = $html ? self::link('GlpiPlugin\\Nms\\Device', (int) ($r['id'] ?? 0), $device) : $device;
         return match ($list) {
             'not_monitored' => [
                 $html ? self::link((string) $r['itemtype'], (int) $r['items_id'], (string) $r['name']) : (string) $r['name'],

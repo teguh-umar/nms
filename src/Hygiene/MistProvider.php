@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Hygiene;
+namespace GlpiPlugin\Nms\Hygiene;
 
 /**
  * Built-in provider: the suite plugin `mist` (Juniper Mist) for wireless devices

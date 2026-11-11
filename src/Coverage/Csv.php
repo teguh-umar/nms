@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Coverage;
+namespace GlpiPlugin\Nms\Coverage;
 
 /** Pure: Excel-friendly CSV (UTF-8 BOM, ';'), formula cells neutralised. */
 final class Csv

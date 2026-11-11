@@ -1,8 +1,8 @@
 <?php
 
-use GlpiPlugin\Opmanager\Config;
-use GlpiPlugin\Opmanager\RightDefinition;
-use GlpiPlugin\Opmanager\SuiteConfig;
+use GlpiPlugin\Nms\Config;
+use GlpiPlugin\Nms\RightDefinition;
+use GlpiPlugin\Nms\SuiteConfig;
 use GlpiPlugin\Pgnsuite\ConfigTab;
 
 include('../../../inc/includes.php');
@@ -36,7 +36,7 @@ if (isset($_POST['update'])) {
         Session::addMessageAfterRedirect(htmlescape($error), false, ERROR);
     }
     if ($result['errors'] === []) {
-        Session::addMessageAfterRedirect(__s('Settings saved', 'opmanager'));
+        Session::addMessageAfterRedirect(__s('Settings saved', 'nms'));
     }
 
     if (!empty($_POST[SuiteConfig::FROM_SUITE_FIELD])) {
@@ -51,7 +51,7 @@ if (Session::haveRight('config', READ)) {
 }
 
 // Standalone page for OpManager admins without core `config` READ. No menu entry.
-Html::header('OpManager', '', \GlpiPlugin\Pgnsuite\Menu::SECTOR, 'opmanager', 'device');
-\GlpiPlugin\Pgnsuite\Menu::renderSubNav('opmanager', 'device');
+Html::header('OpManager', '', \GlpiPlugin\Pgnsuite\Menu::SECTOR, 'nms', 'device');
+\GlpiPlugin\Pgnsuite\Menu::renderSubNav('nms', 'device');
 SuiteConfig::showForm();
 Html::footer();

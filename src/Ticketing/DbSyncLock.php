@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Ticketing;
+namespace GlpiPlugin\Nms\Ticketing;
 
 /**
  * MySQL named lock - held per connection, released explicitly or when the connection ends.

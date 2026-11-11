@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Hygiene;
+namespace GlpiPlugin\Nms\Hygiene;
 
 /**
  * TCP connect probe with a per-connection timeout and a total time budget per run

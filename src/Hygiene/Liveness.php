@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Hygiene;
+namespace GlpiPlugin\Nms\Hygiene;
 
 /**
  * Pure: turns raw facts into liveness evidence and combines evidence from every

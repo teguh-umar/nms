@@ -3,7 +3,7 @@
 require __DIR__ . '/bootstrap.php';
 require_once OPM_ROOT . '/src/RightDefinition.php';
 
-use GlpiPlugin\Opmanager\RightDefinition;
+use GlpiPlugin\Nms\RightDefinition;
 
 // Profile rights matrix: each right needs its own row label (prod showed two "Monitoring" rows).
 $labels = array_map([RightDefinition::class, 'label'], RightDefinition::names());

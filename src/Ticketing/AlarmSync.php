@@ -1,9 +1,9 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Ticketing;
+namespace GlpiPlugin\Nms\Ticketing;
 
-use GlpiPlugin\Opmanager\OpManager\AlarmSource;
-use GlpiPlugin\Opmanager\OpManager\ClientException;
+use GlpiPlugin\Nms\Driver\OpManager\AlarmSource;
+use GlpiPlugin\Nms\Driver\OpManager\ClientException;
 
 /**
  * One alarm poll (spec §7, D20). The active list is fetched BEFORE any write, so

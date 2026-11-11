@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager;
+namespace GlpiPlugin\Nms;
 
 /**
  * "Monitoring" section of the shared PGN Suite asset tab (hub §5, spec §9).
@@ -10,7 +10,7 @@ namespace GlpiPlugin\Opmanager;
 final class AssetSections
 {
     public const KEY      = 'monitoring';
-    public const ORDER    = 60;
+    public const ORDER = 65;
     public const MAX_ROWS = 20;
 
     /** @return list<array{key: string, title: string, icon: string, order: int, render: string}> */
@@ -30,7 +30,7 @@ final class AssetSections
         }
         return [[
             'key'    => self::KEY,
-            'title'  => __('Monitoring', 'opmanager'),
+            'title'  => __('Monitoring', 'nms'),
             'icon'   => 'ti ti-activity',
             'order'  => self::ORDER,
             'render' => self::class . '::render',
@@ -84,18 +84,18 @@ final class AssetSections
         if ($model['stale']) {
             $out .= '<div class="alert alert-warning">'
                 . htmlescape($model['last_sync'] === ''
-                    ? __('OpManager data has never been synced.', 'opmanager')
-                    : sprintf(__('OpManager data is older than %d minutes (last sync: %s).', 'opmanager'), $model['stale_minutes'], $model['last_sync']))
+                    ? __('OpManager data has never been synced.', 'nms')
+                    : sprintf(__('OpManager data is older than %d minutes (last sync: %s).', 'nms'), $model['stale_minutes'], $model['last_sync']))
                 . '</div>';
         }
 
-        $sources = ['name' => __('by name', 'opmanager'), 'ip' => __('by IP', 'opmanager'), 'manual' => __('manual pin', 'opmanager')];
+        $sources = ['name' => __('by name', 'nms'), 'ip' => __('by IP', 'nms'), 'manual' => __('manual pin', 'nms')];
         $out .= '<table class="table table-sm table-hover mb-2"><thead><tr>'
-            . '<th>' . __s('OpManager device', 'opmanager') . '</th>'
+            . '<th>' . __s('OpManager device', 'nms') . '</th>'
             . '<th>' . __s('IP address') . '</th>'
-            . '<th>' . __s('Availability', 'opmanager') . '</th>'
-            . '<th>' . __s('Last seen', 'opmanager') . '</th>'
-            . '<th>' . __s('Matched', 'opmanager') . '</th>'
+            . '<th>' . __s('Availability', 'nms') . '</th>'
+            . '<th>' . __s('Last seen', 'nms') . '</th>'
+            . '<th>' . __s('Matched', 'nms') . '</th>'
             . '</tr></thead><tbody>';
         foreach ($model['rows'] as $row) {
             $name = (string) (($row['display_name'] ?? '') !== '' ? $row['display_name'] : ($row['name'] ?? ''));
@@ -111,24 +111,24 @@ final class AssetSections
         $out .= '</tbody></table>';
 
         if ($model['total'] > count($model['rows'])) {
-            $out .= '<div class="text-muted">' . htmlescape(sprintf(__('Showing %d of %d', 'opmanager'), count($model['rows']), $model['total'])) . '</div>';
+            $out .= '<div class="text-muted">' . htmlescape(sprintf(__('Showing %d of %d', 'nms'), count($model['rows']), $model['total'])) . '</div>';
         }
 
         $alarms = $model['alarms'] ?? [];
         if ($alarms !== []) {
-            $out .= '<h4 class="mt-3">' . __s('OpManager alarms', 'opmanager') . '</h4>'
+            $out .= '<h4 class="mt-3">' . __s('OpManager alarms', 'nms') . '</h4>'
                 . '<table class="table table-sm table-hover mb-2"><thead><tr>'
-                . '<th>' . __s('Severity', 'opmanager') . '</th>'
-                . '<th>' . __s('Message', 'opmanager') . '</th>'
-                . '<th>' . __s('State', 'opmanager') . '</th>'
+                . '<th>' . __s('Severity', 'nms') . '</th>'
+                . '<th>' . __s('Message', 'nms') . '</th>'
+                . '<th>' . __s('State', 'nms') . '</th>'
                 . '<th>' . __s('Ticket') . '</th>'
-                . '<th>' . __s('Last change', 'opmanager') . '</th>'
+                . '<th>' . __s('Last change', 'nms') . '</th>'
                 . '</tr></thead><tbody>';
             foreach ($alarms as $a) {
                 $tid    = (int) ($a['tickets_id'] ?? 0);
                 $ticket = $tid > 0
                     ? '<a href="' . htmlescape(\Ticket::getFormURLWithID($tid)) . '">#' . $tid . '</a>'
-                    : (!empty($a['ticket_pending']) ? __s('pending', 'opmanager') : '-');
+                    : (!empty($a['ticket_pending']) ? __s('pending', 'nms') : '-');
                 $out .= '<tr data-opm-alarm="' . htmlescape((string) ($a['alarm_key'] ?? '')) . '">'
                     . '<td>' . htmlescape((string) ($a['severity_label'] ?? '')) . '</td>'
                     . '<td>' . htmlescape((string) ($a['message'] ?? '')) . '</td>'
@@ -139,7 +139,7 @@ final class AssetSections
             }
             $out .= '</tbody></table>';
             if ($model['alarms_total'] > count($alarms)) {
-                $out .= '<div class="text-muted">' . htmlescape(sprintf(__('Showing %d of %d alarms', 'opmanager'), count($alarms), $model['alarms_total'])) . '</div>';
+                $out .= '<div class="text-muted">' . htmlescape(sprintf(__('Showing %d of %d alarms', 'nms'), count($alarms), $model['alarms_total'])) . '</div>';
             }
         }
 

@@ -1,14 +1,14 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Hygiene;
+namespace GlpiPlugin\Nms\Hygiene;
 
 /** HygieneStore on the plugin's own tables (spec §8). Writes plugin tables only. */
 final class DbHygieneStore implements HygieneStore
 {
-    public const DEVICES    = 'glpi_plugin_opmanager_devices';
-    public const EXCEPTIONS = 'glpi_plugin_opmanager_deviceexceptions';
-    public const TICKETS    = 'glpi_plugin_opmanager_hygienetickets';
-    public const ITEMS      = 'glpi_plugin_opmanager_hygieneitems';
+    public const DEVICES    = 'glpi_plugin_nms_devices';
+    public const EXCEPTIONS = 'glpi_plugin_nms_deviceexceptions';
+    public const TICKETS    = 'glpi_plugin_nms_hygienetickets';
+    public const ITEMS      = 'glpi_plugin_nms_hygieneitems';
 
     public function devices(): array
     {
@@ -62,7 +62,7 @@ final class DbHygieneStore implements HygieneStore
     {
         global $DB;
         $out = [];
-        foreach ($DB->request(['FROM' => self::ITEMS, 'WHERE' => ['plugin_opmanager_hygienetickets_id' => $hygienetickets_id]]) as $row) {
+        foreach ($DB->request(['FROM' => self::ITEMS, 'WHERE' => ['plugin_nms_hygienetickets_id' => $hygienetickets_id]]) as $row) {
             $out[(string) $row['device_key']] = ['state' => (string) $row['hygiene_state'], 'resolved' => $row['resolved_at'] !== null];
         }
         return $out;
@@ -78,7 +78,7 @@ final class DbHygieneStore implements HygieneStore
     public function recordItems(int $hygienetickets_id, array $plan, string $now): void
     {
         global $DB;
-        $where = static fn (string $key): array => ['plugin_opmanager_hygienetickets_id' => $hygienetickets_id, 'device_key' => $key];
+        $where = static fn (string $key): array => ['plugin_nms_hygienetickets_id' => $hygienetickets_id, 'device_key' => $key];
         foreach ($plan['new'] as $key => $state) {
             $key = (string) $key;
             if ($DB->request(['SELECT' => ['id'], 'FROM' => self::ITEMS, 'WHERE' => $where($key)])->current()) {
@@ -119,7 +119,7 @@ final class DbHygieneStore implements HygieneStore
         foreach ($DB->request([
             'SELECT'     => ['t.tickets_id'],
             'FROM'       => self::ITEMS . ' AS i',
-            'INNER JOIN' => [self::TICKETS . ' AS t' => ['ON' => ['i' => 'plugin_opmanager_hygienetickets_id', 't' => 'id']]],
+            'INNER JOIN' => [self::TICKETS . ' AS t' => ['ON' => ['i' => 'plugin_nms_hygienetickets_id', 't' => 'id']]],
             'WHERE'      => ['i.device_key' => $device_key, 'i.resolved_at' => null],
         ]) as $row) {
             $ticket = new \Ticket();

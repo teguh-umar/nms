@@ -4,7 +4,7 @@ require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/Hygiene/Classifier.php';
 require OPM_ROOT . '/src/Hygiene/Report.php';
 
-use GlpiPlugin\Opmanager\Hygiene\Report;
+use GlpiPlugin\Nms\Hygiene\Report;
 
 $d = static fn (string $key, string $state, string $name = 'dev') => [
     'device_key' => $key, 'name' => $name, 'ip' => '10.0.0.1', 'category' => 'Server', 'availability' => 'UnManaged',

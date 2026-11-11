@@ -1,8 +1,8 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Ticketing;
+namespace GlpiPlugin\Nms\Ticketing;
 
-use GlpiPlugin\Opmanager\Matching\Matcher;
+use GlpiPlugin\Nms\Matching\Matcher;
 
 /**
  * An alarm's deviceName is not always in the device list (a VM under a VMware

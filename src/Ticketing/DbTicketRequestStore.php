@@ -1,13 +1,13 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Ticketing;
+namespace GlpiPlugin\Nms\Ticketing;
 
 /**
  * Spec §16.4: one row per alarm whose webhook was answered 202.
  */
 final class DbTicketRequestStore implements TicketRequestStore
 {
-    public const TABLE = 'glpi_plugin_opmanager_ticketrequests';
+    public const TABLE = 'glpi_plugin_nms_ticketrequests';
 
     public function record(string $alarm_key, string $entity_key): void
     {

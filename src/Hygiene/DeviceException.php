@@ -1,8 +1,8 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Hygiene;
+namespace GlpiPlugin\Nms\Hygiene;
 
-use GlpiPlugin\Opmanager\RightDefinition;
+use GlpiPlugin\Nms\RightDefinition;
 
 /**
  * Exclusion of one OpManager device from both hygiene tickets (spec §5). Reason
@@ -10,7 +10,7 @@ use GlpiPlugin\Opmanager\RightDefinition;
  */
 class DeviceException extends \CommonDBTM
 {
-    public const TABLE = 'glpi_plugin_opmanager_deviceexceptions';
+    public const TABLE = 'glpi_plugin_nms_deviceexceptions';
 
     public static $rightname = RightDefinition::HYGIENE;
 
@@ -21,7 +21,7 @@ class DeviceException extends \CommonDBTM
 
     public static function getTypeName($nb = 0)
     {
-        return _n('Hygiene exception', 'Hygiene exceptions', $nb, 'opmanager');
+        return _n('Hygiene exception', 'Hygiene exceptions', $nb, 'nms');
     }
 
     public static function canDelete(): bool
@@ -38,7 +38,7 @@ class DeviceException extends \CommonDBTM
     {
         $len = strlen(trim($reason));
         if ($len < 5 || $len > 1000) {
-            return __('Give a reason of 5 to 1000 characters', 'opmanager');
+            return __('Give a reason of 5 to 1000 characters', 'nms');
         }
         return null;
     }
@@ -52,10 +52,10 @@ class DeviceException extends \CommonDBTM
             return $error;
         }
         if ($device_key === '') {
-            return __('Unknown device', 'opmanager');
+            return __('Unknown device', 'nms');
         }
         if ($DB->request(['SELECT' => ['id'], 'FROM' => self::TABLE, 'WHERE' => ['device_key' => $device_key, 'is_active' => 1]])->current()) {
-            return __('This device is already excluded', 'opmanager');
+            return __('This device is already excluded', 'nms');
         }
         $id = (new self())->add([
             'device_key' => $device_key,
@@ -64,7 +64,7 @@ class DeviceException extends \CommonDBTM
             'is_active'  => 1,
         ]);
         if (!$id) {
-            return __('The exception could not be saved', 'opmanager');
+            return __('The exception could not be saved', 'nms');
         }
         $DB->update(DbHygieneStore::DEVICES, ['hygiene_state' => Classifier::EXCEPTED], ['device_key' => $device_key]);
         return null;

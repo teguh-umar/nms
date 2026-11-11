@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager;
+namespace GlpiPlugin\Nms;
 
 use Glpi\Asset\AssetDefinition;
 

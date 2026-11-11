@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Ticketing;
+namespace GlpiPlugin\Nms\Ticketing;
 
 /**
  * Reads the IP ranges of the "IP Addressing" plugin (Tools > IP Addressing,

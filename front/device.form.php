@@ -1,8 +1,8 @@
 <?php
 
-use GlpiPlugin\Opmanager\Device;
-use GlpiPlugin\Opmanager\Hygiene\DeviceException;
-use GlpiPlugin\Opmanager\RightDefinition;
+use GlpiPlugin\Nms\Device;
+use GlpiPlugin\Nms\Hygiene\DeviceException;
+use GlpiPlugin\Nms\RightDefinition;
 
 include('../../../inc/includes.php');
 
@@ -14,7 +14,7 @@ if (isset($_POST['pin'])) {
     if ($error !== null) {
         Session::addMessageAfterRedirect(htmlescape($error), false, ERROR);
     } else {
-        Session::addMessageAfterRedirect(__s('Device pinned to the asset', 'opmanager'));
+        Session::addMessageAfterRedirect(__s('Device pinned to the asset', 'nms'));
     }
     Html::back();
 }
@@ -22,7 +22,7 @@ if (isset($_POST['pin'])) {
 if (isset($_POST['unpin'])) {
     Session::checkRight(RightDefinition::CONFIG, UPDATE);
     $device->unpin((int) $_POST['id']);
-    Session::addMessageAfterRedirect(__s('Manual pin removed; the next device sync matches it automatically', 'opmanager'));
+    Session::addMessageAfterRedirect(__s('Manual pin removed; the next device sync matches it automatically', 'nms'));
     Html::back();
 }
 
@@ -38,10 +38,10 @@ if (isset($_POST['except']) || isset($_POST['unexcept'])) {
         if ($error !== null) {
             Session::addMessageAfterRedirect(htmlescape($error), false, ERROR);
         } else {
-            Session::addMessageAfterRedirect(__s('Device excluded from hygiene tickets', 'opmanager'));
+            Session::addMessageAfterRedirect(__s('Device excluded from hygiene tickets', 'nms'));
         }
     } elseif (DeviceException::revoke($key, (int) Session::getLoginUserID())) {
-        Session::addMessageAfterRedirect(__s('Exclusion cancelled; the next hygiene run classifies the device again', 'opmanager'));
+        Session::addMessageAfterRedirect(__s('Exclusion cancelled; the next hygiene run classifies the device again', 'nms'));
     }
     Html::back();
 }
@@ -54,5 +54,5 @@ if ($id <= 0) {
     Html::redirect(Device::getSearchURL());
 }
 
-$menus = ['central' => [\GlpiPlugin\Pgnsuite\Menu::SECTOR, 'opmanager', 'device'], 'helpdesk' => []];
+$menus = ['central' => [\GlpiPlugin\Pgnsuite\Menu::SECTOR, 'nms', 'device'], 'helpdesk' => []];
 Device::displayFullPageForItem($id, $menus, []);

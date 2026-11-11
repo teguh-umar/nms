@@ -1,9 +1,9 @@
 <?php
 
-namespace GlpiPlugin\Opmanager;
+namespace GlpiPlugin\Nms;
 
-use GlpiPlugin\Opmanager\Matching\Matcher;
-use GlpiPlugin\Opmanager\OpManager\DeviceSource;
+use GlpiPlugin\Nms\Matching\Matcher;
+use GlpiPlugin\Nms\Driver\OpManager\DeviceSource;
 
 /**
  * One device-sync pass. Fetches the whole list BEFORE writing anything, so a

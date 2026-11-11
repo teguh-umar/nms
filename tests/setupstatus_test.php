@@ -3,7 +3,7 @@
 require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/SetupStatus.php';
 
-use GlpiPlugin\Opmanager\SetupStatus;
+use GlpiPlugin\Nms\SetupStatus;
 
 $now  = '2026-10-02 12:00:00';
 $good = ['api_key_set' => true, 'last_device_sync' => '2026-10-02 11:30:00', 'last_device_sync_error' => '', 'stale_minutes' => 90,

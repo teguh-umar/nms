@@ -1,10 +1,10 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Outbound;
+namespace GlpiPlugin\Nms\Outbound;
 
 final class DbOutboxStore implements OutboxStore
 {
-    public const TABLE = 'glpi_plugin_opmanager_outbox';
+    public const TABLE = 'glpi_plugin_nms_outbox';
 
     public function enqueue(array $row, string $now): void
     {

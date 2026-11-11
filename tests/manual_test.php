@@ -3,10 +3,10 @@
 require __DIR__ . '/bootstrap.php';
 require_once OPM_ROOT . '/src/Manual.php';
 
-use GlpiPlugin\Opmanager\Manual;
+use GlpiPlugin\Nms\Manual;
 
-preg_match("/PLUGIN_OPMANAGER_VERSION',\s*'([^']+)'/", (string) file_get_contents(OPM_ROOT . '/setup.php'), $vm);
-define('PLUGIN_OPMANAGER_VERSION_UNDER_TEST', $vm[1] ?? '');
+preg_match("/PLUGIN_NMS_VERSION',\s*'([^']+)'/", (string) file_get_contents(OPM_ROOT . '/setup.php'), $vm);
+define('PLUGIN_NMS_VERSION_UNDER_TEST', $vm[1] ?? '');
 
 // rc4, suite rule 2026-11-09 (hub §4 "links its user manual"); reference integrasipaman v4.15.0-rc1.
 check('manual path is docs/manual.md', str_ends_with(str_replace('\\', '/', Manual::path()), '/docs/manual.md'));
@@ -33,7 +33,7 @@ check('unknown manual version never lags', !Manual::lags('', '1.3.0'));
 $shipped = Manual::read();
 check('docs/manual.md ships (1.3.1)', $shipped !== null);
 check('shipped manual documents 1.3.1', Manual::versionOf((string) $shipped) === '1.3.1');
-check('shipped manual does not lag the plugin version', !Manual::lags(Manual::versionOf((string) $shipped), PLUGIN_OPMANAGER_VERSION_UNDER_TEST));
+check('shipped manual does not lag the plugin version', !Manual::lags(Manual::versionOf((string) $shipped), PLUGIN_NMS_VERSION_UNDER_TEST));
 check('shipped manual is Copilot\'s suite copy, byte for byte', is_file(dirname(OPM_ROOT, 2) . '/docs/manual/opmanager.md') === false
     || hash_file('sha256', dirname(OPM_ROOT, 2) . '/docs/manual/opmanager.md') === hash_file('sha256', Manual::path()));
 
@@ -51,9 +51,9 @@ check('fallback render escapes HTML', !str_contains($x, '<script>') && str_conta
 
 $page = (string) file_get_contents(OPM_ROOT . '/front/manual.php');
 check('page needs the monitoring (view) right', str_contains($page, 'Session::checkRight(RightDefinition::MONITORING, READ);'));
-check('page in the shared sector with its sub-nav', str_contains($page, "\\GlpiPlugin\\Pgnsuite\\Menu::SECTOR, 'opmanager', 'manual');")
-    && str_contains($page, "\\GlpiPlugin\\Pgnsuite\\Menu::renderSubNav('opmanager', 'manual');"));
-check('page renders Manual::body with the plugin version', str_contains($page, 'Manual::body(Manual::read(), PLUGIN_OPMANAGER_VERSION)'));
+check('page in the shared sector with its sub-nav', str_contains($page, "\\GlpiPlugin\\Pgnsuite\\Menu::SECTOR, 'nms', 'manual');")
+    && str_contains($page, "\\GlpiPlugin\\Pgnsuite\\Menu::renderSubNav('nms', 'manual');"));
+check('page renders Manual::body with the plugin version', str_contains($page, 'Manual::body(Manual::read(), PLUGIN_NMS_VERSION)'));
 
 $menu = (string) file_get_contents(OPM_ROOT . '/src/Menu.php');
 check('menu option manual with ti ti-book', (bool) preg_match("/'manual'\s*=> \[[^\]]*'icon'\s*=> 'ti ti-book'/s", $menu) && str_contains($menu, "'/plugins/opmanager/front/manual.php'"));

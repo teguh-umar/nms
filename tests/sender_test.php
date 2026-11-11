@@ -5,10 +5,10 @@ foreach (['OpManager/ClientException', 'OpManager/AlarmWriter', 'Outbound/Outbox
     require OPM_ROOT . "/src/{$f}.php";
 }
 
-use GlpiPlugin\Opmanager\OpManager\AlarmWriter;
-use GlpiPlugin\Opmanager\OpManager\ClientException;
-use GlpiPlugin\Opmanager\Outbound\OutboxStore;
-use GlpiPlugin\Opmanager\Outbound\Sender;
+use GlpiPlugin\Nms\Driver\OpManager\AlarmWriter;
+use GlpiPlugin\Nms\Driver\OpManager\ClientException;
+use GlpiPlugin\Nms\Outbound\OutboxStore;
+use GlpiPlugin\Nms\Outbound\Sender;
 
 final class Box implements OutboxStore
 {

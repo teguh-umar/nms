@@ -5,14 +5,14 @@
  * CSV export of a whole list.
  */
 
-use GlpiPlugin\Opmanager\Config;
-use GlpiPlugin\Opmanager\Coverage\Csv;
-use GlpiPlugin\Opmanager\Coverage\DbCoverageSource;
-use GlpiPlugin\Opmanager\Coverage\Page;
-use GlpiPlugin\Opmanager\Coverage\Report;
-use GlpiPlugin\Opmanager\Coverage\View;
-use GlpiPlugin\Opmanager\RightDefinition;
-use GlpiPlugin\Opmanager\Ticketing\AddressingRanges;
+use GlpiPlugin\Nms\Config;
+use GlpiPlugin\Nms\Coverage\Csv;
+use GlpiPlugin\Nms\Coverage\DbCoverageSource;
+use GlpiPlugin\Nms\Coverage\Page;
+use GlpiPlugin\Nms\Coverage\Report;
+use GlpiPlugin\Nms\Coverage\View;
+use GlpiPlugin\Nms\RightDefinition;
+use GlpiPlugin\Nms\Ticketing\AddressingRanges;
 
 Session::checkRight(RightDefinition::MONITORING, READ);
 
@@ -41,7 +41,7 @@ if (($_GET['export'] ?? '') === 'csv') {
     return;
 }
 
-Html::header(Page::getTypeName(), '', \GlpiPlugin\Pgnsuite\Menu::SECTOR, 'opmanager', 'coverage');
-\GlpiPlugin\Pgnsuite\Menu::renderSubNav('opmanager', 'coverage');
+Html::header(Page::getTypeName(), '', \GlpiPlugin\Pgnsuite\Menu::SECTOR, 'nms', 'coverage');
+\GlpiPlugin\Pgnsuite\Menu::renderSubNav('nms', 'coverage');
 echo View::render($report, $state, Page::getSearchURL(false));
 Html::footer();

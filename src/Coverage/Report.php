@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Coverage;
+namespace GlpiPlugin\Nms\Coverage;
 
 /** Pure: OpManager devices vs GLPI assets (spec §15.1). */
 final class Report

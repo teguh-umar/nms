@@ -7,9 +7,9 @@ foreach (['Classifier', 'Cidr', 'Liveness', 'Providers', 'TicketPlanner', 'Repor
     require OPM_ROOT . "/src/Hygiene/{$c}.php";
 }
 
-use GlpiPlugin\Opmanager\Hygiene\HygieneGateway;
-use GlpiPlugin\Opmanager\Hygiene\HygieneRun;
-use GlpiPlugin\Opmanager\Hygiene\HygieneStore;
+use GlpiPlugin\Nms\Hygiene\HygieneGateway;
+use GlpiPlugin\Nms\Hygiene\HygieneRun;
+use GlpiPlugin\Nms\Hygiene\HygieneStore;
 
 final class MemStore implements HygieneStore
 {

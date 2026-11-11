@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Ticketing;
+namespace GlpiPlugin\Nms\Ticketing;
 
 /** Plain-text followup / solution texts. The gateway escapes them into HTML. */
 final class Messages

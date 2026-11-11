@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\OpManager;
+namespace GlpiPlugin\Nms\Driver\OpManager;
 
 /**
  * Shared handling of OpManager JSON responses. OpManager reports failures as

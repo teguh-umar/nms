@@ -5,9 +5,9 @@ foreach (['ClientException', 'ResponseGuard', 'DeviceSource', 'AlarmSource', 'De
     require OPM_ROOT . "/src/OpManager/{$f}.php";
 }
 
-use GlpiPlugin\Opmanager\OpManager\Client;
-use GlpiPlugin\Opmanager\OpManager\ClientException;
-use GlpiPlugin\Opmanager\OpManager\DeviceParser;
+use GlpiPlugin\Nms\Driver\OpManager\Client;
+use GlpiPlugin\Nms\Driver\OpManager\ClientException;
+use GlpiPlugin\Nms\Driver\OpManager\DeviceParser;
 
 $list = '[{"deviceName":"10.20.1.1","displayName":"core-sw-01","ipaddress":"10.20.1.1","type":"Cisco 9300","category":"Switch","statusStr":"Clear"},'
       . '{"displayName":"no-key"},'
@@ -128,6 +128,6 @@ $again = new Client('https://opm', 'S3CRET', true, fn () => ['status' => 200, 'b
 $ok = true;
 try { $again->acknowledgeAlarm('E'); } catch (ClientException $e) { $ok = false; }
 check('repeat acknowledge is not a failure', $ok);
-check('client is an AlarmWriter', $writer instanceof \GlpiPlugin\Opmanager\OpManager\AlarmWriter);
+check('client is an AlarmWriter', $writer instanceof \GlpiPlugin\Nms\Driver\OpManager\AlarmWriter);
 
 done();

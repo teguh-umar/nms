@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Matching;
+namespace GlpiPlugin\Nms\Matching;
 
 interface AssetLookup
 {

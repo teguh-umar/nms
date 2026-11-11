@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Hygiene;
+namespace GlpiPlugin\Nms\Hygiene;
 
 /** Built-in provider: TCP probe, only inside the configured reachable CIDRs (spec §3). */
 final class ProbeProvider

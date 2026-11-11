@@ -3,7 +3,7 @@
 require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/Hygiene/TcpProber.php';
 
-use GlpiPlugin\Opmanager\Hygiene\TcpProber;
+use GlpiPlugin\Nms\Hygiene\TcpProber;
 
 $server = stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
 check('test server started', $server !== false, (string) $errstr);

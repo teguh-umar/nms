@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\OpManager;
+namespace GlpiPlugin\Nms\Driver\OpManager;
 
 /**
  * OpManager listAlarms response -> normalised rows. Field names verified on

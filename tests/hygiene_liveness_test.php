@@ -3,7 +3,7 @@
 require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/Hygiene/Liveness.php';
 
-use GlpiPlugin\Opmanager\Hygiene\Liveness as L;
+use GlpiPlugin\Nms\Hygiene\Liveness as L;
 
 $now = '2026-11-06 12:00:00';
 

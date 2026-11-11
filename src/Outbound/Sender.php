@@ -1,9 +1,9 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Outbound;
+namespace GlpiPlugin\Nms\Outbound;
 
-use GlpiPlugin\Opmanager\OpManager\AlarmWriter;
-use GlpiPlugin\Opmanager\OpManager\ClientException;
+use GlpiPlugin\Nms\Driver\OpManager\AlarmWriter;
+use GlpiPlugin\Nms\Driver\OpManager\ClientException;
 
 /**
  * Sends queued notes/clears oldest first. Per alarm the order is kept: once a row of an

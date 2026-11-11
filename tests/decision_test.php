@@ -4,8 +4,8 @@ require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/Ticketing/Decision.php';
 require OPM_ROOT . '/src/Ticketing/Messages.php';
 
-use GlpiPlugin\Opmanager\Ticketing\Decision as D;
-use GlpiPlugin\Opmanager\Ticketing\Messages;
+use GlpiPlugin\Nms\Ticketing\Decision as D;
+use GlpiPlugin\Nms\Ticketing\Messages;
 
 $base = ['severity' => 1, 'message' => 'Device down', 'is_clear' => false, 'existing' => null, 'ticket_status' => null,
          'ticketable' => true, 'device_open_ticket' => 0, 'storm_ticket' => 0, 'storm_should_start' => false, 'message_followup_due' => true];

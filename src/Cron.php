@@ -1,38 +1,38 @@
 <?php
 
-namespace GlpiPlugin\Opmanager;
+namespace GlpiPlugin\Nms;
 
-use GlpiPlugin\Opmanager\Matching\DbAssetLookup;
-use GlpiPlugin\Opmanager\Matching\Matcher;
-use GlpiPlugin\Opmanager\OpManager\Client;
-use GlpiPlugin\Opmanager\OpManager\ClientException;
-use GlpiPlugin\Opmanager\Outbound\DbOutboxStore;
-use GlpiPlugin\Opmanager\Outbound\Hooks;
-use GlpiPlugin\Opmanager\Outbound\Sender;
-use GlpiPlugin\Opmanager\Ticketing\AddressingRanges;
-use GlpiPlugin\Opmanager\Ticketing\AlarmAssetResolver;
-use GlpiPlugin\Opmanager\Ticketing\AlarmSync;
-use GlpiPlugin\Opmanager\Ticketing\DbAlarmStore;
-use GlpiPlugin\Opmanager\Ticketing\DbDeviceIndex;
-use GlpiPlugin\Opmanager\Ticketing\DbSyncLock;
-use GlpiPlugin\Opmanager\Ticketing\DbTicketRequestStore;
-use GlpiPlugin\Opmanager\Ticketing\GlpiTicketGateway;
-use GlpiPlugin\Opmanager\Ticketing\RangeProductionCheck;
+use GlpiPlugin\Nms\Matching\DbAssetLookup;
+use GlpiPlugin\Nms\Matching\Matcher;
+use GlpiPlugin\Nms\Driver\OpManager\Client;
+use GlpiPlugin\Nms\Driver\OpManager\ClientException;
+use GlpiPlugin\Nms\Outbound\DbOutboxStore;
+use GlpiPlugin\Nms\Outbound\Hooks;
+use GlpiPlugin\Nms\Outbound\Sender;
+use GlpiPlugin\Nms\Ticketing\AddressingRanges;
+use GlpiPlugin\Nms\Ticketing\AlarmAssetResolver;
+use GlpiPlugin\Nms\Ticketing\AlarmSync;
+use GlpiPlugin\Nms\Ticketing\DbAlarmStore;
+use GlpiPlugin\Nms\Ticketing\DbDeviceIndex;
+use GlpiPlugin\Nms\Ticketing\DbSyncLock;
+use GlpiPlugin\Nms\Ticketing\DbTicketRequestStore;
+use GlpiPlugin\Nms\Ticketing\GlpiTicketGateway;
+use GlpiPlugin\Nms\Ticketing\RangeProductionCheck;
 
 final class Cron extends \CommonGLPI
 {
     public static function getTypeName($nb = 0)
     {
-        return 'OpManager';
+        return 'NMS Integration';
     }
 
     public static function cronInfo($name)
     {
         return match ($name) {
-            'DeviceSync' => ['description' => __('Sync OpManager devices and match them to GLPI assets', 'opmanager')],
-            'AlarmSync'  => ['description' => __('Pull active OpManager alarms and create/update tickets', 'opmanager')],
-            'OutboxSend' => ['description' => __('Send queued notes and clears to OpManager', 'opmanager')],
-            'HygieneCheck' => ['description' => __('NMS hygiene: liveness of unmanaged devices, classification, weekly tickets', 'opmanager')],
+            'DeviceSync' => ['description' => __('Sync OpManager devices and match them to GLPI assets', 'nms')],
+            'AlarmSync'  => ['description' => __('Pull active OpManager alarms and create/update tickets', 'nms')],
+            'OutboxSend' => ['description' => __('Send queued notes and clears to OpManager', 'nms')],
+            'HygieneCheck' => ['description' => __('NMS hygiene: liveness of unmanaged devices, classification, weekly tickets', 'nms')],
             default      => [],
         };
     }
@@ -49,7 +49,7 @@ final class Cron extends \CommonGLPI
         $status = DeviceSync::statusMessage($missing);
         if ($status !== '') {
             $task->log($status);
-            \Toolbox::logInFile('opmanager', 'DeviceSync: ' . $status . "\n");
+            \Toolbox::logInFile('nms', 'DeviceSync: ' . $status . "\n");
         }
 
         try {
@@ -57,7 +57,7 @@ final class Cron extends \CommonGLPI
             $stats  = DeviceSync::run($client, new DbDeviceStore(), new Matcher($lookup), Config::get('match_mode'), $now, $missing === []);
         } catch (ClientException $e) {
             Config::set(['last_device_sync_error' => $e->getMessage()]);
-            \Toolbox::logInFile('opmanager', 'DeviceSync: ' . $e->getMessage() . "\n");
+            \Toolbox::logInFile('nms', 'DeviceSync: ' . $e->getMessage() . "\n");
             $task->log($e->getMessage());
             return 0;
         }
@@ -113,7 +113,7 @@ final class Cron extends \CommonGLPI
             }
         } catch (ClientException $e) {
             Config::set(['last_alarm_sync_error' => $e->getMessage()]);
-            \Toolbox::logInFile('opmanager', 'AlarmSync: ' . $e->getMessage() . "\n");
+            \Toolbox::logInFile('nms', 'AlarmSync: ' . $e->getMessage() . "\n");
             $task->log($e->getMessage());
             return 0;
         }
@@ -128,7 +128,7 @@ final class Cron extends \CommonGLPI
             $problems[] = sprintf('%d alarm ticket(s) could not be created (see files/_log/opmanager.log); retried next run', $stats['pending']);
         }
         foreach ($sync->lastErrors() as $error) {
-            \Toolbox::logInFile('opmanager', 'AlarmSync: ' . $error . "\n");
+            \Toolbox::logInFile('nms', 'AlarmSync: ' . $error . "\n");
         }
         if ($stats['errors'] > 0) {
             $problems[] = sprintf('%d alarm(s) failed: %s', $stats['errors'], implode('; ', array_slice($sync->lastErrors(), 0, 3)));
@@ -155,10 +155,10 @@ final class Cron extends \CommonGLPI
             return 0;
         }
 
-        $run = new \GlpiPlugin\Opmanager\Hygiene\HygieneRun(
-            new \GlpiPlugin\Opmanager\Hygiene\DbHygieneStore(),
-            \GlpiPlugin\Opmanager\Hygiene\Providers::all($cfg),
-            new \GlpiPlugin\Opmanager\Hygiene\GlpiHygieneGateway([
+        $run = new \GlpiPlugin\Nms\Hygiene\HygieneRun(
+            new \GlpiPlugin\Nms\Hygiene\DbHygieneStore(),
+            \GlpiPlugin\Nms\Hygiene\Providers::all($cfg),
+            new \GlpiPlugin\Nms\Hygiene\GlpiHygieneGateway([
                 'service_user'   => $tcf['service_user'],
                 'entity_default' => $tcf['entity_default'],
                 'itil_category'  => $cfg['itil_category'],
@@ -176,7 +176,7 @@ final class Cron extends \CommonGLPI
         $stats = $run->run($now, $due);
 
         foreach ($stats['errors'] as $error) {
-            \Toolbox::logInFile('opmanager', 'HygieneCheck: ' . $error . "\n");
+            \Toolbox::logInFile('nms', 'HygieneCheck: ' . $error . "\n");
         }
         $values = ['last_hygiene_run' => $now, 'last_hygiene_error' => substr(implode(' | ', $stats['errors']), 0, 1000)];
         // Review Focus 4: a failed ticket run is retried tomorrow, not in a week; a broken

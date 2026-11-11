@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Hygiene;
+namespace GlpiPlugin\Nms\Hygiene;
 
 /** Built-in provider: last contact of the GLPI agent of the matched asset (spec §3). */
 final class AgentProvider

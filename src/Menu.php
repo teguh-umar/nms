@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager;
+namespace GlpiPlugin\Nms;
 
 use Session;
 
@@ -11,6 +11,8 @@ use Session;
  */
 class Menu
 {
+    public const ORDER = 65;
+
     /** Provider for \GlpiPlugin\Pgnsuite\Menu::HOOK; null hides the entry. */
     public static function entry(): ?array
     {
@@ -18,10 +20,10 @@ class Menu
             return null;
         }
         return [
-            'title'   => 'OpManager',
+            'title'   => 'NMS Integration',
             'icon'    => 'ti ti-activity',
             'page'    => Device::getSearchURL(false),
-            'order'   => 60,
+            'order'   => self::ORDER,
             'options' => [
                 'device'   => [
                     'title'          => Device::getTypeName(2),
@@ -38,13 +40,13 @@ class Menu
                     'lists_itemtype' => Alarm::class,
                 ],
                 'coverage' => [
-                    'title' => \GlpiPlugin\Opmanager\Coverage\Page::getTypeName(),
-                    'page'  => \GlpiPlugin\Opmanager\Coverage\Page::getSearchURL(false),
-                    'icon'  => \GlpiPlugin\Opmanager\Coverage\Page::getIcon(),
+                    'title' => \GlpiPlugin\Nms\Coverage\Page::getTypeName(),
+                    'page'  => \GlpiPlugin\Nms\Coverage\Page::getSearchURL(false),
+                    'icon'  => \GlpiPlugin\Nms\Coverage\Page::getIcon(),
                 ],
                 // v1.3.0-rc4: the user manual (suite rule 2026-11-09).
                 'manual'   => [
-                    'title' => __('Manual', 'opmanager'),
+                    'title' => __('Manual', 'nms'),
                     'page'  => '/plugins/opmanager/front/manual.php',
                     'icon'  => 'ti ti-book',
                 ],

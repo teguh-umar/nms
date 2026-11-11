@@ -1,10 +1,10 @@
 <?php
 
-namespace GlpiPlugin\Opmanager;
+namespace GlpiPlugin\Nms;
 
 final class Config
 {
-    public const CONTEXT = 'plugin:opmanager';
+    public const CONTEXT = 'plugin:nms';
 
     /**
      * Every accepted match mode, in dropdown order. The ONLY list: the dropdown,
@@ -164,11 +164,11 @@ final class Config
     public static function matchModeLabels(): array
     {
         return [
-            'ip_only'     => __('IP only', 'opmanager'),
-            'name_only'   => __('Name only', 'opmanager'),
-            'hybrid'      => __('Hybrid - IP first, then name', 'opmanager'),
-            'hybrid_name' => __('Hybrid - name first, then IP', 'opmanager'),
-            'manual'      => __('Manual only - no automatic matching', 'opmanager'),
+            'ip_only'     => __('IP only', 'nms'),
+            'name_only'   => __('Name only', 'nms'),
+            'hybrid'      => __('Hybrid - IP first, then name', 'nms'),
+            'hybrid_name' => __('Hybrid - name first, then IP', 'nms'),
+            'manual'      => __('Manual only - no automatic matching', 'nms'),
         ];
     }
 
@@ -189,7 +189,7 @@ final class Config
         if ($url === '' || preg_match('#^https?://[^\s/]+(/[^\s]*)?$#i', $url) === 1) {
             $values['opm_url'] = rtrim($url, '/');
         } else {
-            $errors[] = __('OpManager URL must start with http:// or https://', 'opmanager');
+            $errors[] = __('OpManager URL must start with http:// or https://', 'nms');
         }
 
         if (!empty($post['opm_api_key_clear'])) {
@@ -207,7 +207,7 @@ final class Config
         if (in_array($mode, self::MATCH_MODES, true)) {
             $values['match_mode'] = $mode;
         } else {
-            $errors[] = __('Unknown match mode', 'opmanager');
+            $errors[] = __('Unknown match mode', 'nms');
         }
 
         $posted = array_filter((array) ($post['asset_itemtypes'] ?? []), 'is_string');
@@ -217,7 +217,7 @@ final class Config
         if ($stale >= 5 && $stale <= 1440) {
             $values['stale_warning_minutes'] = (string) $stale;
         } else {
-            $errors[] = __('Stale warning must be between 5 and 1440 minutes', 'opmanager');
+            $errors[] = __('Stale warning must be between 5 and 1440 minutes', 'nms');
         }
 
         // Coverage page (D28): GLPI states counted as "in use"; [] = every state.
@@ -255,7 +255,7 @@ final class Config
         foreach (['ticket_title_pattern' => 250, 'ticket_content_pattern' => 5000] as $key => $max) {
             $v = trim(self::normaliseLines((string) ($post[$key] ?? '')));
             if ($v === '' || strlen($v) > $max) {
-                $errors[] = sprintf(__('%s must be 1 to %d characters', 'opmanager'), $key, $max);
+                $errors[] = sprintf(__('%s must be 1 to %d characters', 'nms'), $key, $max);
             } else {
                 $values[$key] = $v;
             }
@@ -278,7 +278,7 @@ final class Config
         $values['ticket_filter_event_types'] = (string) json_encode(array_keys($types));
         $keywords = implode("\n", self::lines((string) ($post['ticket_filter_keywords'] ?? '')));
         if (strlen($keywords) > self::FILTER_KEYWORDS_MAX) {
-            $errors[] = sprintf(__('%s must be at most %d characters', 'opmanager'), 'ticket_filter_keywords', self::FILTER_KEYWORDS_MAX);
+            $errors[] = sprintf(__('%s must be at most %d characters', 'nms'), 'ticket_filter_keywords', self::FILTER_KEYWORDS_MAX);
         } else {
             $values['ticket_filter_keywords'] = $keywords;
         }
@@ -286,7 +286,7 @@ final class Config
         foreach (['relink_window_hours' => [0, 720], 'storm_threshold' => [0, 1000], 'storm_window_minutes' => [1, 120], 'outbound_max_attempts' => [1, 50]] as $key => [$min, $max]) {
             $n = (int) ($post[$key] ?? -1);
             if ($n < $min || $n > $max) {
-                $errors[] = sprintf(__('%s must be between %d and %d', 'opmanager'), $key, $min, $max);
+                $errors[] = sprintf(__('%s must be between %d and %d', 'nms'), $key, $min, $max);
             } else {
                 $values[$key] = (string) $n;
             }
@@ -309,7 +309,7 @@ final class Config
         foreach (['hygiene_frequency_days' => [1, 90], 'hygiene_agent_stale_days' => [1, 365], 'hygiene_mist_stale_days' => [1, 365], 'hygiene_probe_timeout_ms' => [100, 5000]] as $key => [$min, $max]) {
             $n = (int) ($post[$key] ?? -1);
             if ($n < $min || $n > $max) {
-                $errors[] = sprintf(__('%s must be between %d and %d', 'opmanager'), $key, $min, $max);
+                $errors[] = sprintf(__('%s must be between %d and %d', 'nms'), $key, $min, $max);
             } else {
                 $values[$key] = (string) $n;
             }
@@ -317,7 +317,7 @@ final class Config
 
         $unmanaged = self::lines((string) ($post['hygiene_unmanaged_availabilities'] ?? ''));
         if ($unmanaged === []) {
-            $errors[] = __('List at least one OpManager availability that means "not monitored"', 'opmanager');
+            $errors[] = __('List at least one OpManager availability that means "not monitored"', 'nms');
         } else {
             $values['hygiene_unmanaged_availabilities'] = (string) json_encode($unmanaged);
         }
@@ -325,7 +325,7 @@ final class Config
         $cidrs = self::lines((string) ($post['hygiene_probe_cidrs'] ?? ''));
         $bad   = array_values(array_filter($cidrs, static fn (string $c): bool => !Hygiene\Cidr::isValid($c)));
         if ($bad !== []) {
-            $errors[] = sprintf(__('Invalid IPv4 CIDR: %s', 'opmanager'), implode(', ', $bad));
+            $errors[] = sprintf(__('Invalid IPv4 CIDR: %s', 'nms'), implode(', ', $bad));
         } else {
             $values['hygiene_probe_cidrs'] = (string) json_encode($cidrs, JSON_UNESCAPED_SLASHES);
         }
@@ -340,7 +340,7 @@ final class Config
             $ports[(int) $p] = true;
         }
         if (!$ok || count($ports) > 10) {
-            $errors[] = __('Probe ports: up to 10 TCP ports between 1 and 65535', 'opmanager');
+            $errors[] = __('Probe ports: up to 10 TCP ports between 1 and 65535', 'nms');
         } else {
             $values['hygiene_probe_tcp_ports'] = (string) json_encode(array_keys($ports));
         }
@@ -358,7 +358,7 @@ final class Config
         $enabled = !empty($post['hygiene_enabled']);
         // rc7 (option A): the asset technician(s) own the "not in GLPI" ticket; the groups only watch it.
         if ($enabled && ($users === [] || $values['hygiene_nms_group'] === '0')) {
-            $errors[] = __('NMS hygiene tickets need at least one asset technician and the NMS team group; tickets stay off', 'opmanager');
+            $errors[] = __('NMS hygiene tickets need at least one asset technician and the NMS team group; tickets stay off', 'nms');
             $enabled  = false;
         }
         $values['hygiene_enabled'] = $enabled ? '1' : '0';

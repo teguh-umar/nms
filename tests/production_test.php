@@ -4,7 +4,7 @@ require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/Ticketing/ProductionCheck.php';
 require OPM_ROOT . '/src/Ticketing/RangeProductionCheck.php';
 
-use GlpiPlugin\Opmanager\Ticketing\RangeProductionCheck;
+use GlpiPlugin\Nms\Ticketing\RangeProductionCheck;
 
 // Rows as stored by the IP Addressing plugin (glpi_plugin_addressing_addressings), production screenshot 2026-09-30.
 $rows = [

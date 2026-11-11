@@ -5,8 +5,8 @@ foreach (['ClientException', 'ResponseGuard', 'AlarmParser'] as $f) {
     require OPM_ROOT . "/src/OpManager/{$f}.php";
 }
 
-use GlpiPlugin\Opmanager\OpManager\AlarmParser;
-use GlpiPlugin\Opmanager\OpManager\ClientException;
+use GlpiPlugin\Nms\Driver\OpManager\AlarmParser;
+use GlpiPlugin\Nms\Driver\OpManager\ClientException;
 
 // Shape captured on production 2026-09-30 (spec §14).
 $row = [

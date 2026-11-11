@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager;
+namespace GlpiPlugin\Nms;
 
 /**
  * Pure plan for which profile rights to write on install/upgrade (hub §4):

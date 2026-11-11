@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Ticketing;
+namespace GlpiPlugin\Nms\Ticketing;
 
 /**
  * Pure decision for one alarm (spec §7, D3/D6/D12/D20). Rules, first match wins:

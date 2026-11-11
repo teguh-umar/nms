@@ -3,8 +3,8 @@
 require __DIR__ . '/bootstrap.php';
 
 $setup = (string) file_get_contents(OPM_ROOT . '/setup.php');
-check('stateless path registered in plugin_opmanager_boot', (bool) preg_match('/function plugin_opmanager_boot\(\).*?registerPluginStatelessPath\(\'opmanager\', \'#\^\/front\/webhook\\\\\.php\$#\'\)/s', $setup));
-check('not registered in plugin_init (too late)', !preg_match('/function plugin_init_opmanager\(\).*?registerPluginStatelessPath/s', $setup));
+check('stateless path registered in plugin_nms_boot', (bool) preg_match('/function plugin_nms_boot\(\).*?registerPluginStatelessPath\(\'nms\', \'#\^\/front\/webhook\\\\\.php\$#\'\)/s', $setup));
+check('not registered in plugin_init (too late)', !preg_match('/function plugin_init_nms\(\).*?registerPluginStatelessPath/s', $setup));
 
 $hook = (string) @file_get_contents(OPM_ROOT . '/front/webhook.php');
 $cfg  = (string) file_get_contents(OPM_ROOT . '/front/config.php');

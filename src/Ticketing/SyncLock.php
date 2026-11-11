@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Ticketing;
+namespace GlpiPlugin\Nms\Ticketing;
 
 /** One lock shared by the AlarmSync cron and the webhook, so one alarm is never ticketed twice. */
 interface SyncLock

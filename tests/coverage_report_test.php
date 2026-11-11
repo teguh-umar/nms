@@ -4,8 +4,8 @@ require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/Coverage/Report.php';
 require OPM_ROOT . '/src/Coverage/Csv.php';
 
-use GlpiPlugin\Opmanager\Coverage\Csv;
-use GlpiPlugin\Opmanager\Coverage\Report;
+use GlpiPlugin\Nms\Coverage\Csv;
+use GlpiPlugin\Nms\Coverage\Report;
 
 $dev = static fn (int $id, string $name, string $ip, string $state, string $itemtype = '', int $items_id = 0, string $source = '', string $seen = '2026-10-02 11:00:00', string $cat = 'Server') => [
     'id' => $id, 'device_key' => "k{$id}", 'name' => $name, 'display_name' => $name, 'ip' => $ip, 'category' => $cat, 'type' => 'Linux',

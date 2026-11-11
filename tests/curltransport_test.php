@@ -13,8 +13,8 @@ foreach (['ClientException', 'ResponseGuard', 'DeviceSource', 'AlarmSource', 'De
     require OPM_ROOT . "/src/OpManager/{$f}.php";
 }
 
-use GlpiPlugin\Opmanager\OpManager\Client;
-use GlpiPlugin\Opmanager\OpManager\ClientException;
+use GlpiPlugin\Nms\Driver\OpManager\Client;
+use GlpiPlugin\Nms\Driver\OpManager\ClientException;
 
 $src = (string) file_get_contents(OPM_ROOT . '/src/OpManager/Client.php');
 check('client does not depend on Guzzle (another plugin may ship an old copy)', !str_contains($src, 'GuzzleHttp'));

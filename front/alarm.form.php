@@ -1,7 +1,7 @@
 <?php
 
-use GlpiPlugin\Opmanager\Alarm;
-use GlpiPlugin\Opmanager\RightDefinition;
+use GlpiPlugin\Nms\Alarm;
+use GlpiPlugin\Nms\RightDefinition;
 
 include('../../../inc/includes.php');
 
@@ -11,5 +11,5 @@ $id = (int) ($_GET['id'] ?? 0);
 if ($id <= 0) {
     Html::redirect(Alarm::getSearchURL());
 }
-$menus = ['central' => [\GlpiPlugin\Pgnsuite\Menu::SECTOR, 'opmanager', 'alarm'], 'helpdesk' => []];
+$menus = ['central' => [\GlpiPlugin\Pgnsuite\Menu::SECTOR, 'nms', 'alarm'], 'helpdesk' => []];
 Alarm::displayFullPageForItem($id, $menus, []);

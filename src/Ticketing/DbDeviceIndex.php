@@ -1,8 +1,8 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Ticketing;
+namespace GlpiPlugin\Nms\Ticketing;
 
-use GlpiPlugin\Opmanager\Device;
+use GlpiPlugin\Nms\Device;
 
 final class DbDeviceIndex implements DeviceIndex
 {

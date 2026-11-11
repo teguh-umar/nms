@@ -4,8 +4,8 @@ require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/Ticketing/EntityResolver.php';
 require OPM_ROOT . '/src/Ticketing/TicketBuilder.php';
 
-use GlpiPlugin\Opmanager\Ticketing\EntityResolver;
-use GlpiPlugin\Opmanager\Ticketing\TicketBuilder;
+use GlpiPlugin\Nms\Ticketing\EntityResolver;
+use GlpiPlugin\Nms\Ticketing\TicketBuilder;
 
 $nets = [
     ['entities_id' => 3, 'address' => '10.20.0.0', 'netmask' => '255.255.0.0'],

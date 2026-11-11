@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager;
+namespace GlpiPlugin\Nms;
 
 use CommonDBTM;
 use Dropdown;
@@ -17,7 +17,7 @@ class Device extends CommonDBTM
 
     public static function getTypeName($nb = 0)
     {
-        return _n('OpManager device', 'OpManager devices', $nb, 'opmanager');
+        return _n('OpManager device', 'OpManager devices', $nb, 'nms');
     }
 
     public static function getIcon()
@@ -44,9 +44,9 @@ class Device extends CommonDBTM
     public static function matchStateLabels(): array
     {
         return [
-            'matched'   => __('Matched', 'opmanager'),
-            'review'    => __('Needs review', 'opmanager'),
-            'unmatched' => __('Not found in GLPI', 'opmanager'),
+            'matched'   => __('Matched', 'nms'),
+            'review'    => __('Needs review', 'nms'),
+            'unmatched' => __('Not found in GLPI', 'nms'),
         ];
     }
 
@@ -66,10 +66,10 @@ class Device extends CommonDBTM
     public static function validatePin(string $itemtype, int $items_id, array $allowed): ?string
     {
         if (!in_array($itemtype, $allowed, true)) {
-            return __('This asset type is not enabled in OpManager setup', 'opmanager');
+            return __('This asset type is not enabled in OpManager setup', 'nms');
         }
         if ($items_id <= 0) {
-            return __('Choose an asset', 'opmanager');
+            return __('Choose an asset', 'nms');
         }
         return null;
     }
@@ -82,7 +82,7 @@ class Device extends CommonDBTM
         }
         $asset = getItemForItemtype($itemtype);
         if (!$asset instanceof CommonDBTM || !$asset->getFromDB($items_id)) {
-            return __('That asset does not exist', 'opmanager');
+            return __('That asset does not exist', 'nms');
         }
         $this->update([
             'id'           => $id,
@@ -113,20 +113,20 @@ class Device extends CommonDBTM
         $table = self::getTable();
         return [
             ['id' => 'common', 'name' => self::getTypeName(2)],
-            ['id' => 1, 'table' => $table, 'field' => 'display_name', 'name' => __('Name'), 'datatype' => 'itemlink', 'massiveaction' => false],
-            ['id' => 2, 'table' => $table, 'field' => 'id', 'name' => __('ID'), 'datatype' => 'number', 'massiveaction' => false],
-            ['id' => 3, 'table' => $table, 'field' => 'ip_address', 'name' => __('IP address'), 'datatype' => 'string', 'massiveaction' => false],
-            ['id' => 4, 'table' => $table, 'field' => 'device_category', 'name' => __('Category'), 'datatype' => 'string', 'massiveaction' => false],
-            ['id' => 5, 'table' => $table, 'field' => 'availability', 'name' => __('Availability', 'opmanager'), 'datatype' => 'string', 'massiveaction' => false],
-            ['id' => 6, 'table' => $table, 'field' => 'match_state', 'name' => __('Match state', 'opmanager'), 'datatype' => 'specific', 'searchtype' => ['equals', 'notequals'], 'massiveaction' => false],
-            ['id' => 7, 'table' => $table, 'field' => 'items_id', 'name' => __('GLPI asset', 'opmanager'), 'datatype' => 'specific', 'additionalfields' => ['itemtype'], 'nosearch' => true, 'massiveaction' => false],
-            ['id' => 8, 'table' => $table, 'field' => 'last_seen', 'name' => __('Last seen', 'opmanager'), 'datatype' => 'datetime', 'massiveaction' => false],
-            ['id' => 9, 'table' => $table, 'field' => 'is_manual', 'name' => __('Pinned manually', 'opmanager'), 'datatype' => 'bool', 'massiveaction' => false],
+            ['id' => 8380, 'table' => $table, 'field' => 'display_name', 'name' => __('Name'), 'datatype' => 'itemlink', 'massiveaction' => false],
+            ['id' => 8381, 'table' => $table, 'field' => 'id', 'name' => __('ID'), 'datatype' => 'number', 'massiveaction' => false],
+            ['id' => 8382, 'table' => $table, 'field' => 'ip_address', 'name' => __('IP address'), 'datatype' => 'string', 'massiveaction' => false],
+            ['id' => 8383, 'table' => $table, 'field' => 'device_category', 'name' => __('Category'), 'datatype' => 'string', 'massiveaction' => false],
+            ['id' => 8384, 'table' => $table, 'field' => 'availability', 'name' => __('Availability', 'nms'), 'datatype' => 'string', 'massiveaction' => false],
+            ['id' => 8385, 'table' => $table, 'field' => 'match_state', 'name' => __('Match state', 'nms'), 'datatype' => 'specific', 'searchtype' => ['equals', 'notequals'], 'massiveaction' => false],
+            ['id' => 8386, 'table' => $table, 'field' => 'items_id', 'name' => __('GLPI asset', 'nms'), 'datatype' => 'specific', 'additionalfields' => ['itemtype'], 'nosearch' => true, 'massiveaction' => false],
+            ['id' => 8387, 'table' => $table, 'field' => 'last_seen', 'name' => __('Last seen', 'nms'), 'datatype' => 'datetime', 'massiveaction' => false],
+            ['id' => 8388, 'table' => $table, 'field' => 'is_manual', 'name' => __('Pinned manually', 'nms'), 'datatype' => 'bool', 'massiveaction' => false],
             // D34 NMS hygiene (spec §6).
-            ['id' => 10, 'table' => $table, 'field' => 'hygiene_state', 'name' => __('Hygiene condition', 'opmanager'), 'datatype' => 'specific', 'searchtype' => ['equals', 'notequals'], 'massiveaction' => false],
-            ['id' => 11, 'table' => $table, 'field' => 'liveness_state', 'name' => __('Liveness', 'opmanager'), 'datatype' => 'specific', 'searchtype' => ['equals', 'notequals'], 'massiveaction' => false],
-            ['id' => 12, 'table' => $table, 'field' => 'liveness_detail', 'name' => __('Liveness evidence', 'opmanager'), 'datatype' => 'string', 'massiveaction' => false],
-            ['id' => 13, 'table' => $table, 'field' => 'liveness_checked_at', 'name' => __('Liveness checked', 'opmanager'), 'datatype' => 'datetime', 'massiveaction' => false],
+            ['id' => 8389, 'table' => $table, 'field' => 'hygiene_state', 'name' => __('Hygiene condition', 'nms'), 'datatype' => 'specific', 'searchtype' => ['equals', 'notequals'], 'massiveaction' => false],
+            ['id' => 8390, 'table' => $table, 'field' => 'liveness_state', 'name' => __('Liveness', 'nms'), 'datatype' => 'specific', 'searchtype' => ['equals', 'notequals'], 'massiveaction' => false],
+            ['id' => 8391, 'table' => $table, 'field' => 'liveness_detail', 'name' => __('Liveness evidence', 'nms'), 'datatype' => 'string', 'massiveaction' => false],
+            ['id' => 8392, 'table' => $table, 'field' => 'liveness_checked_at', 'name' => __('Liveness checked', 'nms'), 'datatype' => 'datetime', 'massiveaction' => false],
         ];
     }
 
@@ -134,10 +134,10 @@ class Device extends CommonDBTM
     public static function livenessLabels(): array
     {
         return [
-            'alive'   => __('Alive', 'opmanager'),
-            'dead'    => __('Dead', 'opmanager'),
-            'unknown' => __('Unknown', 'opmanager'),
-            ''        => __('Not checked', 'opmanager'),
+            'alive'   => __('Alive', 'nms'),
+            'dead'    => __('Dead', 'nms'),
+            'unknown' => __('Unknown', 'nms'),
+            ''        => __('Not checked', 'nms'),
         ];
     }
 
@@ -202,15 +202,15 @@ class Device extends CommonDBTM
         $labels = self::matchStateLabels();
         $rows   = [
             __('Name')                            => htmlescape($f['display_name'] ?: $f['name']),
-            __('OpManager identity', 'opmanager') => htmlescape($f['device_key']),
+            __('OpManager identity', 'nms') => htmlescape($f['device_key']),
             __('IP address')                      => htmlescape($f['ip_address']),
             __('Type')                            => htmlescape($f['device_type']),
             __('Category')                        => htmlescape($f['device_category']),
-            __('Availability', 'opmanager')       => htmlescape($f['availability']),
-            __('Last seen', 'opmanager')          => htmlescape((string) $f['last_seen']),
-            __('Match state', 'opmanager')        => htmlescape($labels[$f['match_state']] ?? $f['match_state']),
-            __('GLPI asset', 'opmanager')         => self::assetLink((string) $f['itemtype'], (int) $f['items_id']),
-            __('Pinned manually', 'opmanager')    => $f['is_manual'] ? __s('Yes') : __s('No'),
+            __('Availability', 'nms')       => htmlescape($f['availability']),
+            __('Last seen', 'nms')          => htmlescape((string) $f['last_seen']),
+            __('Match state', 'nms')        => htmlescape($labels[$f['match_state']] ?? $f['match_state']),
+            __('GLPI asset', 'nms')         => self::assetLink((string) $f['itemtype'], (int) $f['items_id']),
+            __('Pinned manually', 'nms')    => $f['is_manual'] ? __s('Yes') : __s('No'),
         ];
 
         echo "<div class='card'><div class='card-body'><table class='table table-sm'>";
@@ -229,9 +229,9 @@ class Device extends CommonDBTM
                 'entity_restrict'  => -1,
                 'default_itemtype' => $f['itemtype'] !== '' ? $f['itemtype'] : 0,
             ]);
-            echo Html::submit(__('Pin to this asset', 'opmanager'), ['name' => 'pin', 'class' => 'btn btn-primary']);
+            echo Html::submit(__('Pin to this asset', 'nms'), ['name' => 'pin', 'class' => 'btn btn-primary']);
             if ($f['is_manual']) {
-                echo Html::submit(__('Remove manual pin', 'opmanager'), ['name' => 'unpin', 'class' => 'btn btn-outline-secondary']);
+                echo Html::submit(__('Remove manual pin', 'nms'), ['name' => 'unpin', 'class' => 'btn btn-outline-secondary']);
             }
             Html::closeForm();
         }
@@ -252,15 +252,15 @@ class Device extends CommonDBTM
         $condition = Hygiene\Classifier::labels()[(string) ($f['hygiene_state'] ?? '')] ?? (string) $f['hygiene_state'];
         $evidence  = trim(($f['liveness_source'] ?? '') !== '' ? $f['liveness_source'] . ': ' . ($f['liveness_detail'] ?? '') : (string) ($f['liveness_detail'] ?? ''));
 
-        echo '<h4 class="mt-3">' . __s('NMS hygiene', 'opmanager') . '</h4><table class="table table-sm">';
+        echo '<h4 class="mt-3">' . __s('NMS hygiene', 'nms') . '</h4><table class="table table-sm">';
         $rows = [
-            __('Hygiene condition', 'opmanager') => htmlescape($condition),
-            __('Liveness', 'opmanager')          => htmlescape($live . ($evidence !== '' ? ' (' . $evidence . ')' : '')),
-            __('Liveness checked', 'opmanager')  => htmlescape((string) ($f['liveness_checked_at'] ?? '') ?: '-'),
+            __('Hygiene condition', 'nms') => htmlescape($condition),
+            __('Liveness', 'nms')          => htmlescape($live . ($evidence !== '' ? ' (' . $evidence . ')' : '')),
+            __('Liveness checked', 'nms')  => htmlescape((string) ($f['liveness_checked_at'] ?? '') ?: '-'),
         ];
         $tickets = Hygiene\DbHygieneStore::openTicketsFor($key);
         if ($tickets !== []) {
-            $rows[__('Open hygiene tickets', 'opmanager')] = implode(', ', array_map(
+            $rows[__('Open hygiene tickets', 'nms')] = implode(', ', array_map(
                 static fn (int $id): string => '<a href="' . htmlescape(\Ticket::getFormURLWithID($id)) . '">#' . $id . '</a>',
                 $tickets
             ));
@@ -272,7 +272,7 @@ class Device extends CommonDBTM
 
         if ($active !== null) {
             echo '<div class="alert alert-info">' . htmlescape(sprintf(
-                __('Excluded from hygiene tickets by %1$s on %2$s: %3$s', 'opmanager'),
+                __('Excluded from hygiene tickets by %1$s on %2$s: %3$s', 'nms'),
                 getUserName((int) $active['users_id']),
                 (string) $active['date_creation'],
                 (string) $active['reason']
@@ -284,17 +284,17 @@ class Device extends CommonDBTM
             echo Html::hidden('id', ['value' => (int) $f['id']]);
             if ($active === null) {
                 echo '<textarea class="form-control mb-2" name="reason" rows="2" required minlength="5" maxlength="1000" placeholder="'
-                    . __s('Reason, e.g. ISP-owned router, unmanaged on purpose (licence limit)', 'opmanager') . '"></textarea>';
-                echo Html::submit(__('Exclude from hygiene tickets', 'opmanager'), ['name' => 'except', 'class' => 'btn btn-outline-warning']);
+                    . __s('Reason, e.g. ISP-owned router, unmanaged on purpose (licence limit)', 'nms') . '"></textarea>';
+                echo Html::submit(__('Exclude from hygiene tickets', 'nms'), ['name' => 'except', 'class' => 'btn btn-outline-warning']);
             } else {
-                echo Html::submit(__('Cancel exclusion', 'opmanager'), ['name' => 'unexcept', 'class' => 'btn btn-outline-secondary']);
+                echo Html::submit(__('Cancel exclusion', 'nms'), ['name' => 'unexcept', 'class' => 'btn btn-outline-secondary']);
             }
             Html::closeForm();
         }
 
         if ($history !== []) {
-            echo '<details><summary>' . __s('Exception history', 'opmanager') . '</summary><table class="table table-sm"><tr><th>'
-                . __s('Excluded', 'opmanager') . '</th><th>' . __s('By', 'opmanager') . '</th><th>' . __s('Reason', 'opmanager') . '</th><th>' . __s('Cancelled', 'opmanager') . '</th></tr>';
+            echo '<details><summary>' . __s('Exception history', 'nms') . '</summary><table class="table table-sm"><tr><th>'
+                . __s('Excluded', 'nms') . '</th><th>' . __s('By', 'nms') . '</th><th>' . __s('Reason', 'nms') . '</th><th>' . __s('Cancelled', 'nms') . '</th></tr>';
             foreach ($history as $h) {
                 $cancel = (int) $h['is_active'] === 1 ? '-' : (string) $h['revoked_at'] . ' (' . getUserName((int) $h['revoked_by']) . ')';
                 echo '<tr><td>' . htmlescape((string) $h['date_creation']) . '</td><td>' . htmlescape(getUserName((int) $h['users_id'])) . '</td><td>'

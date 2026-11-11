@@ -4,8 +4,8 @@ require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/Matching/AssetLookup.php';
 require OPM_ROOT . '/src/Matching/Matcher.php';
 
-use GlpiPlugin\Opmanager\Matching\AssetLookup;
-use GlpiPlugin\Opmanager\Matching\Matcher;
+use GlpiPlugin\Nms\Matching\AssetLookup;
+use GlpiPlugin\Nms\Matching\Matcher;
 
 final class FakeLookup implements AssetLookup
 {

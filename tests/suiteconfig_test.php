@@ -71,15 +71,15 @@ namespace {
     require OPM_ROOT . '/src/SetupStatus.php';
     require OPM_ROOT . '/src/SuiteConfig.php';
 
-    use GlpiPlugin\Opmanager\RightDefinition as R;
-    use GlpiPlugin\Opmanager\SuiteConfig;
+    use GlpiPlugin\Nms\RightDefinition as R;
+    use GlpiPlugin\Nms\SuiteConfig;
 
     check('no config right: section hidden', SuiteConfig::section() === null);
 
     $GLOBALS['RIGHTS'] = [R::CONFIG => READ];
     $section = SuiteConfig::section();
     check('config READ: section shown', is_array($section));
-    check('render is a Class::method string', ($section['render'] ?? null) === 'GlpiPlugin\\Opmanager\\SuiteConfig::render');
+    check('render is a Class::method string', ($section['render'] ?? null) === 'GlpiPlugin\\Nms\\SuiteConfig::render');
 
     $GLOBALS['CFG_VALUES'] = ['opm_api_key' => 'ENCRYPTED-SECRET-VALUE', 'opm_url' => 'https://opm'];
     ob_start();

@@ -23,7 +23,7 @@ check('trashed ticket reported as TRASHED', str_contains($gw, 'TicketGateway::TR
 check('no raw writes to core ticket tables', !preg_match("/DB->(insert|update|delete)\(\s*'glpi_(tickets|itilfollowups|groups_tickets)/", $gw));
 
 $store = (string) @file_get_contents(OPM_ROOT . '/src/Hygiene/DbHygieneStore.php');
-check('store writes only plugin tables', !preg_match("/DB->(insert|update|delete)\(\s*'glpi_(?!plugin_opmanager_)/", $store));
+check('store writes only plugin tables', !preg_match("/DB->(insert|update|delete)\(\s*'glpi_(?!plugin_nms_)/", $store));
 check('store keeps stored liveness when null is passed', str_contains($store, '!== null'));
 
 $cron = (string) @file_get_contents(OPM_ROOT . '/src/Cron.php');

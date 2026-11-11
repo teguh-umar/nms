@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Matching;
+namespace GlpiPlugin\Nms\Matching;
 
 /**
  * AssetLookup against the GLPI database, across every configured asset itemtype.

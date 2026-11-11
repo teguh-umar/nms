@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Hygiene;
+namespace GlpiPlugin\Nms\Hygiene;
 
 /** Pure IPv4 CIDR helpers for the probe allow-list (spec §3). */
 final class Cidr

@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager;
+namespace GlpiPlugin\Nms;
 
 use CommonDBTM;
 
@@ -11,7 +11,7 @@ class Alarm extends CommonDBTM
 
     public static function getTypeName($nb = 0)
     {
-        return _n('OpManager alarm', 'OpManager alarms', $nb, 'opmanager');
+        return _n('OpManager alarm', 'OpManager alarms', $nb, 'nms');
     }
 
     public static function getIcon()
@@ -63,15 +63,15 @@ class Alarm extends CommonDBTM
         $table = self::getTable();
         return [
             ['id' => 'common', 'name' => self::getTypeName(2)],
-            ['id' => 1, 'table' => $table, 'field' => 'alarm_key', 'name' => __('Alarm ID', 'opmanager'), 'datatype' => 'itemlink', 'massiveaction' => false],
-            ['id' => 2, 'table' => $table, 'field' => 'display_name', 'name' => __('Device', 'opmanager'), 'datatype' => 'string', 'massiveaction' => false],
-            ['id' => 3, 'table' => $table, 'field' => 'severity_label', 'name' => __('Severity', 'opmanager'), 'datatype' => 'string', 'massiveaction' => false],
-            ['id' => 4, 'table' => $table, 'field' => 'message', 'name' => __('Message', 'opmanager'), 'datatype' => 'text', 'massiveaction' => false],
-            ['id' => 5, 'table' => $table, 'field' => 'state', 'name' => __('State', 'opmanager'), 'datatype' => 'string', 'massiveaction' => false],
-            ['id' => 6, 'table' => $table, 'field' => 'tickets_id', 'name' => __('Ticket'), 'datatype' => 'number', 'massiveaction' => false],
-            ['id' => 7, 'table' => $table, 'field' => 'last_change', 'name' => __('Last change', 'opmanager'), 'datatype' => 'datetime', 'massiveaction' => false],
-            ['id' => 8, 'table' => $table, 'field' => 'ip_address', 'name' => __('IP address'), 'datatype' => 'string', 'massiveaction' => false],
-            ['id' => 9, 'table' => $table, 'field' => 'ticket_pending', 'name' => __('Ticket pending', 'opmanager'), 'datatype' => 'bool', 'massiveaction' => false],
+            ['id' => 8380, 'table' => $table, 'field' => 'alarm_key', 'name' => __('Alarm ID', 'nms'), 'datatype' => 'itemlink', 'massiveaction' => false],
+            ['id' => 8381, 'table' => $table, 'field' => 'display_name', 'name' => __('Device', 'nms'), 'datatype' => 'string', 'massiveaction' => false],
+            ['id' => 8382, 'table' => $table, 'field' => 'severity_label', 'name' => __('Severity', 'nms'), 'datatype' => 'string', 'massiveaction' => false],
+            ['id' => 8383, 'table' => $table, 'field' => 'message', 'name' => __('Message', 'nms'), 'datatype' => 'text', 'massiveaction' => false],
+            ['id' => 8384, 'table' => $table, 'field' => 'state', 'name' => __('State', 'nms'), 'datatype' => 'string', 'massiveaction' => false],
+            ['id' => 8385, 'table' => $table, 'field' => 'tickets_id', 'name' => __('Ticket'), 'datatype' => 'number', 'massiveaction' => false],
+            ['id' => 8386, 'table' => $table, 'field' => 'last_change', 'name' => __('Last change', 'nms'), 'datatype' => 'datetime', 'massiveaction' => false],
+            ['id' => 8387, 'table' => $table, 'field' => 'ip_address', 'name' => __('IP address'), 'datatype' => 'string', 'massiveaction' => false],
+            ['id' => 8388, 'table' => $table, 'field' => 'ticket_pending', 'name' => __('Ticket pending', 'nms'), 'datatype' => 'bool', 'massiveaction' => false],
         ];
     }
 
@@ -89,18 +89,18 @@ class Alarm extends CommonDBTM
         }
         $f    = $this->fields;
         $rows = [
-            __('Alarm ID', 'opmanager')    => htmlescape($f['alarm_key']),
-            __('OpManager entity', 'opmanager') => htmlescape($f['entity_key']),
-            __('Device', 'opmanager')      => htmlescape($f['display_name'] ?: $f['device_name']),
+            __('Alarm ID', 'nms')    => htmlescape($f['alarm_key']),
+            __('OpManager entity', 'nms') => htmlescape($f['entity_key']),
+            __('Device', 'nms')      => htmlescape($f['display_name'] ?: $f['device_name']),
             __('IP address')               => htmlescape($f['ip_address']),
-            __('Severity', 'opmanager')    => htmlescape($f['severity_label']),
-            __('Alarm type', 'opmanager')  => htmlescape($f['alarm_code']),
-            __('Message', 'opmanager')     => htmlescape((string) $f['message']),
-            __('State', 'opmanager')       => htmlescape($f['state']),
+            __('Severity', 'nms')    => htmlescape($f['severity_label']),
+            __('Alarm type', 'nms')  => htmlescape($f['alarm_code']),
+            __('Message', 'nms')     => htmlescape((string) $f['message']),
+            __('State', 'nms')       => htmlescape($f['state']),
             __('Ticket')                   => $f['tickets_id'] > 0
                 ? '<a href="' . htmlescape(\Ticket::getFormURLWithID((int) $f['tickets_id'])) . '">#' . (int) $f['tickets_id'] . '</a>'
-                : ($f['ticket_pending'] ? __s('pending', 'opmanager') : '-'),
-            __('Last change', 'opmanager') => htmlescape((string) $f['last_change']),
+                : ($f['ticket_pending'] ? __s('pending', 'nms') : '-'),
+            __('Last change', 'nms') => htmlescape((string) $f['last_change']),
         ];
         echo "<div class='card'><div class='card-body'><table class='table table-sm'>";
         foreach ($rows as $label => $value) {

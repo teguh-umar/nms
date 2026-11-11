@@ -7,7 +7,7 @@ class CommonDBTM extends CommonGLPI {}
 require OPM_ROOT . '/src/RightDefinition.php';
 require OPM_ROOT . '/src/Device.php';
 
-use GlpiPlugin\Opmanager\Device;
+use GlpiPlugin\Nms\Device;
 
 $allowed = ['Computer', 'NetworkEquipment', 'Glpi\\CustomAsset\\SecurityAsset'];
 check('pin to an enabled custom asset type is valid', Device::validatePin('Glpi\\CustomAsset\\SecurityAsset', 5, $allowed) === null);
@@ -32,7 +32,7 @@ check('alarm list page exists', is_file(OPM_ROOT . '/front/alarm.php'));
 check('except requires the hygiene UPDATE right', (bool) preg_match('/isset\(\$_POST\[.except.\]\).*?checkRight\(RightDefinition::HYGIENE, UPDATE\)/s', $form));
 check('unexcept requires the hygiene UPDATE right', (bool) preg_match('/isset\(\$_POST\[.unexcept.\]\).*?checkRight\(RightDefinition::HYGIENE, UPDATE\)/s', $form));
 $dev = (string) file_get_contents(OPM_ROOT . '/src/Device.php');
-foreach ([10 => 'hygiene_state', 11 => 'liveness_state', 12 => 'liveness_detail'] as $id => $field) {
+foreach ([8389 => 'hygiene_state', 8390 => 'liveness_state', 8391 => 'liveness_detail'] as $id => $field) {
     check("search option {$id} is {$field}", str_contains($dev, "'id' => {$id}, 'table' => \$table, 'field' => '{$field}'"));
 }
 check('hygiene block gated by the hygiene READ right', str_contains($dev, 'haveRight(RightDefinition::HYGIENE, READ)'));

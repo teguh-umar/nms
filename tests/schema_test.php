@@ -12,7 +12,7 @@ preg_match_all(
     $tables,
     PREG_SET_ORDER
 );
-check('install creates the devices table', in_array('glpi_plugin_opmanager_devices', array_column($tables, 1), true));
+check('install creates the devices table', in_array('glpi_plugin_nms_devices', array_column($tables, 1), true));
 
 foreach ($tables as [, $table, $body]) {
     check("{$table}: no DATETIME column", stripos($body, 'DATETIME') === false);
@@ -28,29 +28,29 @@ foreach ($tables as [, $table, $body]) {
 }
 check('devices.device_key is UNIQUE', (bool) preg_match('/UNIQUE KEY `device_key` \(`device_key`\)/', $src));
 
-foreach (['glpi_plugin_opmanager_alarms', 'glpi_plugin_opmanager_storms'] as $t) {
+foreach (['glpi_plugin_nms_alarms', 'glpi_plugin_nms_storms'] as $t) {
     check("install creates {$t}", in_array($t, array_column($tables, 1), true));
 }
 check('alarms.alarm_key is UNIQUE (D3)', (bool) preg_match('/UNIQUE KEY `alarm_key` \(`alarm_key`\)/', $src));
 check('alarms keep entity_key for notes/clear', str_contains($src, '`entity_key` VARCHAR(255)'));
-check('uninstall drops the new tables', str_contains((string) file_get_contents(OPM_ROOT . '/install/uninstall.php'), 'glpi_plugin_opmanager_alarms')
-    && str_contains((string) file_get_contents(OPM_ROOT . '/install/uninstall.php'), 'glpi_plugin_opmanager_storms'));
+check('uninstall drops the new tables', str_contains((string) file_get_contents(OPM_ROOT . '/install/uninstall.php'), 'glpi_plugin_nms_alarms')
+    && str_contains((string) file_get_contents(OPM_ROOT . '/install/uninstall.php'), 'glpi_plugin_nms_storms'));
 
 check('alarms track last followup time', str_contains($src, '`last_followup_at` TIMESTAMP'));
 
 // v1.1.0 (D32): deferred webhook requests.
-check('install creates glpi_plugin_opmanager_ticketrequests', in_array('glpi_plugin_opmanager_ticketrequests', array_column($tables, 1), true));
+check('install creates glpi_plugin_nms_ticketrequests', in_array('glpi_plugin_nms_ticketrequests', array_column($tables, 1), true));
 check('ticketrequests.alarm_key is UNIQUE', (bool) preg_match('/ticketrequests.*?UNIQUE KEY `alarm_key` \(`alarm_key`\)/s', $src));
-check('uninstall drops ticketrequests', str_contains((string) file_get_contents(OPM_ROOT . '/install/uninstall.php'), 'glpi_plugin_opmanager_ticketrequests'));
+check('uninstall drops ticketrequests', str_contains((string) file_get_contents(OPM_ROOT . '/install/uninstall.php'), 'glpi_plugin_nms_ticketrequests'));
 
 // v1.3.0 (D34): NMS hygiene.
-foreach (['glpi_plugin_opmanager_deviceexceptions', 'glpi_plugin_opmanager_hygienetickets', 'glpi_plugin_opmanager_hygieneitems'] as $t) {
+foreach (['glpi_plugin_nms_deviceexceptions', 'glpi_plugin_nms_hygienetickets', 'glpi_plugin_nms_hygieneitems'] as $t) {
     check("install creates {$t}", in_array($t, array_column($tables, 1), true));
     check("uninstall drops {$t}", str_contains((string) file_get_contents(OPM_ROOT . '/install/uninstall.php'), $t));
 }
 $devices_ddl = '';
 foreach ($tables as [, $table, $body]) {
-    if ($table === 'glpi_plugin_opmanager_devices') {
+    if ($table === 'glpi_plugin_nms_devices') {
         $devices_ddl = $body;
     }
 }
@@ -60,7 +60,7 @@ foreach (['liveness_state', 'liveness_source', 'liveness_detail', 'liveness_chec
 }
 check('upgrade ALTER is guarded by fieldExists', str_contains($src, 'if (!$DB->fieldExists($table, $col))'));
 check('liveness_source holds a 32-char provider name', str_contains($src, '`liveness_source` VARCHAR(32)'));
-check('hygieneitems one row per ticket and device', (bool) preg_match('/hygieneitems.*?UNIQUE KEY `ticket_device` \(`plugin_opmanager_hygienetickets_id`, `device_key`\)/s', $src));
+check('hygieneitems one row per ticket and device', (bool) preg_match('/hygieneitems.*?UNIQUE KEY `ticket_device` \(`plugin_nms_hygienetickets_id`, `device_key`\)/s', $src));
 check('HygieneCheck cron registered in CLI mode', str_contains($src, "'HygieneCheck', Config::HYGIENE_CRON_MINUTES * MINUTE_TIMESTAMP"));
 
 done();

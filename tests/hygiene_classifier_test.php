@@ -4,8 +4,8 @@ require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/Hygiene/Classifier.php';
 require OPM_ROOT . '/src/Hygiene/Cidr.php';
 
-use GlpiPlugin\Opmanager\Hygiene\Cidr;
-use GlpiPlugin\Opmanager\Hygiene\Classifier as C;
+use GlpiPlugin\Nms\Hygiene\Cidr;
+use GlpiPlugin\Nms\Hygiene\Classifier as C;
 
 $u     = ['UnManaged', 'Device Not Monitored.'];
 $stale = '2026-11-06 10:00:00';

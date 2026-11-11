@@ -5,12 +5,12 @@ foreach (['Matching/AssetLookup', 'Matching/Matcher', 'OpManager/ClientException
     require OPM_ROOT . "/src/{$f}.php";
 }
 
-use GlpiPlugin\Opmanager\DeviceStore;
-use GlpiPlugin\Opmanager\DeviceSync;
-use GlpiPlugin\Opmanager\Matching\AssetLookup;
-use GlpiPlugin\Opmanager\Matching\Matcher;
-use GlpiPlugin\Opmanager\OpManager\ClientException;
-use GlpiPlugin\Opmanager\OpManager\DeviceSource;
+use GlpiPlugin\Nms\DeviceStore;
+use GlpiPlugin\Nms\DeviceSync;
+use GlpiPlugin\Nms\Matching\AssetLookup;
+use GlpiPlugin\Nms\Matching\Matcher;
+use GlpiPlugin\Nms\Driver\OpManager\ClientException;
+use GlpiPlugin\Nms\Driver\OpManager\DeviceSource;
 
 final class FakeSource implements DeviceSource
 {

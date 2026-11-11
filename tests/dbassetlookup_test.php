@@ -4,7 +4,7 @@ require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/Matching/AssetLookup.php';
 require OPM_ROOT . '/src/Matching/DbAssetLookup.php';
 
-use GlpiPlugin\Opmanager\Matching\DbAssetLookup;
+use GlpiPlugin\Nms\Matching\DbAssetLookup;
 
 // Review Focus 5: a configured custom asset that cannot be resolved at runtime
 // must be REPORTED, not silently skipped.

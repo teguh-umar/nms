@@ -1,11 +1,11 @@
 <?php
 
-use GlpiPlugin\Opmanager\Config;
-use GlpiPlugin\Opmanager\Cron;
-use GlpiPlugin\Opmanager\RightDefinition;
-use GlpiPlugin\Opmanager\RightSeeder;
+use GlpiPlugin\Nms\Config;
+use GlpiPlugin\Nms\Cron;
+use GlpiPlugin\Nms\RightDefinition;
+use GlpiPlugin\Nms\RightSeeder;
 
-function plugin_opmanager_install()
+function plugin_nms_install()
 {
     global $DB;
 
@@ -14,7 +14,7 @@ function plugin_opmanager_install()
 
     // Suite schema rules (hub §4): keys INT UNSIGNED; OpManager identifiers are
     // VARCHAR *_key (an INT *_id counts as a GLPI key); dates TIMESTAMP only.
-    $table = 'glpi_plugin_opmanager_devices';
+    $table = 'glpi_plugin_nms_devices';
     if (!$DB->tableExists($table)) {
         $DB->doQuery("CREATE TABLE `$table` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -63,7 +63,7 @@ function plugin_opmanager_install()
         }
     }
 
-    $table = 'glpi_plugin_opmanager_alarms';
+    $table = 'glpi_plugin_nms_alarms';
     if (!$DB->tableExists($table)) {
         $DB->doQuery("CREATE TABLE `$table` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -79,7 +79,7 @@ function plugin_opmanager_install()
             `severity_label` VARCHAR(32) NOT NULL DEFAULT '',
             `message` TEXT NULL,
             `state` VARCHAR(16) NOT NULL DEFAULT 'active',
-            `plugin_opmanager_devices_id` INT UNSIGNED NOT NULL DEFAULT 0,
+            `plugin_nms_devices_id` INT UNSIGNED NOT NULL DEFAULT 0,
             `itemtype` VARCHAR(255) NOT NULL DEFAULT '',
             `items_id` INT UNSIGNED NOT NULL DEFAULT 0,
             `tickets_id` INT UNSIGNED NOT NULL DEFAULT 0,
@@ -99,11 +99,11 @@ function plugin_opmanager_install()
             KEY `device_name` (`device_name`),
             KEY `tickets_id` (`tickets_id`),
             KEY `item` (`itemtype`, `items_id`),
-            KEY `plugin_opmanager_devices_id` (`plugin_opmanager_devices_id`)
+            KEY `plugin_nms_devices_id` (`plugin_nms_devices_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=$charset COLLATE=$collation");
     }
 
-    $table = 'glpi_plugin_opmanager_storms';
+    $table = 'glpi_plugin_nms_storms';
     if (!$DB->tableExists($table)) {
         $DB->doQuery("CREATE TABLE `$table` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -118,7 +118,7 @@ function plugin_opmanager_install()
     }
 
     // Plan 3: notes/clears queued for OpManager, retried by the OutboxSend cron.
-    $table = 'glpi_plugin_opmanager_outbox';
+    $table = 'glpi_plugin_nms_outbox';
     if (!$DB->tableExists($table)) {
         $DB->doQuery("CREATE TABLE `$table` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -141,7 +141,7 @@ function plugin_opmanager_install()
     }
 
     // v1.1.0 (D32): webhooks answered 202 - the next AlarmSync run treats them as webhook calls.
-    $table = 'glpi_plugin_opmanager_ticketrequests';
+    $table = 'glpi_plugin_nms_ticketrequests';
     if (!$DB->tableExists($table)) {
         $DB->doQuery("CREATE TABLE `$table` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -156,7 +156,7 @@ function plugin_opmanager_install()
     }
 
     // v1.3.0 (D34): NMS hygiene - exceptions (history kept), hygiene tickets and their devices.
-    $table = 'glpi_plugin_opmanager_deviceexceptions';
+    $table = 'glpi_plugin_nms_deviceexceptions';
     if (!$DB->tableExists($table)) {
         $DB->doQuery("CREATE TABLE `$table` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -174,7 +174,7 @@ function plugin_opmanager_install()
         ) ENGINE=InnoDB DEFAULT CHARSET=$charset COLLATE=$collation");
     }
 
-    $table = 'glpi_plugin_opmanager_hygienetickets';
+    $table = 'glpi_plugin_nms_hygienetickets';
     if (!$DB->tableExists($table)) {
         $DB->doQuery("CREATE TABLE `$table` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -189,18 +189,18 @@ function plugin_opmanager_install()
         ) ENGINE=InnoDB DEFAULT CHARSET=$charset COLLATE=$collation");
     }
 
-    $table = 'glpi_plugin_opmanager_hygieneitems';
+    $table = 'glpi_plugin_nms_hygieneitems';
     if (!$DB->tableExists($table)) {
         $DB->doQuery("CREATE TABLE `$table` (
             `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-            `plugin_opmanager_hygienetickets_id` INT UNSIGNED NOT NULL DEFAULT 0,
+            `plugin_nms_hygienetickets_id` INT UNSIGNED NOT NULL DEFAULT 0,
             `device_key` VARCHAR(255) NOT NULL DEFAULT '',
             `hygiene_state` VARCHAR(16) NOT NULL DEFAULT '',
             `reported_at` TIMESTAMP NULL DEFAULT NULL,
             `changed_at` TIMESTAMP NULL DEFAULT NULL,
             `resolved_at` TIMESTAMP NULL DEFAULT NULL,
             PRIMARY KEY (`id`),
-            UNIQUE KEY `ticket_device` (`plugin_opmanager_hygienetickets_id`, `device_key`),
+            UNIQUE KEY `ticket_device` (`plugin_nms_hygienetickets_id`, `device_key`),
             KEY `device_key` (`device_key`)
         ) ENGINE=InnoDB DEFAULT CHARSET=$charset COLLATE=$collation");
     }

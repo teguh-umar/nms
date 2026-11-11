@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\OpManager;
+namespace GlpiPlugin\Nms\Driver\OpManager;
 
 /**
  * The only place that talks HTTP to OpManager. The API key travels ONLY in the

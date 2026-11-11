@@ -1,8 +1,8 @@
 <?php
 
-namespace GlpiPlugin\Opmanager;
+namespace GlpiPlugin\Nms;
 
-use GlpiPlugin\Opmanager\Matching\DbAssetLookup;
+use GlpiPlugin\Nms\Matching\DbAssetLookup;
 
 /** Runtime checks against the real GLPI + DB. Run on the VM via tools/selfcheck.php. */
 final class SelfCheck
@@ -13,7 +13,7 @@ final class SelfCheck
         return [
             'schema/devices-table' => static function (): void {
                 global $DB;
-                self::assert($DB->tableExists(Device::getTable()), 'glpi_plugin_opmanager_devices missing');
+                self::assert($DB->tableExists(Device::getTable()), 'glpi_plugin_nms_devices missing');
             },
             'rights/registered' => static function (): void {
                 $all = array_keys(\ProfileRight::getAllPossibleRights());
@@ -38,7 +38,7 @@ final class SelfCheck
             },
             'schema/alarm-tables' => static function (): void {
                 global $DB;
-                self::assert($DB->tableExists('glpi_plugin_opmanager_alarms') && $DB->tableExists('glpi_plugin_opmanager_storms'), 'alarm/storm tables missing');
+                self::assert($DB->tableExists('glpi_plugin_nms_alarms') && $DB->tableExists('glpi_plugin_nms_storms'), 'alarm/storm tables missing');
             },
             'cron/alarm-sync-cli' => static function (): void {
                 $task = new \CronTask();
@@ -52,24 +52,24 @@ final class SelfCheck
             },
             'tickets/production-ranges' => static function (): void {
                 $ids = Config::ticketingConfig()['production_addressings'];
-                self::assert(\GlpiPlugin\Opmanager\Ticketing\AddressingRanges::load($ids) !== [], 'Setup > OpManager: select at least one valid production IP range, otherwise no ticket is created');
+                self::assert(\GlpiPlugin\Nms\Ticketing\AddressingRanges::load($ids) !== [], 'Setup > OpManager: select at least one valid production IP range, otherwise no ticket is created');
             },
             'webhook/stateless' => static function (): void {
                 $request = \Symfony\Component\HttpFoundation\Request::create(Config::WEBHOOK_PATH, 'POST');
-                self::assert((new \Glpi\Http\SessionManager())->isResourceStateless($request), 'front/webhook.php is not registered as stateless (plugin_opmanager_boot)');
+                self::assert((new \Glpi\Http\SessionManager())->isResourceStateless($request), 'front/webhook.php is not registered as stateless (plugin_nms_boot)');
             },
             'webhook/token' => static function (): void {
                 self::assert(Config::webhookToken() !== '', 'Setup > OpManager: generate a webhook token (webhook disabled until then)');
                 self::assert(Config::get('webhook_token') !== Config::webhookToken(), 'webhook_token is stored in clear text');
             },
             'webhook/lock' => static function (): void {
-                $lock = new \GlpiPlugin\Opmanager\Ticketing\DbSyncLock();
+                $lock = new \GlpiPlugin\Nms\Ticketing\DbSyncLock();
                 self::assert($lock->acquire(1), 'GET_LOCK opmanager_alarm_sync not obtainable');
                 $lock->release();
             },
             'outbound/table' => static function (): void {
                 global $DB;
-                self::assert($DB->tableExists('glpi_plugin_opmanager_outbox'), 'outbox table missing - re-run plugin:install');
+                self::assert($DB->tableExists('glpi_plugin_nms_outbox'), 'outbox table missing - re-run plugin:install');
             },
             'outbound/cron' => static function (): void {
                 self::assert((new \CronTask())->getFromDBbyName(Cron::class, 'OutboxSend'), 'OutboxSend cron not registered - re-run plugin:install');
@@ -107,7 +107,7 @@ final class SelfCheck
             },
             'hygiene/schema' => static function (): void {
                 global $DB;
-                foreach (['glpi_plugin_opmanager_deviceexceptions', 'glpi_plugin_opmanager_hygienetickets', 'glpi_plugin_opmanager_hygieneitems'] as $t) {
+                foreach (['glpi_plugin_nms_deviceexceptions', 'glpi_plugin_nms_hygienetickets', 'glpi_plugin_nms_hygieneitems'] as $t) {
                     self::assert($DB->tableExists($t), "{$t} missing - re-run plugin:install");
                 }
                 foreach (['liveness_state', 'liveness_source', 'liveness_detail', 'liveness_checked_at', 'hygiene_state'] as $col) {

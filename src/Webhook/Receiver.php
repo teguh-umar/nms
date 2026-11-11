@@ -1,11 +1,11 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Webhook;
+namespace GlpiPlugin\Nms\Webhook;
 
-use GlpiPlugin\Opmanager\OpManager\AlarmSource;
-use GlpiPlugin\Opmanager\OpManager\ClientException;
-use GlpiPlugin\Opmanager\Ticketing\SyncLock;
-use GlpiPlugin\Opmanager\Ticketing\TicketRequestStore;
+use GlpiPlugin\Nms\Driver\OpManager\AlarmSource;
+use GlpiPlugin\Nms\Driver\OpManager\ClientException;
+use GlpiPlugin\Nms\Ticketing\SyncLock;
+use GlpiPlugin\Nms\Ticketing\TicketRequestStore;
 
 /**
  * OpManager "Invoke a Webhook" receiver. The payload is only a trigger: the alarm itself is

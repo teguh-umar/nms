@@ -5,8 +5,8 @@ require OPM_ROOT . '/src/Config.php';
 require OPM_ROOT . '/src/RightDefinition.php';
 require OPM_ROOT . '/src/Hygiene/Cidr.php';
 
-use GlpiPlugin\Opmanager\Config;
-use GlpiPlugin\Opmanager\RightDefinition;
+use GlpiPlugin\Nms\Config;
+use GlpiPlugin\Nms\RightDefinition;
 
 // --- single source of truth for match modes (integrasipaman v2.6.0 lesson) ---
 check('five match modes, manual included', Config::MATCH_MODES === ['ip_only', 'name_only', 'hybrid', 'hybrid_name', 'manual']);
@@ -64,7 +64,7 @@ check('stale default exceeds the device sync interval', (int) Config::DEFAULTS['
 check('install registers DeviceSync from the same interval constant', str_contains((string) file_get_contents(OPM_ROOT . '/install/install.php'), 'Config::DEVICE_SYNC_MINUTES'));
 
 // --- rights ---
-check('three rights', RightDefinition::names() === ['plugin_opmanager_config', 'plugin_opmanager_monitoring', 'plugin_opmanager_hygiene']);
+check('three rights', RightDefinition::names() === ['plugin_nms_config', 'plugin_nms_monitoring', 'plugin_nms_hygiene']);
 check('config right is READ|UPDATE', RightDefinition::ALL[RightDefinition::CONFIG] === (READ | UPDATE));
 check('monitoring right is READ only', RightDefinition::ALL[RightDefinition::MONITORING] === READ);
 check('matrix columns match masks', array_keys(RightDefinition::rightsMatrix(RightDefinition::MONITORING)) === [READ]);
@@ -103,7 +103,7 @@ check('production ranges stored as positive ids', json_decode($r['values']['prod
 
 // v0.3.0: alarm filter (user decision 2026-10-01): event types + message keywords, exclude/include.
 require OPM_ROOT . '/src/Ticketing/AlarmFilter.php';
-check('filter modes shared with AlarmFilter', Config::FILTER_MODES === \GlpiPlugin\Opmanager\Ticketing\AlarmFilter::MODES);
+check('filter modes shared with AlarmFilter', Config::FILTER_MODES === \GlpiPlugin\Nms\Ticketing\AlarmFilter::MODES);
 check('filter off by default', Config::DEFAULTS['ticket_filter_mode'] === 'exclude' && Config::DEFAULTS['ticket_filter_event_types'] === '[]' && Config::DEFAULTS['ticket_filter_keywords'] === '');
 $r = Config::sanitizeTicketing(['ticket_filter_mode' => 'include', 'ticket_filter_event_types' => [' CPU Utilization ', '', 'CPU Utilization', 'Device Down'],
     'ticket_filter_keywords' => "threshold\r\n\r\n  utilization  \nthreshold"] + $t);

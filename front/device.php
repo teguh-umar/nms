@@ -1,13 +1,13 @@
 <?php
 
-use GlpiPlugin\Opmanager\Device;
-use GlpiPlugin\Opmanager\RightDefinition;
+use GlpiPlugin\Nms\Device;
+use GlpiPlugin\Nms\RightDefinition;
 
 include('../../../inc/includes.php');
 
 Session::checkRight(RightDefinition::MONITORING, READ);
 
-Html::header(Device::getTypeName(2), '', \GlpiPlugin\Pgnsuite\Menu::SECTOR, 'opmanager', 'device');
-\GlpiPlugin\Pgnsuite\Menu::renderSubNav('opmanager', 'device');
+Html::header(Device::getTypeName(2), '', \GlpiPlugin\Pgnsuite\Menu::SECTOR, 'nms', 'device');
+\GlpiPlugin\Pgnsuite\Menu::renderSubNav('nms', 'device');
 Search::show(Device::class);
 Html::footer();

@@ -1,6 +1,6 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Ticketing;
+namespace GlpiPlugin\Nms\Ticketing;
 
 /**
  * TicketGateway on GLPI 11 core objects - every write through ->add(), never raw
@@ -49,7 +49,7 @@ final class GlpiTicketGateway implements TicketGateway
 
             $missing = TicketBuilder::missingMandatory($input, $mandatory);
             if ($missing !== []) {
-                \Toolbox::logInFile('opmanager', sprintf(
+                \Toolbox::logInFile('nms', sprintf(
                     "AlarmSync: alarm %s not ticketed, template %d mandatory field(s) not filled: %s\n",
                     $alarm['alarm_key'],
                     $template_id,

@@ -4,8 +4,8 @@ require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/Ticketing/TicketGateway.php';
 require OPM_ROOT . '/src/Hygiene/TicketPlanner.php';
 
-use GlpiPlugin\Opmanager\Hygiene\TicketPlanner as P;
-use GlpiPlugin\Opmanager\Ticketing\TicketGateway;
+use GlpiPlugin\Nms\Hygiene\TicketPlanner as P;
+use GlpiPlugin\Nms\Ticketing\TicketGateway;
 
 $two = ['a' => 'nms_dead', 'b' => 'nms_unknown'];
 $rep = static function (array $states, array $resolved = []): array {

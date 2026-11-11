@@ -29,7 +29,7 @@ require_once $glpiRoot . '/vendor/autoload.php';
 $filter = $argv[1] ?? '';
 $fail   = 0;
 $pass   = 0;
-foreach (\GlpiPlugin\Opmanager\SelfCheck::checks() as $name => $check) {
+foreach (\GlpiPlugin\Nms\SelfCheck::checks() as $name => $check) {
     if ($filter !== '' && !str_contains($name, $filter)) {
         continue;
     }

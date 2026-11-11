@@ -4,8 +4,8 @@ require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/RightDefinition.php';
 require OPM_ROOT . '/src/RightSeeder.php';
 
-use GlpiPlugin\Opmanager\RightDefinition as R;
-use GlpiPlugin\Opmanager\RightSeeder;
+use GlpiPlugin\Nms\RightDefinition as R;
+use GlpiPlugin\Nms\RightSeeder;
 
 $profiles = [
     4 => ['interface' => 'central',  'config' => READ | UPDATE, 'computer' => 31], // super-admin

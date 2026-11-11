@@ -6,14 +6,14 @@ foreach (['OpManager/ClientException', 'OpManager/AlarmSource', 'Ticketing/Asset
     require OPM_ROOT . "/src/{$f}.php";
 }
 
-use GlpiPlugin\Opmanager\OpManager\AlarmSource;
-use GlpiPlugin\Opmanager\OpManager\ClientException;
-use GlpiPlugin\Opmanager\Ticketing\AlarmStore;
-use GlpiPlugin\Opmanager\Ticketing\AlarmSync;
-use GlpiPlugin\Opmanager\Ticketing\AssetResolver;
-use GlpiPlugin\Opmanager\Ticketing\ProductionCheck;
-use GlpiPlugin\Opmanager\Ticketing\TicketGateway;
-use GlpiPlugin\Opmanager\Ticketing\TicketRequestStore;
+use GlpiPlugin\Nms\Driver\OpManager\AlarmSource;
+use GlpiPlugin\Nms\Driver\OpManager\ClientException;
+use GlpiPlugin\Nms\Ticketing\AlarmStore;
+use GlpiPlugin\Nms\Ticketing\AlarmSync;
+use GlpiPlugin\Nms\Ticketing\AssetResolver;
+use GlpiPlugin\Nms\Ticketing\ProductionCheck;
+use GlpiPlugin\Nms\Ticketing\TicketGateway;
+use GlpiPlugin\Nms\Ticketing\TicketRequestStore;
 
 final class Src implements AlarmSource
 {

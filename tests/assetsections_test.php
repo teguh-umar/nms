@@ -34,7 +34,7 @@ namespace Glpi\CustomAsset {
     class SecurityAsset extends \CommonDBTM {}
 }
 
-namespace GlpiPlugin\Opmanager {
+namespace GlpiPlugin\Nms {
     final class CustomAssets
     {
         public static function active(): array { return ['Glpi\\CustomAsset\\SecurityAsset' => 'Security']; }
@@ -57,8 +57,8 @@ namespace {
     require OPM_ROOT . '/src/RightDefinition.php';
     require OPM_ROOT . '/src/AssetSections.php';
 
-    use GlpiPlugin\Opmanager\AssetSections;
-    use GlpiPlugin\Opmanager\RightDefinition as R;
+    use GlpiPlugin\Nms\AssetSections;
+    use GlpiPlugin\Nms\RightDefinition as R;
 
     $row = ['id' => 7, 'name' => '10.20.3.3', 'display_name' => '<b>vm-contoh-01</b>', 'ip_address' => '10.20.3.3',
             'availability' => 'Clear', 'match_source' => 'name', 'last_seen' => '2026-09-29 09:55:00'];
@@ -70,8 +70,8 @@ namespace {
     check('type not enabled: no section', AssetSections::sections(new Printer()) === []);
 
     $s = AssetSections::sections(new Computer());
-    check('section key/order/render per contract', ($s[0]['key'] ?? null) === 'monitoring' && $s[0]['order'] === 60
-        && $s[0]['render'] === 'GlpiPlugin\\Opmanager\\AssetSections::render');
+    check('section key/order/render per contract', ($s[0]['key'] ?? null) === 'monitoring' && $s[0]['order'] === 65
+        && $s[0]['render'] === 'GlpiPlugin\\Nms\\AssetSections::render');
     check('custom asset gets the section', count(AssetSections::sections(new Glpi\CustomAsset\SecurityAsset())) === 1);
 
     $now = strtotime('2026-09-29 10:00:00');

@@ -1,13 +1,13 @@
 <?php
 
-namespace GlpiPlugin\Opmanager\Outbound;
+namespace GlpiPlugin\Nms\Outbound;
 
 use Glpi\RichText\RichText;
-use GlpiPlugin\Opmanager\Config;
-use GlpiPlugin\Opmanager\OpManager\Client;
-use GlpiPlugin\Opmanager\Ticketing\DbAlarmStore;
-use GlpiPlugin\Opmanager\Ticketing\DbSyncLock;
-use GlpiPlugin\Opmanager\Ticketing\GlpiTicketGateway;
+use GlpiPlugin\Nms\Config;
+use GlpiPlugin\Nms\Driver\OpManager\Client;
+use GlpiPlugin\Nms\Ticketing\DbAlarmStore;
+use GlpiPlugin\Nms\Ticketing\DbSyncLock;
+use GlpiPlugin\Nms\Ticketing\GlpiTicketGateway;
 
 /**
  * GLPI -> OpManager (Plan 3). Runs inside the technician's save: decide (Planner), queue,
@@ -48,7 +48,7 @@ final class Hooks
             );
             self::queueAndSend($rows, $cfg);
         } catch (\Throwable $e) {
-            \Toolbox::logInFile('opmanager', 'Outbound followup hook: ' . $e->getMessage() . "\n");
+            \Toolbox::logInFile('nms', 'Outbound followup hook: ' . $e->getMessage() . "\n");
         }
     }
 
@@ -87,7 +87,7 @@ final class Hooks
             );
             self::queueAndSend($rows, $cfg);
         } catch (\Throwable $e) {
-            \Toolbox::logInFile('opmanager', 'Outbound ticket hook: ' . $e->getMessage() . "\n");
+            \Toolbox::logInFile('nms', 'Outbound ticket hook: ' . $e->getMessage() . "\n");
         }
     }
 
@@ -117,13 +117,13 @@ final class Hooks
                 $sender = new Sender($store, $client, $cfg['outbound_max_attempts']);
                 $sender->run($now, 20, true);
                 foreach ($sender->lastErrors() as $error) {
-                    \Toolbox::logInFile('opmanager', 'Outbound: ' . $error . " (will retry)\n");
+                    \Toolbox::logInFile('nms', 'Outbound: ' . $error . " (will retry)\n");
                 }
             } finally {
                 $lock->release();
             }
         } catch (\Throwable $e) {
-            \Toolbox::logInFile('opmanager', 'Outbound send: ' . $e->getMessage() . " (queued for cron)\n");
+            \Toolbox::logInFile('nms', 'Outbound send: ' . $e->getMessage() . " (queued for cron)\n");
         }
     }
 }
