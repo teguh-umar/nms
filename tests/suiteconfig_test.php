@@ -7,6 +7,8 @@ namespace {
     $GLOBALS['CFG_VALUES'] = [];
     $GLOBALS['CFG_GLPI'] = ['url_base' => 'https://glpi.example.com'];
 
+    require OPM_ROOT . '/src/Connection/Settings.php';
+
     class CommonGLPI {}
     class Session
     {

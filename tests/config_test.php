@@ -4,13 +4,15 @@ require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/Config.php';
 require OPM_ROOT . '/src/RightDefinition.php';
 require OPM_ROOT . '/src/Hygiene/Cidr.php';
+require OPM_ROOT . '/src/Connection/Settings.php';
 
 use GlpiPlugin\Nms\Config;
+use GlpiPlugin\Nms\Connection\Settings;
 use GlpiPlugin\Nms\RightDefinition;
 
 // --- single source of truth for match modes (integrasipaman v2.6.0 lesson) ---
 check('five match modes, manual included', Config::MATCH_MODES === ['ip_only', 'name_only', 'hybrid', 'hybrid_name', 'manual']);
-check('default match mode is a valid mode', in_array(Config::DEFAULTS['match_mode'], Config::MATCH_MODES, true));
+check('default match mode is a valid mode', in_array(Settings::DEFAULTS['match_mode'], Config::MATCH_MODES, true));
 check('dropdown labels cover exactly MATCH_MODES', array_keys(Config::matchModeLabels()) === Config::MATCH_MODES);
 check('secured keys all have defaults', array_diff(Config::SECURED, array_keys(Config::DEFAULTS)) === []);
 
@@ -71,7 +73,7 @@ check('matrix columns match masks', array_keys(RightDefinition::rightsMatrix(Rig
 
 // --- ticketing (Plan 2) ---
 check('ticketable severities exclude Clear', array_keys(Config::SEVERITIES) === [1, 2, 3, 4]);
-check('default ticket severity is Critical only (D11/D19)', json_decode(Config::DEFAULTS['ticket_severities'], true) === [1]);
+check('default ticket severity is Critical only (D11/D19)', json_decode(Settings::DEFAULTS['ticket_severities'], true) === [1]);
 check('alarm sync faster than device sync', Config::ALARM_SYNC_MINUTES < Config::DEVICE_SYNC_MINUTES);
 
 $t = ['ticket_severities' => ['1', '2', '9'], 'ticket_template' => '3', 'ticket_title_pattern' => ' [OPM-{alarm_key}] {message} ',
@@ -97,14 +99,14 @@ check('unchecked ipnetwork box stores 0', Config::sanitizeTicketing($b)['values'
 check('storm idle window never shorter than one poll', Config::stormIdleMinutes(5) === Config::ALARM_SYNC_MINUTES + 1 && Config::stormIdleMinutes(30) === 30);
 
 // Production-only tickets (user decision 2026-09-30)
-check('no production range selected by default', Config::DEFAULTS['production_addressings'] === '[]');
+check('no production range selected by default', Settings::DEFAULTS['production_addressings'] === '[]');
 $r = Config::sanitizeTicketing(['production_addressings' => ['3', '7', 'x', '-2']] + $t);
 check('production ranges stored as positive ids', json_decode($r['values']['production_addressings'], true) === [3, 7]);
 
 // v0.3.0: alarm filter (user decision 2026-10-01): event types + message keywords, exclude/include.
 require OPM_ROOT . '/src/Ticketing/AlarmFilter.php';
 check('filter modes shared with AlarmFilter', Config::FILTER_MODES === \GlpiPlugin\Nms\Ticketing\AlarmFilter::MODES);
-check('filter off by default', Config::DEFAULTS['ticket_filter_mode'] === 'exclude' && Config::DEFAULTS['ticket_filter_event_types'] === '[]' && Config::DEFAULTS['ticket_filter_keywords'] === '');
+check('filter off by default', Settings::DEFAULTS['ticket_filter_mode'] === 'exclude' && Settings::DEFAULTS['ticket_filter_event_types'] === '[]' && Settings::DEFAULTS['ticket_filter_keywords'] === '');
 $r = Config::sanitizeTicketing(['ticket_filter_mode' => 'include', 'ticket_filter_event_types' => [' CPU Utilization ', '', 'CPU Utilization', 'Device Down'],
     'ticket_filter_keywords' => "threshold\r\n\r\n  utilization  \nthreshold"] + $t);
 check('filter form valid', $r['errors'] === [], implode('; ', $r['errors']));
@@ -141,33 +143,33 @@ check('new token differs and is 48 hex', $a !== $b && preg_match('/^[0-9a-f]{48}
 check('webhook header and path constants', Config::WEBHOOK_HEADER === 'X-OPM-Token' && Config::WEBHOOK_PATH === '/plugins/opmanager/front/webhook.php');
 
 // Plan 3: outbound retries (D13)
-check('outbound retries default 10', Config::DEFAULTS['outbound_max_attempts'] === '10');
+check('outbound retries default 10', Settings::DEFAULTS['outbound_max_attempts'] === '10');
 $r = Config::sanitizeTicketing(['outbound_max_attempts' => '0'] + $t);
 check('outbound retries 0 rejected', !array_key_exists('outbound_max_attempts', $r['values']) && count($r['errors']) === 1);
 $r = Config::sanitizeTicketing(['outbound_max_attempts' => '7'] + $t);
 check('outbound retries stored', $r['values']['outbound_max_attempts'] === '7');
 
 // Plan 4: GLPI states counted by the Coverage page (empty = all)
-check('coverage states default to all', Config::DEFAULTS['coverage_states'] === '[]');
+check('coverage states default to all', Settings::DEFAULTS['coverage_states'] === '[]');
 $r = Config::sanitize(['coverage_states' => ['3', 'x', '-1', '7', '3']] + $base, $allowed);
 check('coverage states stored as unique positive ids', json_decode($r['values']['coverage_states'], true) === [3, 7]);
 $r = Config::sanitize($base, $allowed);
 check('no coverage state posted = all', $r['values']['coverage_states'] === '[]');
 
 // v1.1.0 (D32): ticket source.
-check('ticket source defaults to webhook', Config::DEFAULTS['ticket_source'] === 'webhook' && Config::TICKET_SOURCES[0] === 'webhook');
+check('ticket source defaults to webhook', Settings::DEFAULTS['ticket_source'] === 'webhook' && Config::TICKET_SOURCES[0] === 'webhook');
 check('ticket source rules accepted', Config::sanitizeTicketing(['ticket_source' => 'rules'] + $t)['values']['ticket_source'] === 'rules');
 check('unknown ticket source falls back to webhook', Config::sanitizeTicketing(['ticket_source' => 'x'] + $t)['values']['ticket_source'] === 'webhook');
 
 
 // --- v1.3.0 (D34) hygiene defaults, spec §8.4 ---
 foreach (['hygiene_enabled', 'hygiene_frequency_days', 'hygiene_unmanaged_availabilities', 'hygiene_agent_stale_days', 'hygiene_mist_stale_days', 'hygiene_probe_cidrs', 'hygiene_probe_tcp_ports', 'hygiene_probe_timeout_ms', 'hygiene_ticket_template', 'hygiene_glpi_groups', 'hygiene_glpi_users', 'hygiene_itil_category', 'hygiene_nms_group', 'last_hygiene_run', 'last_hygiene_ticket_run', 'last_hygiene_error'] as $k) {
-    check("default exists: {$k}", array_key_exists($k, Config::DEFAULTS));
+    check("default exists: {$k}", array_key_exists($k, Settings::DEFAULTS));
 }
-check('unmanaged availabilities default', json_decode(Config::DEFAULTS['hygiene_unmanaged_availabilities'] ?? '', true) === ['UnManaged', 'Device Not Monitored.']);
-check('hygiene tickets off by default', (Config::DEFAULTS['hygiene_enabled'] ?? null) === '0');
-check('hygiene weekly by default', (Config::DEFAULTS['hygiene_frequency_days'] ?? null) === '7');
-check('probe off by default (no CIDR)', (Config::DEFAULTS['hygiene_probe_cidrs'] ?? null) === '[]');
+check('unmanaged availabilities default', json_decode(Settings::DEFAULTS['hygiene_unmanaged_availabilities'] ?? '', true) === ['UnManaged', 'Device Not Monitored.']);
+check('hygiene tickets off by default', (Settings::DEFAULTS['hygiene_enabled'] ?? null) === '0');
+check('hygiene weekly by default', (Settings::DEFAULTS['hygiene_frequency_days'] ?? null) === '7');
+check('probe off by default (no CIDR)', (Settings::DEFAULTS['hygiene_probe_cidrs'] ?? null) === '[]');
 check('hygiene cron is daily', Config::HYGIENE_CRON_MINUTES === 1440);
 
 
@@ -187,7 +189,7 @@ check('hygiene: ports unique ints', ($r['values']['hygiene_probe_tcp_ports'] ?? 
 check('hygiene: groups as int JSON', ($r['values']['hygiene_glpi_groups'] ?? null) === '[11,12]' && ($r['values']['hygiene_nms_group'] ?? null) === '20');
 check('hygiene: asset technicians as int JSON (rc4)', ($r['values']['hygiene_glpi_users'] ?? null) === '[7,9]');
 check('hygiene: ITIL category stored (rc5)', ($r['values']['hygiene_itil_category'] ?? null) === '31');
-check('hygiene: ITIL category default none', (Config::DEFAULTS['hygiene_itil_category'] ?? null) === '0');
+check('hygiene: ITIL category default none', (Settings::DEFAULTS['hygiene_itil_category'] ?? null) === '0');
 check('hygiene: mist stale stored', ($r['values']['hygiene_mist_stale_days'] ?? null) === '14');
 $r = Config::sanitizeHygiene(['hygiene_frequency_days' => '0'] + $h);
 check('hygiene: frequency 0 refused, value kept', $r['errors'] !== [] && !array_key_exists('hygiene_frequency_days', $r['values']));
@@ -211,6 +213,6 @@ $r = Config::sanitizeHygiene(['hygiene_probe_timeout_ms' => '50'] + $h);
 check('hygiene: timeout below 100 ms refused', $r['errors'] !== []);
 $r = Config::sanitizeHygiene(['hygiene_enabled' => '0'] + array_diff_key($h, ['hygiene_glpi_users' => 1]));
 check('hygiene: no technician posted stores an empty list', ($r['values']['hygiene_glpi_users'] ?? null) === '[]' && $r['errors'] === []);
-check('hygiene: technicians default empty', (Config::DEFAULTS['hygiene_glpi_users'] ?? null) === '[]');
+check('hygiene: technicians default empty', (Settings::DEFAULTS['hygiene_glpi_users'] ?? null) === '[]');
 
 done();

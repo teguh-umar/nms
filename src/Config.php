@@ -2,6 +2,8 @@
 
 namespace GlpiPlugin\Nms;
 
+use GlpiPlugin\Nms\Connection\Settings;
+
 final class Config
 {
     public const CONTEXT = 'plugin:nms';
@@ -58,51 +60,20 @@ final class Config
     public const FILTER_KEYWORDS_MAX = 2000;
 
     public const DEFAULTS = [
+        // Global (single-connection) config, not part of per-connection Settings.
         'opm_url'                => '',
         'opm_api_key'            => '',
         'webhook_token'          => '',
         'opm_verify_ssl'         => '1',
-        'match_mode'             => 'hybrid_name',
+        // Config keeps only these global keys (spec Plan 1 Task 5); every other
+        // 1.3.2 default moved per connection lives in Connection\Settings::DEFAULTS.
         'asset_itemtypes'        => '["Computer","NetworkEquipment"]',
         'stale_warning_minutes'  => '90',
-        'coverage_states'        => '[]',
+        // Per-connection sync status (read via Connection\Settings in the cron loop).
         'last_device_sync'       => '',
         'last_device_sync_error' => '',
-        'ticket_severities'           => '[1]',
-        'ticket_source'               => 'webhook',
-        'ticket_template'             => '0',
-        'ticket_title_pattern'        => self::DEFAULT_TITLE_PATTERN,
-        'ticket_content_pattern'      => self::DEFAULT_CONTENT_PATTERN,
-        'service_user'                => '0',
-        'ticket_entity_default'       => '0',
-        'ticket_use_ipnetwork_entity' => '1',
-        'relink_window_hours'         => '24',
-        'storm_threshold'             => '10',
-        'storm_window_minutes'        => '5',
-        'outbound_max_attempts'       => '10',
-        'production_addressings'      => '[]',
-        'ticket_filter_mode'          => 'exclude',
-        'ticket_filter_event_types'   => '[]',
-        'ticket_filter_keywords'      => '',
-        'last_alarm_sync'             => '',
-        'last_alarm_sync_error'       => '',
-        // v1.3.0 (D34) NMS hygiene, spec §8.4.
-        'hygiene_enabled'                  => '0',
-        'hygiene_frequency_days'           => '7',
-        'hygiene_unmanaged_availabilities' => '["UnManaged","Device Not Monitored."]',
-        'hygiene_agent_stale_days'         => '7',
-        'hygiene_mist_stale_days'          => '7',
-        'hygiene_probe_cidrs'              => '[]',
-        'hygiene_probe_tcp_ports'          => '[22,443,80,3389,161]',
-        'hygiene_probe_timeout_ms'         => '1000',
-        'hygiene_ticket_template'          => '0',
-        'hygiene_glpi_groups'              => '[]',
-        'hygiene_glpi_users'               => '[]',
-        'hygiene_itil_category'            => '0',
-        'hygiene_nms_group'                => '0',
-        'last_hygiene_run'                 => '',
-        'last_hygiene_ticket_run'          => '',
-        'last_hygiene_error'               => '',
+        'last_alarm_sync'        => '',
+        'last_alarm_sync_error'  => '',
     ];
 
     /** HygieneCheck frequency: daily; tickets follow hygiene_frequency_days (spec §7). */
@@ -372,22 +343,19 @@ final class Config
      */
     public static function hygieneConfig(): array
     {
-        $list = static fn (string $key): array => array_values((array) (json_decode(self::get($key), true) ?: []));
-        return [
-            'enabled'          => self::get('hygiene_enabled') === '1',
-            'frequency_days'   => max(1, (int) self::get('hygiene_frequency_days')),
-            'unmanaged_values' => array_map('strval', $list('hygiene_unmanaged_availabilities')),
-            'agent_stale_days' => max(1, (int) self::get('hygiene_agent_stale_days')),
-            'mist_stale_days'  => max(1, (int) self::get('hygiene_mist_stale_days')),
-            'probe_cidrs'      => array_map('strval', $list('hygiene_probe_cidrs')),
-            'probe_ports'      => array_map('intval', $list('hygiene_probe_tcp_ports')),
-            'probe_timeout_ms' => max(100, (int) self::get('hygiene_probe_timeout_ms')),
-            'template_id'      => (int) self::get('hygiene_ticket_template'),
-            'glpi_groups'      => array_map('intval', $list('hygiene_glpi_groups')),
-            'glpi_users'       => array_map('intval', $list('hygiene_glpi_users')),
-            'itil_category'    => max(0, (int) self::get('hygiene_itil_category')),
-            'nms_group'        => (int) self::get('hygiene_nms_group'),
-        ];
+        $s = Settings::fromJson('{}')->with(self::storedOrDefaults());
+        return self::hygieneConfigFromSettings($s);
+    }
+
+    /** Read stored values for per-connection keys from glpi_configs; fall back to Settings defaults. @return array<string, string> */
+    private static function storedOrDefaults(): array
+    {
+        $out = [];
+        foreach (Settings::DEFAULTS as $k => $d) {
+            $v = self::get($k);
+            $out[$k] = $v !== '' ? $v : $d;
+        }
+        return $out;
     }
 
     /**
@@ -403,23 +371,8 @@ final class Config
     /** @return array{ticket_severities: list<int>, ticket_source: string, relink_window_hours: int, storm_threshold: int, storm_window_minutes: int, storm_idle_minutes: int, service_user: int, template_id: int, title_pattern: string, content_pattern: string, entity_default: int, use_ipnetwork: bool} */
     public static function ticketingConfig(): array
     {
-        $sev = json_decode(self::get('ticket_severities'), true);
-        return [
-            'ticket_severities'    => is_array($sev) ? array_values(array_map('intval', $sev)) : [1],
-            'ticket_source'        => in_array(self::get('ticket_source'), self::TICKET_SOURCES, true) ? self::get('ticket_source') : self::TICKET_SOURCES[0],
-            'relink_window_hours'  => (int) self::get('relink_window_hours'),
-            'storm_threshold'      => (int) self::get('storm_threshold'),
-            'storm_window_minutes' => max(1, (int) self::get('storm_window_minutes')),
-            'storm_idle_minutes'   => self::stormIdleMinutes(max(1, (int) self::get('storm_window_minutes'))),
-            'service_user'         => (int) self::get('service_user'),
-            'template_id'          => (int) self::get('ticket_template'),
-            'title_pattern'        => self::get('ticket_title_pattern'),
-            'content_pattern'      => self::get('ticket_content_pattern'),
-            'entity_default'       => (int) self::get('ticket_entity_default'),
-            'use_ipnetwork'        => self::get('ticket_use_ipnetwork_entity') === '1',
-            'outbound_max_attempts' => max(1, (int) self::get('outbound_max_attempts')),
-            'production_addressings' => array_values(array_map('intval', (array) (json_decode(self::get('production_addressings'), true) ?: []))),
-        ] + self::filterSettings(self::get('ticket_filter_mode'), self::get('ticket_filter_event_types'), self::get('ticket_filter_keywords'));
+        $s = Settings::fromJson('{}')->with(self::storedOrDefaults());
+        return self::ticketingConfigFromSettings($s);
     }
 
     /** @return array{filter_mode: string, filter_event_types: list<string>, filter_keywords: list<string>} */
@@ -431,6 +384,55 @@ final class Config
             'filter_event_types' => is_array($types) ? array_values(array_map('strval', $types)) : [],
             'filter_keywords'    => self::lines($keywords),
         ];
+    }
+
+    /** Ticketing config resolved from a per-connection Settings (Task 5). */
+    public static function ticketingConfigFromSettings(Settings $s): array
+    {
+        $sev = json_decode($s->get('ticket_severities'), true);
+        return [
+            'ticket_severities'    => is_array($sev) ? array_values(array_map('intval', $sev)) : [1],
+            'ticket_source'        => in_array($s->get('ticket_source'), self::TICKET_SOURCES, true) ? $s->get('ticket_source') : self::TICKET_SOURCES[0],
+            'relink_window_hours'  => (int) $s->get('relink_window_hours'),
+            'storm_threshold'      => (int) $s->get('storm_threshold'),
+            'storm_window_minutes' => max(1, (int) $s->get('storm_window_minutes')),
+            'storm_idle_minutes'   => self::stormIdleMinutes(max(1, (int) $s->get('storm_window_minutes'))),
+            'service_user'         => (int) $s->get('service_user'),
+            'template_id'          => (int) $s->get('ticket_template'),
+            'title_pattern'        => $s->get('ticket_title_pattern'),
+            'content_pattern'      => $s->get('ticket_content_pattern'),
+            'entity_default'       => (int) $s->get('ticket_entity_default'),
+            'use_ipnetwork'        => $s->get('ticket_use_ipnetwork_entity') === '1',
+            'outbound_max_attempts' => max(1, (int) $s->get('outbound_max_attempts')),
+            'production_addressings' => array_values(array_map('intval', (array) (json_decode($s->get('production_addressings'), true) ?: []))),
+        ] + self::filterSettings($s->get('ticket_filter_mode'), $s->get('ticket_filter_event_types'), $s->get('ticket_filter_keywords'));
+    }
+
+    /** Hygiene config resolved from a per-connection Settings (Task 5). */
+    public static function hygieneConfigFromSettings(Settings $s): array
+    {
+        $list = static fn (string $key): array => array_values((array) (json_decode($s->get($key), true) ?: []));
+        return [
+            'enabled'          => $s->get('hygiene_enabled') === '1',
+            'frequency_days'   => max(1, (int) $s->get('hygiene_frequency_days')),
+            'unmanaged_values' => array_map('strval', $list('hygiene_unmanaged_availabilities')),
+            'agent_stale_days' => max(1, (int) $s->get('hygiene_agent_stale_days')),
+            'mist_stale_days'  => max(1, (int) $s->get('hygiene_mist_stale_days')),
+            'probe_cidrs'      => array_map('strval', $list('hygiene_probe_cidrs')),
+            'probe_ports'      => array_map('intval', $list('hygiene_probe_tcp_ports')),
+            'probe_timeout_ms' => max(100, (int) $s->get('hygiene_probe_timeout_ms')),
+            'template_id'      => (int) $s->get('hygiene_ticket_template'),
+            'glpi_groups'      => array_map('intval', $list('hygiene_glpi_groups')),
+            'glpi_users'       => array_map('intval', $list('hygiene_glpi_users')),
+            'itil_category'    => max(0, (int) $s->get('hygiene_itil_category')),
+            'nms_group'        => (int) $s->get('hygiene_nms_group'),
+        ];
+    }
+
+    /** Coverage states from a per-connection Settings (Task 5). */
+    public static function coverageStatesFromSettings(Settings $s): array
+    {
+        return array_values(array_map('intval', (array) (json_decode($s->get('coverage_states'), true) ?: [])));
     }
 
     /** @return list<string> trimmed, non-empty, unique lines */
@@ -462,7 +464,11 @@ final class Config
     /** @return list<int> GLPI states counted by the Coverage page; [] = every state (D28). */
     public static function coverageStates(): array
     {
-        return array_values(array_map('intval', (array) (json_decode(self::get('coverage_states'), true) ?: [])));
+        $stored = self::get('coverage_states');
+        if ($stored !== '') {
+            return array_values(array_map('intval', (array) (json_decode($stored, true) ?: [])));
+        }
+        return self::coverageStatesFromSettings(Settings::fromJson('{}'));
     }
 
     /** @return list<string> configured asset itemtypes still on offer */
