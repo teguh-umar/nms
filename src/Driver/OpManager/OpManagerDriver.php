@@ -30,7 +30,7 @@ final class OpManagerDriver implements Driver
         private int $timeout = 30,
     ) {
         $this->transport = $transport ?? $this->curlTransport(...);
-        $this->capabilities = $this->capabilities ?? new Capabilities(true, true, true, true, true, true, true);
+        $this->capabilities = $this->capabilities ?? new Capabilities(true, true, true, true, true, true, true, true);
     }
 
     public function capabilities(): Capabilities

@@ -156,6 +156,14 @@ final class SuiteConfig
             \Html::closeForm();
             echo '</div>';
         }
+
+        // Task 9: link to the per-connection management page.
+        echo '<div class="mt-3">';
+        echo '<a href="' . htmlescape(\Html::getPrefixedUrl('/plugins/opmanager/front/connection.php')) . '" class="btn btn-outline-primary">';
+        echo __('Manage connections', 'nms');
+        echo '</a>';
+        echo '<div class="form-hint">' . __s('List and edit all NMS connections.', 'nms') . '</div>';
+        echo '</div>';
     }
 
     private static function tabMatching(string $sfx, string $disabled, bool $canedit): void

@@ -2,16 +2,20 @@
 
 namespace GlpiPlugin\Nms;
 
-/** Pure: the health badges at the top of the Setup section (spec §15.2). */
+use GlpiPlugin\Nms\Connection\Connection;
+
+/**
+ * Pure: the health badges at the top of the Setup section (spec §15.2).
+ */
 final class SetupStatus
 {
     /**
      * @param array{api_key_set: bool, last_device_sync: string, last_device_sync_error: string, stale_minutes: int,
      *   last_alarm_sync: string, last_alarm_sync_error: string, alarm_minutes: int, webhook_token_set: bool,
      *   outbox_pending: int, outbox_failed: int, ticket_source?: string} $f
-     * @return list<array{key: string, label: string, level: string, text: string}>
-     */
-    public static function items(array $f, string $now): array
+     * @param list<Connection> $connections per-connection status lines (Task 9)
+     * @return list<array{key: string, label: string, level: string, text: string}> */
+    public static function items(array $f, string $now, array $connections = []): array
     {
         $age = static function (string $when) use ($now): ?int {
             return $when === '' ? null : intdiv(max(0, strtotime($now) - strtotime($when)), 60);
@@ -45,6 +49,16 @@ final class SetupStatus
                 $item = ['key' => 'hygiene', 'label' => $label, 'level' => 'warn', 'text' => __('tickets off', 'nms')];
             }
             $items[] = $item;
+        }
+        // Task 9: one status line per connection.
+        foreach ($connections as $conn) {
+            $label = __('Connection', 'nms') . ' — ' . htmlescape($conn->name);
+            $level = $conn->last_status === 'error' ? 'error' : ($conn->last_status === 'ok' ? 'ok' : 'warn');
+            $text  = $conn->last_status !== '' ? $conn->last_status : __('never synced', 'nms');
+            if ($conn->last_error !== '') {
+                $text .= ' — ' . htmlescape($conn->last_error);
+            }
+            $items[] = ['key' => 'conn_' . (int) $conn->id, 'label' => $label, 'level' => $level, 'text' => $text];
         }
         return $items;
     }

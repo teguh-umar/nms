@@ -32,4 +32,10 @@ final class DriverFactory
             default     => throw new InvalidArgumentException('No NMS driver for brand: ' . $c->brand),
         };
     }
+
+    /** @return list<string> brands that have a Driver implementation. */
+    public static function supportedBrands(): array
+    {
+        return ['opmanager'];
+    }
 }

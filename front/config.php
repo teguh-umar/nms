@@ -65,6 +65,11 @@ if (isset($_POST['migrate_from_opmanager'])) {
     Html::back();
 }
 
+// Link to per-connection management page.
+if (!empty($_POST['manage_connections'])) {
+    Html::redirect(\Html::getPrefixedUrl('/plugins/opmanager/front/connection.php'));
+}
+
 // Users who can open Setup > General get the PGN Suite tab instead (hub §5).
 if (Session::haveRight('config', READ)) {
     Html::redirect(ConfigTab::getReturnUrl(SuiteConfig::SECTION));

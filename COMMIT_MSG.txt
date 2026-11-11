@@ -1,0 +1,28 @@
+feat: Setup lists and edits connections
+
+Add ConnectionForm: renders the connections list table and the per-connection
+edit form, and processes POST saves. Secret fields (api_key, password,
+webhook_token) are never echoed - blank means "keep stored". The form shows
+"set / not set" placeholders for secrets. The Test button calls
+Driver::testConnection() and shows its message. Write-back and Webhook
+switches are disabled with "Not supported by this NMS" when the capability
+is false. The brand select lists only brands that DriverFactory supports.
+
+Files:
+- front/connection.php: lists connections (name, brand, entity, active,
+  tickets, write-back, last sync, last status).
+- front/connection.form.php: edits every connection column + Settings.
+- src/Connection/ConnectionForm.php: render + save logic.
+- tests/connection_form_test.php: no secret in HTML; disabled switches for
+  non-opmanager brand; POST without UPDATE right refused; empty secret keeps
+  stored value; supported brands from DriverFactory.
+
+Modify:
+- src/SetupStatus.php: items() accepts optional list<Connection> and emits
+  one status line per connection.
+- src/SuiteConfig.php: connection tab links to the connections page.
+- front/config.php: manage_connections POST redirects to connection page.
+- src/Driver/Capabilities.php: added writeback capability flag.
+- src/Driver/DriverFactory.php: added supportedBrands().
+
+Co-Authored-By: Nemotron-3.5-Super-VL-Free <noreply@opencode.ai>

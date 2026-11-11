@@ -13,5 +13,6 @@ final class Capabilities
         public readonly bool $ack,
         public readonly bool $clear,
         public readonly bool $webhook,
+        public readonly bool $writeback = false,
     ) {}
 }
