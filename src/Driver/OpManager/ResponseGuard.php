@@ -60,4 +60,10 @@ final class ResponseGuard
         }
         return 'OpManager error: ' . (is_scalar($error) ? (string) $error : 'unknown');
     }
+
+    /** Scrub any apiKey from a URL or message so it never leaks in logs or exceptions. */
+    public static function redact(string $text): string
+    {
+        return (string) preg_replace('/(apiKey=)[^&\s"\']+/i', '$1***', $text);
+    }
 }

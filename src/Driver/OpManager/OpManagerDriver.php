@@ -2,13 +2,17 @@
 
 namespace GlpiPlugin\Nms\Driver\OpManager;
 
+use GlpiPlugin\Nms\Connection\Connection;
+use GlpiPlugin\Nms\Driver\Capabilities;
+use GlpiPlugin\Nms\Driver\Driver;
+use GlpiPlugin\Nms\Driver\UnsupportedOperation;
+
 /**
- * The only place that talks HTTP to OpManager. The API key travels ONLY in the
- * `apiKey` header (query-parameter auth is deprecated since OpManager 12.8.100 and
- * listAlarms is header-only, spec §14). redact() still scrubs any message that
- * could embed a URL.
+ * OpManager brand driver. Wraps the OpManager REST API (ext-curl) behind the
+ * Driver interface. listDevices()/listActiveAlarms() return the same array
+ * shapes that 1.3.2's DeviceParser/AlarmParser return.
  */
-final class Client implements DeviceSource, AlarmSource, AlarmWriter
+final class OpManagerDriver implements Driver
 {
     public const DEVICE_LIST_PATH = '/api/json/device/listDevices';
     public const ALARM_LIST_PATH  = '/api/json/alarm/listAlarms';
@@ -16,74 +20,93 @@ final class Client implements DeviceSource, AlarmSource, AlarmWriter
     public const CLEAR_ALARM_PATH = '/api/json/alarm/clearAlarm';
     public const ACK_ALARM_PATH   = '/api/json/alarm/acknowledgeAlarm';
 
-    /** @var callable(string, array<string, string>, array<string, string>, ?array<string, string>): array{status: int, body: string} a non-null form means POST */
+    /** @var callable(string, array<string, string>, array<string, string>, ?array<string, string>): array{status: int, body: string} */
     private $transport;
 
     public function __construct(
-        private string $baseUrl,
-        private string $apiKey,
-        private bool $verifySsl = true,
+        private Connection $connection,
         ?callable $transport = null,
+        private ?Capabilities $capabilities = null,
         private int $timeout = 30,
     ) {
         $this->transport = $transport ?? $this->curlTransport(...);
+        $this->capabilities = $this->capabilities ?? new Capabilities(true, true, true, true, true, true, true);
     }
 
+    public function capabilities(): Capabilities
+    {
+        return $this->capabilities;
+    }
+
+    /** @return array{ok: bool, message: string} */
+    public function testConnection(): array
+    {
+        try {
+            $this->listDevices();
+            return ['ok' => true, 'message' => ''];
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'message' => ResponseGuard::errorMessage(['message' => $e->getMessage()])];
+        }
+    }
+
+    /** @return list<array<string, mixed>> same shape as DeviceParser::parse() */
     public function listDevices(): array
     {
         return DeviceParser::parse($this->get(self::DEVICE_LIST_PATH));
     }
 
+    /** @return list<array<string, mixed>> same shape as AlarmParser::parse() */
     public function listActiveAlarms(): array
     {
         return AlarmParser::parse($this->get(self::ALARM_LIST_PATH, ['alertType' => 'ActiveAlarms']));
     }
 
-    public function alarmByEntity(string $entity): ?array
+    public function alarmByKey(string $key): ?array
     {
-        foreach (AlarmParser::parse($this->get(self::ALARM_LIST_PATH, ['entity' => $entity])) as $alarm) {
-            if ($alarm['entity_key'] === $entity) {
+        foreach ($this->listActiveAlarms() as $alarm) {
+            if ($alarm['alarm_key'] === $key) {
                 return $alarm;
             }
         }
         return null;
     }
 
-    public static function redact(string $text): string
+    public function addNote(string $alarm_key, string $text): void
     {
-        return (string) preg_replace('/(apiKey=)[^&\s"\']+/i', '$1***', $text);
+        $this->checkCapability('note');
+        $this->post(self::ADD_NOTES_PATH, ['entity' => $alarm_key, 'notes' => $text]);
     }
 
-    public function addNote(string $entity, string $notes): void
+    public function acknowledge(string $alarm_key): void
     {
-        $this->post(self::ADD_NOTES_PATH, ['entity' => $entity, 'notes' => $notes]);
+        $this->checkCapability('ack');
+        $this->post(self::ACK_ALARM_PATH, ['entity' => $alarm_key]);
     }
 
-    public function clearAlarm(string $entity): void
+    public function clear(string $alarm_key): void
     {
-        $this->post(self::CLEAR_ALARM_PATH, ['entity' => $entity]);
+        $this->checkCapability('clear');
+        $this->post(self::CLEAR_ALARM_PATH, ['entity' => $alarm_key]);
     }
 
-    public function acknowledgeAlarm(string $entity): void
+    private function checkCapability(string $cap): void
     {
-        $this->post(self::ACK_ALARM_PATH, ['entity' => $entity]);
+        if (!$this->capabilities->$cap) {
+            throw new UnsupportedOperation("$cap not supported by {$this->connection->brand}");
+        }
     }
 
     /**
-     * OpManager answers HTTP 200 with {"error":{...}} on refusal (spec §14). Success shapes
-     * differ per call (addNotes: "result", clearAlarm: "ackMessage"), so only "error" counts.
-     *
      * @param array<string, string> $form
      */
     private function post(string $path, array $form): void
     {
         $data = json_decode($this->request($path, [], $form), true);
         if (is_array($data) && array_key_exists('error', $data)) {
-            throw new ClientException(sprintf('OpManager %s refused: %s', $path, ResponseGuard::errorMessage($data['error'])));
+            throw new \RuntimeException(sprintf('OpManager %s refused: %s', $path, ResponseGuard::errorMessage($data['error'])));
         }
     }
 
-    /** @param array<string, string> $query */
     private function get(string $path, array $query = []): string
     {
         return $this->request($path, $query);
@@ -91,30 +114,28 @@ final class Client implements DeviceSource, AlarmSource, AlarmWriter
 
     /**
      * @param array<string, string> $query
-     * @param array<string, string>|null $form
+     * @param array<string, string> $headers
+     * @param array<string, string>|null $form POST body; null = GET
+     * @return array{status: int, body: string}
      */
     private function request(string $path, array $query = [], ?array $form = null): string
     {
-        if ($this->baseUrl === '' || $this->apiKey === '') {
-            throw new ClientException('OpManager URL or API key is not configured');
+        if ($this->connection->url === '' || $this->connection->secret('api_key') === '') {
+            throw new \RuntimeException('OpManager URL or API key is not configured');
         }
         try {
-            $response = ($this->transport)(rtrim($this->baseUrl, '/') . $path, $query, ['apiKey' => $this->apiKey], $form);
-        } catch (ClientException $e) {
-            throw $e;
+            $response = ($this->transport)(rtrim($this->connection->url, '/') . $path, $query, ['apiKey' => $this->connection->secret('api_key')], $form);
         } catch (\Throwable $e) {
-            throw new ClientException(self::redact(sprintf('OpManager %s failed: %s', $path, $e->getMessage())));
+            throw new \RuntimeException(sprintf('OpManager %s failed: %s', $path, $e->getMessage()));
         }
         if ($response['status'] < 200 || $response['status'] >= 300) {
-            throw new ClientException(sprintf('OpManager %s answered HTTP %d', $path, $response['status']));
+            throw new \RuntimeException(sprintf('OpManager %s answered HTTP %d', $path, $response['status']));
         }
         return $response['body'];
     }
 
     /**
-     * Plain ext-curl (a GLPI requirement) rather than Guzzle: another plugin can ship its own
-     * older Guzzle and win the autoload race (telegrambot bundles 6.2.1), which breaks
-     * GLPI's Guzzle 7 with "Undefined constant ClientInterface::MAJOR_VERSION".
+     * Plain ext-curl transport.
      *
      * @param array<string, string> $query
      * @param array<string, string> $headers
@@ -136,8 +157,8 @@ final class Client implements DeviceSource, AlarmSource, AlarmWriter
             CURLOPT_HTTPHEADER     => $lines,
             CURLOPT_TIMEOUT        => $this->timeout,
             CURLOPT_CONNECTTIMEOUT => min(10, $this->timeout),
-            CURLOPT_SSL_VERIFYPEER => $this->verifySsl,
-            CURLOPT_SSL_VERIFYHOST => $this->verifySsl ? 2 : 0,
+            CURLOPT_SSL_VERIFYPEER => $this->connection->verify_tls === 1,
+            CURLOPT_SSL_VERIFYHOST => $this->connection->verify_tls === 1 ? 2 : 0,
             CURLOPT_FOLLOWLOCATION => false,
         ]);
         if ($form !== null) {

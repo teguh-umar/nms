@@ -1,12 +1,12 @@
 <?php
 
 require __DIR__ . '/bootstrap.php';
-foreach (['OpManager/ClientException', 'OpManager/AlarmSource', 'Ticketing/AssetResolver', 'Ticketing/AlarmStore',
+foreach (['Driver/Driver', 'Driver/OpManager/ClientException', 'Ticketing/AssetResolver', 'Ticketing/AlarmStore',
           'Ticketing/TicketGateway', 'Ticketing/TicketRequestStore', 'Ticketing/ProductionCheck', 'Ticketing/Decision', 'Ticketing/Messages', 'Ticketing/AlarmFilter', 'Ticketing/AlarmSync'] as $f) {
     require OPM_ROOT . "/src/{$f}.php";
 }
 
-use GlpiPlugin\Nms\Driver\OpManager\AlarmSource;
+use GlpiPlugin\Nms\Driver\Driver;
 use GlpiPlugin\Nms\Driver\OpManager\ClientException;
 use GlpiPlugin\Nms\Ticketing\AlarmStore;
 use GlpiPlugin\Nms\Ticketing\AlarmSync;
@@ -15,14 +15,23 @@ use GlpiPlugin\Nms\Ticketing\ProductionCheck;
 use GlpiPlugin\Nms\Ticketing\TicketGateway;
 use GlpiPlugin\Nms\Ticketing\TicketRequestStore;
 
-final class Src implements AlarmSource
+final class Src implements Driver
 {
     public array $byEntity = [];
     public ?ClientException $fail = null;
     public array $entityCalls = [];
     public function __construct(public array $active) {}
+    public function capabilities(): \GlpiPlugin\Nms\Driver\Capabilities
+    {
+        return new \GlpiPlugin\Nms\Driver\Capabilities(true, true, true, true, true, true, true);
+    }
+    public function testConnection(): array { return ['ok' => true, 'message' => '']; }
+    public function listDevices(): array { return []; }
     public function listActiveAlarms(): array { if ($this->fail) { throw $this->fail; } return $this->active; }
-    public function alarmByEntity(string $e): ?array { $this->entityCalls[] = $e; if (($this->byEntity[$e] ?? null) instanceof ClientException) { throw $this->byEntity[$e]; } return $this->byEntity[$e] ?? null; }
+    public function alarmByKey(string $k): ?array { $this->entityCalls[] = $k; foreach ($this->byEntity as $a) { if (($a['alarm_key'] ?? '') === $k) { if ($a instanceof ClientException) { throw $a; } return $a; } } return null; }
+    public function addNote(string $alarm_key, string $text): void {}
+    public function acknowledge(string $alarm_key): void {}
+    public function clear(string $alarm_key): void {}
 }
 final class Store implements AlarmStore
 {

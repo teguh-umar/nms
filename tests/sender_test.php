@@ -1,11 +1,11 @@
 <?php
 
 require __DIR__ . '/bootstrap.php';
-foreach (['OpManager/ClientException', 'OpManager/AlarmWriter', 'Outbound/OutboxStore', 'Outbound/Sender'] as $f) {
+foreach (['Driver/Driver', 'Driver/OpManager/ClientException', 'Outbound/OutboxStore', 'Outbound/Sender'] as $f) {
     require OPM_ROOT . "/src/{$f}.php";
 }
 
-use GlpiPlugin\Nms\Driver\OpManager\AlarmWriter;
+use GlpiPlugin\Nms\Driver\Driver;
 use GlpiPlugin\Nms\Driver\OpManager\ClientException;
 use GlpiPlugin\Nms\Outbound\OutboxStore;
 use GlpiPlugin\Nms\Outbound\Sender;
@@ -24,12 +24,17 @@ final class Box implements OutboxStore
     public function markFailed(int $id, int $a, string $e, string $now): void { $this->rows[$id]['state'] = 'failed'; $this->rows[$id]['attempts'] = $a; $this->rows[$id]['error'] = $e; }
     public function summary(): array { return ['pending' => 0, 'failed' => 0, 'last_error' => '']; }
 }
-final class Opm implements AlarmWriter
+final class Opm implements Driver
 {
     public array $calls = []; public array $down = [];
-    public function addNote(string $e, string $n): void { $this->calls[] = "note {$e} {$n}"; if (in_array($e, $this->down, true)) { throw new ClientException('OpManager down'); } }
-    public function clearAlarm(string $e): void { $this->calls[] = "clear {$e}"; if (in_array($e, $this->down, true)) { throw new ClientException('OpManager down'); } }
-    public function acknowledgeAlarm(string $e): void { $this->calls[] = "ack {$e}"; if (in_array($e, $this->down, true)) { throw new ClientException('OpManager down'); } }
+    public function capabilities(): \GlpiPlugin\Nms\Driver\Capabilities { return new \GlpiPlugin\Nms\Driver\Capabilities(true, true, true, true, true, true, true); }
+    public function testConnection(): array { return ['ok' => true, 'message' => '']; }
+    public function listDevices(): array { return []; }
+    public function listActiveAlarms(): array { return []; }
+    public function alarmByKey(string $alarm_key): ?array { return null; }
+    public function addNote(string $alarm_key, string $text): void { $this->calls[] = "note {$alarm_key} {$text}"; if (in_array($alarm_key, $this->down, true)) { throw new ClientException('OpManager down'); } }
+    public function acknowledge(string $alarm_key): void { $this->calls[] = "ack {$alarm_key}"; if (in_array($alarm_key, $this->down, true)) { throw new ClientException('OpManager down'); } }
+    public function clear(string $alarm_key): void { $this->calls[] = "clear {$alarm_key}"; if (in_array($alarm_key, $this->down, true)) { throw new ClientException('OpManager down'); } }
 }
 
 $now = '2026-10-01 10:00:00';

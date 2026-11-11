@@ -1,7 +1,7 @@
 <?php
 
 require __DIR__ . '/bootstrap.php';
-foreach (['Matching/AssetLookup', 'Matching/Matcher', 'OpManager/ClientException', 'OpManager/DeviceSource', 'DeviceStore', 'DeviceSync'] as $f) {
+foreach (['Driver/Driver', 'Matching/AssetLookup', 'Matching/Matcher', 'Driver/OpManager/ClientException', 'DeviceStore', 'DeviceSync'] as $f) {
     require OPM_ROOT . "/src/{$f}.php";
 }
 
@@ -9,12 +9,14 @@ use GlpiPlugin\Nms\DeviceStore;
 use GlpiPlugin\Nms\DeviceSync;
 use GlpiPlugin\Nms\Matching\AssetLookup;
 use GlpiPlugin\Nms\Matching\Matcher;
+use GlpiPlugin\Nms\Driver\Driver;
 use GlpiPlugin\Nms\Driver\OpManager\ClientException;
-use GlpiPlugin\Nms\Driver\OpManager\DeviceSource;
 
-final class FakeSource implements DeviceSource
+final class FakeSource implements Driver
 {
     public function __construct(private array|ClientException $result) {}
+    public function capabilities(): \GlpiPlugin\Nms\Driver\Capabilities { return new \GlpiPlugin\Nms\Driver\Capabilities(true, true, true, true, true, true, true); }
+    public function testConnection(): array { return ['ok' => true, 'message' => '']; }
     public function listDevices(): array
     {
         if ($this->result instanceof ClientException) {
@@ -22,6 +24,11 @@ final class FakeSource implements DeviceSource
         }
         return $this->result;
     }
+    public function listActiveAlarms(): array { return []; }
+    public function alarmByKey(string $key): ?array { return null; }
+    public function addNote(string $alarm_key, string $text): void {}
+    public function acknowledge(string $alarm_key): void {}
+    public function clear(string $alarm_key): void {}
 }
 final class FakeStore implements DeviceStore
 {

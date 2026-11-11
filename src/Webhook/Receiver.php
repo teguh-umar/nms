@@ -2,25 +2,22 @@
 
 namespace GlpiPlugin\Nms\Webhook;
 
-use GlpiPlugin\Nms\Driver\OpManager\AlarmSource;
-use GlpiPlugin\Nms\Driver\OpManager\ClientException;
+use GlpiPlugin\Nms\Driver\Driver;
 use GlpiPlugin\Nms\Ticketing\SyncLock;
 use GlpiPlugin\Nms\Ticketing\TicketRequestStore;
 
 /**
- * OpManager "Invoke a Webhook" receiver. The payload is only a trigger: the alarm itself is
- * re-read from the OpManager API, so a forged body can at worst make us look up a real alarm.
+ * NMS "Invoke a Webhook" receiver. The payload is only a trigger: the alarm itself is
+ * re-read from the NMS API, so a forged body can at worst make us look up a real alarm.
  * Anything that cannot be processed now is answered 202 - the AlarmSync cron picks it up.
  */
 final class Receiver
 {
     public const MAX_BODY = 8192;
 
-    /**
-     * Any printable text up to 255 (the column size): real OpManager entities can hold '/',
-     * spaces and exceed 64 chars (interfaces). The values only reach the OpManager API as an
-     * encoded query parameter and a string comparison, never SQL.
-     */
+    /** @var printable text up to 255 (the column size): real NMS entities can hold '/',
+     * spaces and exceed 64 chars (interfaces). The values only reach the NMS API as an
+     * encoded query parameter and a string comparison, never SQL. */
     public const ID_PATTERN = '/^[^\x00-\x1F\x7F]{1,255}$/';
 
     private const RECEIVED_MAX = 200;
@@ -32,7 +29,7 @@ final class Receiver
 
     public function __construct(
         private string $token,
-        private AlarmSource $source,
+        private Driver $source,
         private SyncLock $lock,
         callable $runner,
         private ?TicketRequestStore $requests = null
@@ -56,9 +53,9 @@ final class Receiver
         $data     = json_decode($raw_body, true);
         $alarm_id = is_array($data) && is_scalar($data['alarm_id'] ?? null) ? (string) $data['alarm_id'] : '';
         $entity   = is_array($data) && is_scalar($data['entity'] ?? null) ? (string) $data['entity'] : '';
-        // OpManager "Test Action" sends $alarmid/$entity unfilled: acknowledge, process nothing.
+        // NMS "Test Action" sends $alarmid/$entity unfilled: acknowledge, process nothing.
         if (str_starts_with($alarm_id, '$') || str_starts_with($entity, '$')) {
-            return ['status' => 200, 'body' => ['status' => 'test', 'message' => 'test received; OpManager did not fill $alarmid/$entity, no alarm processed']];
+            return ['status' => 200, 'body' => ['status' => 'test', 'message' => 'test received; NMS did not fill $alarmid/$entity, no alarm processed']];
         }
         if (preg_match(self::ID_PATTERN, $alarm_id) !== 1 || preg_match(self::ID_PATTERN, $entity) !== 1) {
             $reply = self::reply(400, 'alarm_id and entity are required');
@@ -73,11 +70,11 @@ final class Receiver
         }
         try {
             try {
-                $alarm = $this->source->alarmByEntity($entity);
-            } catch (ClientException $e) {
-                return $this->defer('OpManager API unavailable; deferred to AlarmSync cron', $alarm_id, $entity);
+                $alarm = $this->source->alarmByKey($alarm_id);
+            } catch (\Throwable $e) {
+                return $this->defer('NMS API unavailable; deferred to AlarmSync cron', $alarm_id, $entity);
             }
-            if ($alarm === null || (string) ($alarm['alarm_key'] ?? '') !== $alarm_id) {
+            if ($alarm === null || (string) ($alarm['alarm_key'] ?? '') !== $alarm_id || (string) ($alarm['entity_key'] ?? '') !== $entity) {
                 return $this->defer('alarm not current on this entity; deferred to AlarmSync cron', $alarm_id, $entity);
             }
             $stats = ($this->runner)($alarm);

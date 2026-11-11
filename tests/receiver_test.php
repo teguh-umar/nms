@@ -1,24 +1,30 @@
 <?php
 
 require __DIR__ . '/bootstrap.php';
-foreach (['OpManager/ClientException', 'OpManager/AlarmSource', 'Ticketing/SyncLock', 'Ticketing/TicketRequestStore', 'Webhook/Receiver'] as $f) {
+foreach (['Driver/Driver', 'Driver/OpManager/ClientException', 'Ticketing/SyncLock', 'Ticketing/TicketRequestStore', 'Webhook/Receiver'] as $f) {
     require OPM_ROOT . "/src/{$f}.php";
 }
 
-use GlpiPlugin\Nms\Driver\OpManager\AlarmSource;
+use GlpiPlugin\Nms\Driver\Driver;
 use GlpiPlugin\Nms\Driver\OpManager\ClientException;
 use GlpiPlugin\Nms\Ticketing\SyncLock;
 use GlpiPlugin\Nms\Ticketing\TicketRequestStore;
 use GlpiPlugin\Nms\Webhook\Receiver;
 
-final class Src implements AlarmSource
+final class Src implements Driver
 {
     public array $calls = [];
     public array $locked = [];
     public ?Lock $lock = null;
     public function __construct(public mixed $answer) {}
+    public function capabilities(): \GlpiPlugin\Nms\Driver\Capabilities { return new \GlpiPlugin\Nms\Driver\Capabilities(true, true, true, true, true, true, true); }
+    public function testConnection(): array { return ['ok' => true, 'message' => '']; }
+    public function listDevices(): array { return []; }
     public function listActiveAlarms(): array { return []; }
-    public function alarmByEntity(string $e): ?array { $this->calls[] = $e; $this->locked[] = $this->lock?->holding; if ($this->answer instanceof ClientException) { throw $this->answer; } return $this->answer; }
+    public function alarmByKey(string $k): ?array { $this->calls[] = $k; $this->locked[] = $this->lock?->holding; if ($this->answer instanceof ClientException) { throw $this->answer; } return $this->answer; }
+    public function addNote(string $alarm_key, string $text): void {}
+    public function acknowledge(string $alarm_key): void {}
+    public function clear(string $alarm_key): void {}
 }
 final class Lock implements SyncLock
 {
@@ -52,7 +58,7 @@ check('control characters refused', $r->handle('POST', 'secret-token', json_enco
 check('nothing fetched for refused calls', $s->calls === []);
 
 $res = $r->handle('POST', 'secret-token', $body);
-check('valid call processed', $res['status'] === 200 && $runs === ['10000003244'] && $s->calls === ['10000024830']);
+check('valid call processed', $res['status'] === 200 && $runs === ['10000003244'] && $s->calls === ['10000003244']);
 check('lock taken and released', $l->held === 1 && $l->released === 1);
 check('alarm fetched while holding the lock (no stale snapshot)', $s->locked === [true]);
 
@@ -85,7 +91,7 @@ $runs   = [];
 $long   = 'IF-192.0.2.245.10000000001-Gi0/1 uplink to core ' . str_repeat('x', 80) . '_Poll';
 [$r, $s] = $mk(['alarm_key' => '10000006678', 'entity_key' => $long, 'severity' => 1]);
 $res = $r->handle('POST', 'secret-token', json_encode(['alarm_id' => '10000006678', 'entity' => $long]));
-check('long entity with slash and spaces is processed', $res['status'] === 200 && $runs === ['10000006678'] && $s->calls === [$long]);
+check('long entity with slash and spaces is processed', $res['status'] === 200 && $runs === ['10000006678'] && $s->calls === ['10000006678']);
 [$r] = $mk($alarm);
 check('entity over 255 refused', $r->handle('POST', 'secret-token', json_encode(['alarm_id' => '1', 'entity' => str_repeat('e', 256)]))['status'] === 400);
 

@@ -2,10 +2,10 @@
 
 namespace GlpiPlugin\Nms;
 
+use GlpiPlugin\Nms\Connection\Connection;
+use GlpiPlugin\Nms\Driver\DriverFactory;
 use GlpiPlugin\Nms\Matching\DbAssetLookup;
 use GlpiPlugin\Nms\Matching\Matcher;
-use GlpiPlugin\Nms\Driver\OpManager\Client;
-use GlpiPlugin\Nms\Driver\OpManager\ClientException;
 use GlpiPlugin\Nms\Outbound\DbOutboxStore;
 use GlpiPlugin\Nms\Outbound\Hooks;
 use GlpiPlugin\Nms\Outbound\Sender;
@@ -37,6 +37,30 @@ final class Cron extends \CommonGLPI
         };
     }
 
+    /** Build the OpManager driver from the global (single) connection config. */
+    private static function opmDriver(): \GlpiPlugin\Nms\Driver\Driver
+    {
+        $conn = new Connection([
+            'name'           => 'opm.example.test',
+            'brand'          => 'opmanager',
+            'entities_id'    => 0,
+            'is_recursive'   => 1,
+            'url'            => Config::get('opm_url'),
+            'api_key'        => Config::get('opm_api_key'),
+            'username'       => '',
+            'password'       => '',
+            'verify_tls'     => (int) Config::get('opm_verify_ssl') === 1 ? 1 : 0,
+            'is_active'      => 1,
+            'writeback_enabled' => 1,
+            'tickets_enabled' => 1,
+            'webhook_token'  => Config::get('webhook_token'),
+            'settings'       => '{}',
+            'date_creation'  => '',
+            'date_mod'       => '',
+        ]);
+        return DriverFactory::for($conn);
+    }
+
     public static function cronDeviceSync(\CronTask $task): int
     {
         $now     = (string) \Session::getCurrentTime();
@@ -53,9 +77,9 @@ final class Cron extends \CommonGLPI
         }
 
         try {
-            $client = new Client(Config::get('opm_url'), Config::apiKey(), Config::get('opm_verify_ssl') === '1');
-            $stats  = DeviceSync::run($client, new DbDeviceStore(), new Matcher($lookup), Config::get('match_mode'), $now, $missing === []);
-        } catch (ClientException $e) {
+            $driver = self::opmDriver();
+            $stats  = DeviceSync::run($driver, new DbDeviceStore(), new Matcher($lookup), Config::get('match_mode'), $now, $missing === []);
+        } catch (\Throwable $e) {
             Config::set(['last_device_sync_error' => $e->getMessage()]);
             \Toolbox::logInFile('nms', 'DeviceSync: ' . $e->getMessage() . "\n");
             $task->log($e->getMessage());
@@ -91,9 +115,9 @@ final class Cron extends \CommonGLPI
         $ranges = AddressingRanges::load($cfg['production_addressings']);
 
         try {
-            $client = new Client(Config::get('opm_url'), Config::apiKey(), Config::get('opm_verify_ssl') === '1');
+            $driver = self::opmDriver();
             $sync   = new AlarmSync(
-                $client,
+                $driver,
                 new DbAlarmStore(),
                 new GlpiTicketGateway($cfg),
                 new AlarmAssetResolver(new DbDeviceIndex(), new Matcher(new DbAssetLookup(Config::assetItemtypes())), Config::get('match_mode')),
@@ -111,7 +135,7 @@ final class Cron extends \CommonGLPI
             } finally {
                 $lock->release();
             }
-        } catch (ClientException $e) {
+        } catch (\Throwable $e) {
             Config::set(['last_alarm_sync_error' => $e->getMessage()]);
             \Toolbox::logInFile('nms', 'AlarmSync: ' . $e->getMessage() . "\n");
             $task->log($e->getMessage());
@@ -125,7 +149,7 @@ final class Cron extends \CommonGLPI
             $problems[] = 'no production IP range selected in Setup: alarms are stored but no ticket is created';
         }
         if ($stats['pending'] > 0) {
-            $problems[] = sprintf('%d alarm ticket(s) could not be created (see files/_log/opmanager.log); retried next run', $stats['pending']);
+            $problems[] = sprintf('%d alarm ticket(s) could not be created (see files/_log/nms.log); retried next run', $stats['pending']);
         }
         foreach ($sync->lastErrors() as $error) {
             \Toolbox::logInFile('nms', 'AlarmSync: ' . $error . "\n");
@@ -202,8 +226,8 @@ final class Cron extends \CommonGLPI
     {
         $now    = (string) \Session::getCurrentTime();
         $cfg    = Config::ticketingConfig();
-        $client = new Client(Config::get('opm_url'), Config::apiKey(), Config::get('opm_verify_ssl') === '1');
-        $sender = new Sender(new DbOutboxStore(), $client, $cfg['outbound_max_attempts']);
+        $driver = self::opmDriver();
+        $sender = new Sender(new DbOutboxStore(), $driver, $cfg['outbound_max_attempts']);
         $lock   = new DbSyncLock(Hooks::OUTBOX_LOCK);
         if (!$lock->acquire(0)) {
             $task->log('a technician save is sending to OpManager; skipped this run');

@@ -2,8 +2,7 @@
 
 namespace GlpiPlugin\Nms\Ticketing;
 
-use GlpiPlugin\Nms\Driver\OpManager\AlarmSource;
-use GlpiPlugin\Nms\Driver\OpManager\ClientException;
+use GlpiPlugin\Nms\Driver\Driver;
 
 /**
  * One alarm poll (spec §7, D20). The active list is fetched BEFORE any write, so
@@ -34,7 +33,7 @@ final class AlarmSync
 
     /** @param array{ticket_severities: list<int>, relink_window_hours: int, storm_threshold: int, storm_window_minutes: int, storm_idle_minutes: int, filter_mode?: string, filter_event_types?: list<string>, filter_keywords?: list<string>, ticket_source?: string} $cfg */
     public function __construct(
-        private AlarmSource $source,
+        private Driver $driver,
         private AlarmStore $store,
         private TicketGateway $tickets,
         private AssetResolver $assets,
@@ -48,7 +47,7 @@ final class AlarmSync
     /** @return array<string, int> */
     public function run(string $now): array
     {
-        $active = $this->source->listActiveAlarms();
+        $active = $this->driver->listActiveAlarms();
 
         $this->errors = [];
         $stats = array_fill_keys(['fetched', 'created', 'joined', 'storm', 'reopened', 'restored', 'followups', 'cleared', 'solved', 'pending', 'stored', 'linked', 'errors'], 0);
@@ -70,11 +69,11 @@ final class AlarmSync
 
         foreach ($this->store->activeNotSeen($seen) as $row) {
             try {
-                $current = $this->source->alarmByEntity($row['entity_key']);
-            } catch (ClientException) {
+                $current = $this->driver->alarmByKey($row['alarm_key']);
+            } catch (\Throwable) {
                 continue;
             }
-            if ($current !== null && $current['alarm_key'] === $row['alarm_key'] && (int) $current['severity'] === self::CLEAR) {
+            if ($current !== null && (int) ($current['severity'] ?? 0) === self::CLEAR) {
                 if ($this->guarded($current, $now, $stats, false)) {
                     // M1: a deferred Clear must not leave a request that a later activation would inherit.
                     $this->requests?->delete($current['alarm_key']);

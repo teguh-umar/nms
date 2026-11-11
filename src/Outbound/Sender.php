@@ -2,8 +2,7 @@
 
 namespace GlpiPlugin\Nms\Outbound;
 
-use GlpiPlugin\Nms\Driver\OpManager\AlarmWriter;
-use GlpiPlugin\Nms\Driver\OpManager\ClientException;
+use GlpiPlugin\Nms\Driver\Driver;
 
 /**
  * Sends queued notes/clears oldest first. Per alarm the order is kept: once a row of an
@@ -15,7 +14,7 @@ final class Sender
     /** @var list<string> */
     private array $errors = [];
 
-    public function __construct(private OutboxStore $store, private AlarmWriter $writer, private int $max_attempts)
+    public function __construct(private OutboxStore $store, private Driver $driver, private int $max_attempts)
     {
     }
 
@@ -26,7 +25,7 @@ final class Sender
 
     /**
      * $stop_on_failure: the hooks send inside a technician's save, so one unreachable
-     * OpManager must cost one timeout, not one per row (final review I-3).
+     * NMS must cost one timeout, not one per row (final review I-3).
      *
      * @return array{sent: int, retried: int, failed: int}
      */
@@ -47,14 +46,18 @@ final class Sender
             $attempts = $row['attempts'] + 1;
             try {
                 match ($row['action']) {
-                    'note'  => $this->writer->addNote($row['entity_key'], $row['payload']),
-                    'clear' => $this->writer->clearAlarm($row['entity_key']),
-                    'ack'   => $this->writer->acknowledgeAlarm($row['entity_key']),
+                    'note'  => $this->driver->addNote($row['entity_key'], $row['payload']),
+                    'clear' => $this->driver->clear($row['entity_key']),
+                    'ack'   => $this->driver->acknowledge($row['entity_key']),
                     default => throw new \DomainException('unknown outbox action ' . $row['action']),
                 };
                 $this->store->markSent($row['id'], $now);
                 $stats['sent']++;
-            } catch (ClientException $e) {
+            } catch (\DomainException $e) {
+                $blocked[$key] = true;
+                $this->store->markFailed($row['id'], $attempts, $e->getMessage(), $now);
+                $stats['failed']++;
+            } catch (\Throwable $e) {
                 $blocked[$key] = true;
                 $this->errors[] = sprintf('%s %s: %s', $row['action'], $key, $e->getMessage());
                 if ($attempts >= $this->max_attempts) {
@@ -68,10 +71,6 @@ final class Sender
                 if ($stop_on_failure) {
                     break;
                 }
-            } catch (\DomainException $e) {
-                $blocked[$key] = true;
-                $this->store->markFailed($row['id'], $attempts, $e->getMessage(), $now);
-                $stats['failed']++;
             }
         }
         return $stats;

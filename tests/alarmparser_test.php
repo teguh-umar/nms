@@ -2,7 +2,7 @@
 
 require __DIR__ . '/bootstrap.php';
 foreach (['ClientException', 'ResponseGuard', 'AlarmParser'] as $f) {
-    require OPM_ROOT . "/src/OpManager/{$f}.php";
+    require OPM_ROOT . "/src/Driver/OpManager/{$f}.php";
 }
 
 use GlpiPlugin\Nms\Driver\OpManager\AlarmParser;

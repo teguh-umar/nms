@@ -3,7 +3,7 @@
 namespace GlpiPlugin\Nms;
 
 use GlpiPlugin\Nms\Matching\Matcher;
-use GlpiPlugin\Nms\Driver\OpManager\DeviceSource;
+use GlpiPlugin\Nms\Driver\Driver;
 
 /**
  * One device-sync pass. Fetches the whole list BEFORE writing anything, so a
@@ -19,9 +19,9 @@ final class DeviceSync
      *                        are kept instead of being downgraded to "not found".
      * @return array{fetched: int, matched: int, review: int, unmatched: int, manual: int, skipped: int}
      */
-    public static function run(DeviceSource $source, DeviceStore $store, Matcher $matcher, string $mode, string $now, bool $can_match = true): array
+    public static function run(Driver $driver, DeviceStore $store, Matcher $matcher, string $mode, string $now, bool $can_match = true): array
     {
-        $devices = $source->listDevices();
+        $devices = $driver->listDevices();
 
         $stats = ['fetched' => 0, 'matched' => 0, 'review' => 0, 'unmatched' => 0, 'manual' => 0, 'skipped' => 0];
         foreach ($devices as $device) {

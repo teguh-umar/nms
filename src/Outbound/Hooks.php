@@ -3,8 +3,9 @@
 namespace GlpiPlugin\Nms\Outbound;
 
 use Glpi\RichText\RichText;
+use GlpiPlugin\Nms\Connection\Connection;
 use GlpiPlugin\Nms\Config;
-use GlpiPlugin\Nms\Driver\OpManager\Client;
+use GlpiPlugin\Nms\Driver\DriverFactory;
 use GlpiPlugin\Nms\Ticketing\DbAlarmStore;
 use GlpiPlugin\Nms\Ticketing\DbSyncLock;
 use GlpiPlugin\Nms\Ticketing\GlpiTicketGateway;
@@ -113,8 +114,26 @@ final class Hooks
                 return;
             }
             try {
-                $client = new Client(Config::get('opm_url'), Config::apiKey(), Config::get('opm_verify_ssl') === '1', null, self::SEND_TIMEOUT);
-                $sender = new Sender($store, $client, $cfg['outbound_max_attempts']);
+                $conn = new Connection([
+                    'name'           => 'opm.example.test',
+                    'brand'          => 'opmanager',
+                    'entities_id'    => 0,
+                    'is_recursive'   => 1,
+                    'url'            => Config::get('opm_url'),
+                    'api_key'        => Config::get('opm_api_key'),
+                    'username'       => '',
+                    'password'       => '',
+                    'verify_tls'     => (int) Config::get('opm_verify_ssl') === 1 ? 1 : 0,
+                    'is_active'      => 1,
+                    'writeback_enabled' => 1,
+                    'tickets_enabled' => 1,
+                    'webhook_token'  => Config::get('webhook_token'),
+                    'settings'       => '{}',
+                    'date_creation'  => '',
+                    'date_mod'       => '',
+                ]);
+                $driver = DriverFactory::for($conn);
+                $sender = new Sender($store, $driver, $cfg['outbound_max_attempts']);
                 $sender->run($now, 20, true);
                 foreach ($sender->lastErrors() as $error) {
                     \Toolbox::logInFile('nms', 'Outbound: ' . $error . " (will retry)\n");

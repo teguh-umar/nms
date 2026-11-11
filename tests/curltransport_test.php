@@ -9,15 +9,33 @@ if (!extension_loaded('curl')) {
 }
 
 require __DIR__ . '/bootstrap.php';
-foreach (['ClientException', 'ResponseGuard', 'DeviceSource', 'AlarmSource', 'DeviceParser', 'AlarmParser', 'AlarmWriter', 'Client'] as $f) {
-    require OPM_ROOT . "/src/OpManager/{$f}.php";
+foreach (['ClientException', 'ResponseGuard', 'DeviceParser', 'AlarmParser'] as $f) {
+    require OPM_ROOT . "/src/Driver/OpManager/{$f}.php";
+}
+require OPM_ROOT . '/src/Driver/Driver.php';
+require OPM_ROOT . '/src/Driver/Capabilities.php';
+require OPM_ROOT . '/src/Connection/Connection.php';
+require OPM_ROOT . '/src/Driver/OpManager/OpManagerDriver.php';
+
+use GlpiPlugin\Nms\Connection\Connection;
+use GlpiPlugin\Nms\Driver\OpManager\ClientException;
+use GlpiPlugin\Nms\Driver\OpManager\OpManagerDriver;
+
+if (!class_exists('\GLPIKey', false)) {
+    class GLPIKey
+    {
+        public function encrypt(string $value): string { return base64_encode('enc:' . $value); }
+        public function decrypt($value)
+        {
+            if (!is_string($value)) { return false; }
+            $dec = base64_decode($value, true);
+            return $dec && str_starts_with($dec, 'enc:') ? substr($dec, 4) : false;
+        }
+    }
 }
 
-use GlpiPlugin\Nms\Driver\OpManager\Client;
-use GlpiPlugin\Nms\Driver\OpManager\ClientException;
-
-$src = (string) file_get_contents(OPM_ROOT . '/src/OpManager/Client.php');
-check('client does not depend on Guzzle (another plugin may ship an old copy)', !str_contains($src, 'GuzzleHttp'));
+$src = (string) file_get_contents(OPM_ROOT . '/src/Driver/OpManager/OpManagerDriver.php');
+check('driver does not depend on Guzzle (another plugin may ship an old copy)', !str_contains($src, 'GuzzleHttp'));
 
 $port = 18000 + random_int(0, 999);
 $log  = tempnam(sys_get_temp_dir(), 'opm');
@@ -34,26 +52,28 @@ for ($i = 0; $i < 50 && @fsockopen('127.0.0.1', $port) === false; $i++) {
 }
 
 try {
-    $client = new Client("http://127.0.0.1:{$port}", 'S3CRET', true);
-    $rows   = $client->listDevices();
+    $conn = new Connection(['name' => 'test', 'brand' => 'opmanager', 'url' => "http://127.0.0.1:{$port}", 'api_key' => base64_encode('enc:S3CRET'), 'verify_tls' => 0]);
+    $driver = new OpManagerDriver($conn);
+    $rows   = $driver->listDevices();
     $seen   = json_decode((string) file_get_contents($log), true);
     check('default transport fetches and parses', count($rows) === 1 && $rows[0]['display_name'] === 'sw-01');
-    check('GET to the device list path', ($seen['method'] ?? '') === 'GET' && ($seen['path'] ?? '') === Client::DEVICE_LIST_PATH);
+    check('GET to the device list path', ($seen['method'] ?? '') === 'GET' && ($seen['path'] ?? '') === OpManagerDriver::DEVICE_LIST_PATH);
     check('api key sent in the apiKey header', ($seen['apikey'] ?? null) === 'S3CRET' && !isset($seen['query']['apiKey']));
 
-    $client->alarmByEntity('E 1&x');
+    $driver->alarmByKey('E 1&x');
     $seen = json_decode((string) file_get_contents($log), true);
-    check('query parameters encoded', ($seen['query'] ?? null) === ['entity' => 'E 1&x']);
+    check('active alarms use the ActiveAlarms filter', ($seen['query'] ?? null) === ['alertType' => 'ActiveAlarms']);
 
-    $client->addNote('IF-1.2_Poll', 'note from test');
+    $driver->addNote('IF-1.2_Poll', 'note from test');
     $seen = json_decode((string) file_get_contents($log), true);
     check('curl POSTs the form body', ($seen['method'] ?? '') === 'POST' && ($seen['form'] ?? null) === ['entity' => 'IF-1.2_Poll', 'notes' => 'note from test']);
     check('curl POST keeps the key in the header only', ($seen['apikey'] ?? null) === 'S3CRET' && !isset($seen['form']['apiKey']) && !isset($seen['query']['apiKey']));
 
     try {
-        (new Client("http://127.0.0.1:{$port}/fail", 'S3CRET', true))->listDevices();
+        $badConn = new Connection(['name' => 'test', 'brand' => 'opmanager', 'url' => "http://127.0.0.1:{$port}/fail", 'api_key' => base64_encode('enc:S3CRET'), 'verify_tls' => 0]);
+        (new OpManagerDriver($badConn))->listDevices();
         check('HTTP 500 throws', false);
-    } catch (ClientException $e) {
+    } catch (\RuntimeException $e) {
         check('HTTP 500 throws', str_contains($e->getMessage(), '500'));
     }
 } finally {
@@ -63,10 +83,11 @@ try {
 }
 
 try {
-    (new Client("http://127.0.0.1:{$port}", 'S3CRET', true))->listDevices();
-    check('connection failure throws ClientException', false);
-} catch (ClientException $e) {
-    check('connection failure throws ClientException', !str_contains($e->getMessage(), 'S3CRET'));
+    $badConn = new Connection(['name' => 'test', 'brand' => 'opmanager', 'url' => "http://127.0.0.1:{$port}", 'api_key' => base64_encode('enc:S3CRET'), 'verify_tls' => 0]);
+    (new OpManagerDriver($badConn))->listDevices();
+    check('connection failure throws', false);
+} catch (\RuntimeException $e) {
+    check('connection failure throws', !str_contains($e->getMessage(), 'S3CRET'));
 }
 
 done();

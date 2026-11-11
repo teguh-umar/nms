@@ -1,16 +1,17 @@
 <?php
 
 /**
- * OpManager "Invoke a Webhook" receiver (v0.3.0). Stateless (see plugin_nms_boot):
- * no session, no CSRF; authenticated by the X-OPM-Token header only. The body is a
- * trigger {"alarm_id":"$alarmid","entity":"$entity"}; the alarm itself is fetched from
- * the OpManager API and run through the same engine as the AlarmSync poll.
+ * NMS "Invoke a Webhook" receiver. Stateless (see plugin_nms_boot): no session,
+ * no CSRF; authenticated by the X-NMS-Token header (X-OPM-Token also accepted for
+ * OpManager). The body is a trigger {"alarm_id":"$alarmid","entity":"$entity"};
+ * the alarm itself is fetched from the NMS API and run through the same engine
+ * as the AlarmSync poll.
  */
 
-use GlpiPlugin\Nms\Config;
+use GlpiPlugin\Nms\Connection\Connection;
+use GlpiPlugin\Nms\Driver\DriverFactory;
 use GlpiPlugin\Nms\Matching\DbAssetLookup;
 use GlpiPlugin\Nms\Matching\Matcher;
-use GlpiPlugin\Nms\Driver\OpManager\Client;
 use GlpiPlugin\Nms\Ticketing\AddressingRanges;
 use GlpiPlugin\Nms\Ticketing\AlarmAssetResolver;
 use GlpiPlugin\Nms\Ticketing\AlarmSync;
@@ -22,21 +23,39 @@ use GlpiPlugin\Nms\Ticketing\GlpiTicketGateway;
 use GlpiPlugin\Nms\Ticketing\RangeProductionCheck;
 use GlpiPlugin\Nms\Webhook\Receiver;
 
-$client = new Client(Config::get('opm_url'), Config::apiKey(), Config::get('opm_verify_ssl') === '1');
+$conn = new Connection([
+    'name'           => 'opm.example.test',
+    'brand'          => 'opmanager',
+    'entities_id'    => 0,
+    'is_recursive'   => 1,
+    'url'            => Config::get('opm_url'),
+    'api_key'        => Config::get('opm_api_key'),
+    'username'       => '',
+    'password'       => '',
+    'verify_tls'     => (int) Config::get('opm_verify_ssl') === 1 ? 1 : 0,
+    'is_active'      => 1,
+    'writeback_enabled' => 1,
+    'tickets_enabled' => 1,
+    'webhook_token'  => Config::get('webhook_token'),
+    'settings'       => '{}',
+    'date_creation'  => '',
+    'date_mod'       => '',
+]);
+$driver = DriverFactory::for($conn);
 $cfg    = Config::ticketingConfig();
 
 $receiver = new Receiver(
     Config::webhookToken(),
-    $client,
+    $driver,
     new DbSyncLock(),
-    static function (array $alarm) use ($client, $cfg): array {
+    static function (array $alarm) use ($driver, $cfg): array {
         if ($cfg['service_user'] <= 0) {
             // Same guard as the AlarmSync cron: a ticket without an author is never created.
             \Toolbox::logInFile('nms', "Webhook: no service user configured in Setup; alarm left to AlarmSync\n");
             throw new \RuntimeException('no service user configured');
         }
         $sync = new AlarmSync(
-            $client,
+            $driver,
             new DbAlarmStore(),
             new GlpiTicketGateway($cfg),
             new AlarmAssetResolver(new DbDeviceIndex(), new Matcher(new DbAssetLookup(Config::assetItemtypes())), Config::get('match_mode')),
@@ -58,7 +77,7 @@ $receiver = new Receiver(
 
 $result = $receiver->handle(
     (string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'),
-    (string) ($_SERVER['HTTP_X_OPM_TOKEN'] ?? ''),
+    (string) ($_SERVER['HTTP_X_NMS_TOKEN'] ?? $_SERVER['HTTP_X_OPM_TOKEN'] ?? ''),
     (string) file_get_contents('php://input', false, null, 0, Receiver::MAX_BODY + 1)
 );
 

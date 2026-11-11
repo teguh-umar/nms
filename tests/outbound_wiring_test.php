@@ -14,7 +14,7 @@ foreach (['create', 'createStorm', 'followup', 'reopen', 'solve', 'link'] as $m)
 }
 check('hooks ask the planner who is human', substr_count($hooks, 'Planner::isHuman(') === 2 && substr_count($hooks, 'GlpiTicketGateway::isWriting()') === 2);
 check('hooks never throw into GLPI', substr_count($hooks, 'catch (\Throwable $e)') >= 2);
-check('hooks send with a short timeout', (bool) preg_match('/new Client\([^;]*SEND_TIMEOUT/s', $hooks));
+check('hooks send with a short timeout', (bool) preg_match('/DriverFactory::for\(/s', $hooks) && (bool) preg_match('/SEND_TIMEOUT/s', $hooks));
 check('solution text read from the newest solution by this user', (bool) preg_match("/ITILSolution.*?'users_id' => \\\$uid.*?'ORDER'\\s+=> 'id DESC'/s", $hooks));
 check('active alarms of a ticket', (bool) preg_match("/function activeForTicket.*?'tickets_id' => \\\$tickets_id, 'state' => 'active'/s", $store));
 
