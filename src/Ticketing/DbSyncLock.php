@@ -12,6 +12,12 @@ final class DbSyncLock implements SyncLock
     {
     }
 
+    /** Per-connection alarm-sync lock name: nms_sync_<connections_id>. */
+    public static function lockName(int $connections_id): string
+    {
+        return 'nms_sync_' . $connections_id;
+    }
+
     public function acquire(int $timeout_seconds): bool
     {
         global $DB;

@@ -146,6 +146,13 @@ final class AlarmSync
         $by_webhook = ($this->cfg['ticket_source'] ?? 'rules') === 'webhook';
         $is_clear   = (int) $alarm['severity'] === self::CLEAR;
 
+        // tickets_enabled = 0: store the alarm for the tab only, no ticket/followup/storm calls.
+        if ((int) ($this->cfg['tickets_enabled'] ?? 1) === 0) {
+            $this->store->save($alarm, $this->assets->resolve($alarm), $is_clear ? 'cleared' : 'active', $now);
+            $stats['stored']++;
+            return;
+        }
+
         $existing = $this->store->find($alarm['alarm_key']);
         $status   = null;
         if ($existing !== null && $existing['tickets_id'] > 0) {

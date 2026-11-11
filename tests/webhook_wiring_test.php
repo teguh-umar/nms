@@ -22,6 +22,6 @@ check('token regeneration needs config UPDATE', (bool) preg_match('/generate_web
 
 $cron = (string) file_get_contents(OPM_ROOT . '/src/Cron.php');
 check('webhook passes the request store to the receiver', str_contains($hook, 'new DbTicketRequestStore()'));
-check('cron AlarmSync consumes deferred requests', str_contains($cron, 'new DbTicketRequestStore(0)'));
+check('cron AlarmSync consumes deferred requests', str_contains($cron, 'new DbTicketRequestStore((int) $conn->id)'));
 
 done();

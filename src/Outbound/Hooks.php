@@ -3,7 +3,7 @@
 namespace GlpiPlugin\Nms\Outbound;
 
 use Glpi\RichText\RichText;
-use GlpiPlugin\Nms\Connection\Connection;
+use GlpiPlugin\Nms\Connection\ConnectionStore;
 use GlpiPlugin\Nms\Config;
 use GlpiPlugin\Nms\Driver\DriverFactory;
 use GlpiPlugin\Nms\Ticketing\DbAlarmStore;
@@ -99,6 +99,17 @@ final class Hooks
     private static function queueAndSend(array $rows, array $cfg): void
     {
         if ($rows === []) {
+            return;
+        }
+        // writeback_enabled = 0: never enqueue outbox rows for this NMS.
+        $writeback = false;
+        foreach ((new ConnectionStore())->active() as $c) {
+            if ((int) $c->writeback_enabled === 1) {
+                $writeback = true;
+                break;
+            }
+        }
+        if (!$writeback) {
             return;
         }
         $now   = (string) \Session::getCurrentTime();
