@@ -1,7 +1,65 @@
 # HANDOFF → OpenCode · nms 1.0.0 Plan 1 (foundation and OpManager parity)
 
-Owner: the Claude session for NMS Integration (`nms-integration-18` in hub §6). It reviews everything you commit.
-Written 2026-11-11.
+Owner: the Claude session for NMS Integration (`nms-integration-a5` in hub §6). It reviews everything you commit.
+Written 2026-11-11. **Round 2 added 2026-11-12: start at §0. Round 1 (Tasks 1–9) is done and reviewed.**
+
+## 0. Round 2: review fixes (do these, in order, one commit each)
+
+The owner reviewed Tasks 1–9 at `2d4bfac` and fixed one blocker itself (`f3a2a9d`: the OpManager alarm lookup
+missed cleared alarms; `Driver::alarmByKey(string $alarm_key, string $entity_key = '')` now returns an alarm in any
+state). Base for round 2: `f3a2a9d` or later on `main-nms`. §2 and §3 below still apply. Every fix starts with a
+failing test that would have caught it **on a real GLPI shape**, not only on a fake.
+
+**R1. Outbound hooks (note/ack/clear to OpManager) are broken.** `src/Outbound/Hooks.php`:
+- rows are enqueued in `new DbOutboxStore(0)`, but the cron sends only rows of its own `connections_id`, so they are
+  never sent;
+- the send builds a fake `Connection` named `opm.example.test` from global keys `opm_url` / `opm_api_key` /
+  `webhook_token` that nms no longer stores;
+- `Config::ticketingConfig()` reads global keys, so `service_user` is 0 and the plugin's own followups count as human
+  (echo loop back to OpManager, D24–D26);
+- the hook locks `opmanager_outbox`, the cron locks `nms_sync_<id>_outbox`: hook and cron can send one row twice.
+
+Fix: `DbAlarmStore::activeForTicket()` also returns `connections_id`. The hooks group the ticket's active alarms by
+`connections_id`; per group they load the `Connection` (`DbConnectionStore::get`), skip it when inactive or
+`writeback_enabled = 0`, take `service_user` and `outbound_max_attempts` from that connection's `Settings`, plan with
+`new DbOutboxStore($cid)`, enqueue there, and send under `DbSyncLock::lockName($cid) . '_outbox'` (the cron's name;
+put it in one helper both use). `DriverFactory::for(Connection $c, ?int $timeout = null)` passes `Hooks::SEND_TIMEOUT`.
+Remove `Hooks::OUTBOX_LOCK`. Tests: a followup on a ticket with alarms of connections 1 and 2 enqueues rows under 1 and
+2; a followup by connection 1's `service_user` enqueues nothing; hook and cron use the same lock name; no
+`opm.example.test` in `src/`.
+
+**R2. Settings are still global in the UI and in four readers (Task 5 and 9 incomplete).** `src/SuiteConfig.php` still
+shows and saves `opm_url`, `opm_api_key`, `opm_verify_ssl`, `webhook_token`, `match_mode`, every `ticket_*`,
+`service_user`, `production_addressings`, `relink_window_hours`, `storm_*`, `outbound_max_attempts`, every `hygiene_*`
+as global keys that nothing reads any more. Also global: `src/SelfCheck.php` (lines ~49–88), `front/coverage.php:26`,
+`front/webhook.php:68` (`match_mode`), `src/Cron.php:117` (`match_mode`).
+Fix: the connection form (`ConnectionForm`) edits every key of `Settings::DEFAULTS` for that connection (reuse the
+field rendering now in `SuiteConfig`); the global Setup keeps only `asset_itemtypes`, `stale_warning_minutes`, the
+connection list and the status strip; every reader takes the `Settings` of the connection it works for; SelfCheck checks
+each active connection (secret stored encrypted, service user exists, production ranges exist). Test: grep test that
+no `Config::get('<moved key>')` and no `Config::ticketingConfig()` remain outside `src/Migration/`; `Config::DEFAULTS`
+holds no moved key (already tested) and no `opm_*` / `webhook_token` key.
+
+**R3. Migration reads a table that does not exist.** `FromOpmanager::fetchConfigRow()` reads
+`glpi_plugin_opmanager_config`. opmanager 1.3.2 stores its config in `glpi_configs`, context `plugin:opmanager`
+(`\Config::getConfigurationValues('plugin:opmanager')`). On a real GLPI the request fails or returns nothing, so the
+connection gets no URL, key, token or ticket settings. Fix it; the secrets there are GLPIKey-encrypted
+(`opm_api_key`, `webhook_token`). Also the entity: spec §5.6b asks for the lowest common ancestor of the linked
+assets' entities (root if none), not `min(entities_id)`. Tests: the fake DB serves `glpi_configs` rows
+(`context`, `name`, `value`) exactly as GLPI stores them and has **no** `glpi_plugin_opmanager_config` table; URL, key,
+token and three moved settings arrive in the connection; assets in entities 3 and 5 under parent 2 → entity 2.
+
+**R4. Leftover opmanager identity (Task 1 incomplete; `identity_test` missed them).** In `src/`, `front/`, `tools/`:
+every `/plugins/opmanager/` path (`ConnectionForm`, `Coverage/Page`, `Menu` manual page, `SuiteConfig` forms and links,
+`front/config.php`, `front/connection.php`, `Config::WEBHOOK_PATH`, which Setup shows as the URL to give OpManager);
+lock `SyncLock::NAME = 'opmanager_alarm_sync'` (shared with the live opmanager plugin) → `nms_alarm_sync`, and the
+SelfCheck text; hook `opmanager_liveness` → `nms_liveness` (plan Task 1) incl. the Setup hint; CSS id
+`opmanager-monitoring`; CSV name `opmanager-coverage-…`; `tools/selfcheck.php` path; `tools/release_check.py` install
+dir; `__opmanager_selfcheck_…`. Keep: brand value `'opmanager'`, class/namespace `Driver\OpManager`, user-facing
+"OpManager" where it means the product. Extend `identity_test` to fail on `/plugins/opmanager`, `opmanager_` and
+`opmanager-` outside `src/Migration/`, `tests/`, `docs/`, `CHANGELOG.md`.
+
+Stop after R4 and report as in §4.
 
 **Before the first edit**, load these skills:
 - `pgn-suite-handoff`, which loads `handoff-discipline`;
