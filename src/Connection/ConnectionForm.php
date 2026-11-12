@@ -125,7 +125,76 @@ final class ConnectionForm
             . '<input type="checkbox" name="verify_tls" value="1" id="verify_tls"'
             . ($conn->verify_tls ? ' checked' : '') . $disabled . '></div>';
 
-        // Test button: calls Driver::testConnection().
+        // Decode settings once.
+        $settingsData = json_decode((string) $conn->settings, true);
+        if (!is_array($settingsData)) {
+            $settingsData = [];
+        }
+        $getSetting = static fn (string $key, $default) => $settingsData[$key] ?? $default;
+
+        // --- Match mode ---
+        $out .= '<div class="mb-2"><label class="form-label" for="match_mode">' . __s('Match mode', 'nms') . '</label>';
+        $out .= '<select class="form-select" id="match_mode" name="match_mode"' . $disabled . '>';
+        foreach (['ip_only', 'name_only', 'hybrid', 'hybrid_name', 'manual'] as $mode) {
+            $out .= '<option value="' . htmlescape($mode) . '"' . ($getSetting('match_mode', Settings::DEFAULTS['match_mode']) === $mode ? ' selected' : '') . '>'
+                . __s($mode === 'manual' ? 'Manual only' : ($mode === 'hybrid_name' ? 'Hybrid - name first' : ($mode === 'hybrid' ? 'Hybrid - IP first' : ($mode === 'ip_only' ? 'IP only' : 'Name only'))), 'nms') . '</option>';
+        }
+        $out .= '</select></div>';
+
+        // --- Ticket source ---
+        $out .= '<div class="mb-2"><label class="form-label" for="ticket_source">' . __s('Ticket source', 'nms') . '</label>';
+        $out .= '<select class="form-select" id="ticket_source" name="ticket_source"' . $disabled . '>';
+        foreach (['webhook', 'rules'] as $source) {
+            $out .= '<option value="' . htmlescape($source) . '"' . ($getSetting('ticket_source', Settings::DEFAULTS['ticket_source']) === $source ? ' selected' : '') . '>'
+                . __s($source === 'webhook' ? 'OpManager webhook' : 'Plugin rules', 'nms') . '</option>';
+        }
+        $out .= '</select></div>';
+
+        // --- Ticket severities ---
+        $out .= '<div class="mt-2"><label class="form-label">' . __s('Ticket severities', 'nms') . '</label>';
+        $sevValues = json_decode($getSetting('ticket_severities', Settings::DEFAULTS['ticket_severities']), true) ?? [1];
+        foreach ([1, 2, 3, 4] as $sev) {
+            $sevLabel = ['1' => 'Critical', '2' => 'Trouble', '3' => 'Attention', '4' => 'Service Down'][$sev] ?? (string) $sev;
+            $isChecked = in_array($sev, $sevValues) ? ' checked' : '';
+            $out .= '<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="ticket_severities[]" value="' . $sev . '" id="sev-' . $sev . '"' . $isChecked . $disabled . '>'
+                . '<label class="form-check-label" for="sev-' . $sev . '">' . __s($sevLabel, 'nms') . '</label></div>';
+        }
+        $out .= '</div>';
+
+        // --- Service user ---
+        $out .= '<div class="mb-2"><label class="form-label">' . __('Service user', 'nms') . '</label>'
+            . '<input type="number" class="form-control" name="service_user" value="' . (int) $getSetting('service_user', Settings::DEFAULTS['service_user']) . '"' . $disabled . '></div>';
+
+        // --- Ticket entity default ---
+        $out .= '<div class="mb-2"><label class="form-label">' . __('Default entity', 'nms') . '</label>'
+            . '<input type="number" class="form-control" name="ticket_entity_default" value="' . (int) $getSetting('ticket_entity_default', Settings::DEFAULTS['ticket_entity_default']) . '"' . $disabled . '></div>';
+
+        // --- Use IP network entity ---
+        $out .= '<div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="ticket_use_ipnetwork_entity" value="1" id="ticket_use_ipnetwork_entity"'
+            . ((int) $getSetting('ticket_use_ipnetwork_entity', Settings::DEFAULTS['ticket_use_ipnetwork_entity']) ? ' checked' : '') . $disabled . '>'
+            . '<label class="form-check-label" for="ticket_use_ipnetwork_entity">' . __('Use IP network entity', 'nms') . '</label></div>';
+
+        // --- Ticket title pattern ---
+        $out .= self::textRow('ticket_title_pattern', 'ticket_title_pattern', __('Ticket title pattern', 'nms'), $getSetting('ticket_title_pattern', Settings::DEFAULTS['ticket_title_pattern']), 'text', $disabled);
+
+        // --- Ticket content pattern ---
+        $out .= '<div class="mb-2"><label class="form-label" for="ticket_content_pattern">' . __s('Ticket content pattern', 'nms') . '</label>'
+            . '<textarea class="form-control" rows="6" id="ticket_content_pattern" name="ticket_content_pattern"' . $disabled . '>'
+            . htmlescape($getSetting('ticket_content_pattern', Settings::DEFAULTS['ticket_content_pattern'])) . '</textarea></div>';
+
+        // --- Relink window ---
+        $out .= self::textRow('relink_window_hours', 'relink_window_hours', __('Relink window (hours)', 'nms'), $getSetting('relink_window_hours', Settings::DEFAULTS['relink_window_hours']), 'number', $disabled);
+
+        // --- Storm threshold ---
+        $out .= self::textRow('storm_threshold', 'storm_threshold', __('Storm threshold', 'nms'), (int) $getSetting('storm_threshold', Settings::DEFAULTS['storm_threshold']), 'number', $disabled);
+
+        // --- Storm window ---
+        $out .= self::textRow('storm_window_minutes', 'storm_window_minutes', __('Storm window (minutes)', 'nms'), (int) $getSetting('storm_window_minutes', Settings::DEFAULTS['storm_window_minutes']), 'number', $disabled);
+
+        // --- Outbound max attempts ---
+        $out .= self::textRow('outbound_max_attempts', 'outbound_max_attempts', __('Outbound max attempts', 'nms'), (int) $getSetting('outbound_max_attempts', Settings::DEFAULTS['outbound_max_attempts']), 'number', $disabled);
+
+        // --- Test button: calls Driver::testConnection().
         if ($canedit) {
             $out .= '<div class="mt-2">';
             $out .= \Html::submit(__('Test connection', 'nms'), [
@@ -180,8 +249,27 @@ final class ConnectionForm
         $fields['password']     = (($post['password'] ?? '') !== '')     ? $enc->encrypt((string) ($post['password']    ?? '')) : $conn->password;
         $fields['webhook_token']= (($post['webhook_token'] ?? '') !== '') ? $enc->encrypt((string) ($post['webhook_token'] ?? '')) : $conn->webhook_token;
 
-        // Settings: keep current, allow future per-connection edits here.
-        $fields['settings'] = $conn->settings;
+        // Settings: save all per-connection settings.
+        $settingsData = json_decode((string) $conn->settings, true);
+        if (!is_array($settingsData)) {
+            $settingsData = [];
+        }
+        foreach (Settings::DEFAULTS as $key => $default) {
+            $postKey = $key;
+            if (array_key_exists($postKey, $post)) {
+                $val = $post[$postKey];
+                if ($val === '' || $val === null) {
+                    $settingsData[$key] = $default;
+                } elseif (is_bool($default)) {
+                    $settingsData[$key] = (int) $val;
+                } elseif (is_int($default)) {
+                    $settingsData[$key] = (int) $val;
+                } else {
+                    $settingsData[$key] = (string) $val;
+                }
+            }
+        }
+        $fields['settings'] = json_encode($settingsData);
 
         $this->store->save($fields);
         return ['ok' => true, 'message' => __('Connection saved', 'nms')];
@@ -191,5 +279,11 @@ final class ConnectionForm
     public static function supportedBrands(): array
     {
         return DriverFactory::supportedBrands();
+    }
+
+    private static function textRow(string $id, string $name, string $label, string $value, string $type, string $disabled): string
+    {
+        return '<div class="mb-2"><label class="form-label" for="' . htmlescape($id) . '">' . htmlescape($label) . '</label>'
+            . '<input type="' . $type . '" class="form-control" id="' . htmlescape($id) . '" name="' . htmlescape($name) . '" value="' . htmlescape($value) . '"' . $disabled . '></div>';
     }
 }

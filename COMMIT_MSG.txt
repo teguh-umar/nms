@@ -1,0 +1,31 @@
+feat: per-connection settings in UI, cron, webhook, selfcheck (R2)
+
+Fix R2: settings are now per-connection everywhere instead of global.
+
+- Config::DEFAULTS keeps only asset_itemtypes and stale_warning_minutes;
+  opm_url, opm_api_key, webhook_token, opm_verify_ssl removed.
+- Config::SECURED is now empty (per-connection secrets handled by plugin).
+- Cron::cronDeviceSync/cronAlarmSync/cronHygieneCheck/cronOutboxSend use
+  per-connection Settings instead of global Config::get() for moved keys.
+- DbAlarmStore::activeForTicket() now returns connections_id per alarm.
+- Outbound hooks group alarms by connections_id, load the Connection,
+  skip inactive/writeback-disabled connections, take service_user and
+  outbound_max_attempts from that connection's Settings, enqueue via
+  DbOutboxStore($cid), send under DbSyncLock::lockName($cid).'_outbox'.
+  DriverFactory::for(Connection, ?int $timeout) passes timeout to driver.
+  Removed Hooks::OUTBOX_LOCK.
+- SelfCheck checks each active connection (service user exists, production
+  ranges exist, API key encrypted).
+- SuiteConfig shows only status strip + connections link + migration button;
+  per-connection settings moved to front/connection.form.php.
+- front/webhook.php reads token and settings from the resolved connection.
+- front/coverage.php uses per-connection settings via Connection.
+
+Tests: tests/r2_settings_per_connection.php (Config::DEFAULTS has no moved
+keys, no Config::get('<moved key>') outside src/Migration/, Settings round-trip);
+tests/connection_form_test.php (no secret in HTML, disabled switches,
+POST without UPDATE refused, empty secret keeps stored, supported brands);
+tests/ticketsource_wiring_test.php updated for per-connection settings;
+tests/suiteconfig_test.php updated for minimal Setup section.
+
+Co-Authored-By: Nemotron-3.5-Super-VL-Free <noreply@opencode.ai>

@@ -136,7 +136,8 @@ check('patterns stored with \n only', $r['values']['ticket_content_pattern'] ===
 check('normaliseLines helper', Config::normaliseLines("a\r\nb\rc\n") === "a\nb\nc\n");
 
 // v0.3.0 webhook token
-check('webhook token is secured', in_array('webhook_token', Config::SECURED, true) && (Config::DEFAULTS['webhook_token'] ?? null) === '');
+check('webhook token is not a global secured config key', !in_array('webhook_token', Config::SECURED, true));
+check('webhook token is not a global default', !array_key_exists('webhook_token', Config::DEFAULTS));
 $a = Config::newWebhookToken();
 $b = Config::newWebhookToken();
 check('new token differs and is 48 hex', $a !== $b && preg_match('/^[0-9a-f]{48}$/', $a) === 1);

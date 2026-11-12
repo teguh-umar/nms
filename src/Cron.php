@@ -69,6 +69,7 @@ final class Cron extends \CommonGLPI
                 $dbStore   = new DbDeviceStore((int) $conn->id);
                 $stats     = DeviceSync::run($driver, $dbStore, new Matcher($lookup), $settings->get('match_mode'), $now, $missing === []);
 
+
                 $store->recordStatus((int) $conn->id, 'device', 'ok', '', $now);
                 \Config::set(['last_device_sync' => $now, 'last_device_sync_error' => '']);
                 $task->addVolume($stats['fetched']);
@@ -114,7 +115,7 @@ final class Cron extends \CommonGLPI
                     $driver,
                     new DbAlarmStore((int) $conn->id),
                     new GlpiTicketGateway($cfg),
-                    new AlarmAssetResolver(new DbDeviceIndex((int) $conn->id), new Matcher(new DbAssetLookup(Config::assetItemtypes())), Config::get('match_mode')),
+                    new AlarmAssetResolver(new DbDeviceIndex((int) $conn->id), new Matcher(new DbAssetLookup(Config::assetItemtypes())), $settings->get('match_mode')),
                     new RangeProductionCheck($ranges, [AddressingRanges::class, 'assetIps']),
                     $cfg,
                     new DbTicketRequestStore((int) $conn->id)
@@ -166,11 +167,12 @@ final class Cron extends \CommonGLPI
         $total  = 0;
         foreach ($store->active() as $conn) {
             try {
-                $cfg = Config::hygieneConfigFromSettings(Settings::fromJson((string) $conn->settings));
-                $tcf = Config::ticketingConfigFromSettings(Settings::fromJson((string) $conn->settings));
+                $settings = Settings::fromJson((string) $conn->settings);
+                $cfg = Config::hygieneConfigFromSettings($settings);
+                $tcf = Config::ticketingConfigFromSettings($settings);
                 $cfg['tickets_enabled'] = (int) $conn->tickets_enabled;
 
-                $last = Config::get('last_hygiene_ticket_run');
+                $last = $settings->get('last_hygiene_ticket_run');
                 $due  = $last === '' || strtotime($now) >= strtotime($last) + $cfg['frequency_days'] * 86400;
                 if ($due && $cfg['enabled'] && $tcf['service_user'] <= 0) {
                     $msg = 'no service user configured in Setup; hygiene tickets would have no author';
@@ -193,17 +195,22 @@ final class Cron extends \CommonGLPI
                         'entity_default' => $tcf['entity_default'],
                         'list_url'       => Device::getSearchURL(true),
                         // Final review #3: no ticket run on stale OpManager data.
-                        'device_data_fresh' => Config::get('last_device_sync_error') === ''
-                            && Config::get('last_device_sync') !== ''
-                            && strtotime($now) - strtotime(Config::get('last_device_sync')) <= 60 * max(1, (int) Config::get('stale_warning_minutes')),
+                        'device_data_fresh' => $settings->get('last_device_sync_error') === ''
+                            && $settings->get('last_device_sync') !== ''
+                            && strtotime($now) - strtotime($settings->get('last_device_sync')) <= 60 * max(1, (int) Config::get('stale_warning_minutes')),
                     ]
                 );
                 $stats = $run->run($now, $due);
 
                 $store->recordStatus((int) $conn->id, 'alarm', 'ok', '', $now);
-                \Config::set(['last_hygiene_run' => $now, 'last_hygiene_error' => '']);
+                $newSettings = $settings->with([
+                    'last_hygiene_run' => $now,
+                    'last_hygiene_error' => '',
+                ]);
+                $store->save(array_merge((array) $conn, ['settings' => $newSettings->toJson()]));
                 if ($due && $cfg['enabled'] && $stats['ticket_errors'] === []) {
-                    \Config::set(['last_hygiene_ticket_run' => $now]);
+                    $newSettings = $settings->with(['last_hygiene_ticket_run' => $now]);
+                    $store->save(array_merge((array) $conn, ['settings' => $newSettings->toJson()]));
                 }
                 foreach ($stats['errors'] as $error) {
                     \Toolbox::logInFile('nms', 'HygieneCheck conn ' . (int) $conn->id . ': ' . $error . "\n");

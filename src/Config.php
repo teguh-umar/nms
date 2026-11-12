@@ -15,8 +15,10 @@ final class Config
      */
     public const MATCH_MODES = ['ip_only', 'name_only', 'hybrid', 'hybrid_name', 'manual'];
 
-    /** Encrypted at rest by core via $PLUGIN_HOOKS['secured_configs'] (GLPIKey::getConfigs). */
-    public const SECURED = ['opm_api_key', 'webhook_token'];
+    /** Encrypted at rest by core via $PLUGIN_HOOKS['secured_configs'] (GLPIKey::getConfigs).
+     * Only global config keys that exist in DEFAULTS; per-connection secrets are
+     * encrypted/decrypted by the plugin via GLPIKey, not by core. */
+    public const SECURED = [];
 
     public const WEBHOOK_HEADER = 'X-OPM-Token';
 
@@ -60,11 +62,6 @@ final class Config
     public const FILTER_KEYWORDS_MAX = 2000;
 
     public const DEFAULTS = [
-        // Global (single-connection) config, not part of per-connection Settings.
-        'opm_url'                => '',
-        'opm_api_key'            => '',
-        'webhook_token'          => '',
-        'opm_verify_ssl'         => '1',
         // Config keeps only these global keys (spec Plan 1 Task 5); every other
         // 1.3.2 default moved per connection lives in Connection\Settings::DEFAULTS.
         'asset_itemtypes'        => '["Computer","NetworkEquipment"]',

@@ -27,7 +27,7 @@ final class OpManagerDriver implements Driver
         private Connection $connection,
         ?callable $transport = null,
         private ?Capabilities $capabilities = null,
-        private int $timeout = 30,
+        ?int $timeout = null,
     ) {
         $this->transport = $transport ?? $this->curlTransport(...);
         $this->capabilities = $this->capabilities ?? new Capabilities(true, true, true, true, true, true, true, true);

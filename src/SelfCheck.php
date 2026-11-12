@@ -2,6 +2,7 @@
 
 namespace GlpiPlugin\Nms;
 
+use GlpiPlugin\Nms\Connection\Settings;
 use GlpiPlugin\Nms\Matching\DbAssetLookup;
 
 /** Runtime checks against the real GLPI + DB. Run on the VM via tools/selfcheck.php. */
@@ -46,21 +47,45 @@ final class SelfCheck
                 self::assert((int) $task->fields['mode'] === \CronTask::MODE_EXTERNAL, 'AlarmSync is not in CLI mode');
             },
             'tickets/service-user' => static function (): void {
-                $uid  = (int) Config::get('service_user');
-                $user = new \User();
-                self::assert($uid > 0 && $user->getFromDB($uid) && !empty($user->fields['is_active']), 'Setup > OpManager: choose an active GLPI service user for alarm tickets');
+                $store = new \GlpiPlugin\Nms\Connection\DbConnectionStore();
+                $found = false;
+                foreach ($store->active() as $conn) {
+                    $settings = Settings::fromJson((string) $conn->settings);
+                    $uid = (int) $settings->get('service_user');
+                    $user = new \User();
+                    if ($uid > 0 && $user->getFromDB($uid) && !empty($user->fields['is_active'])) {
+                        $found = true;
+                        break;
+                    }
+                }
+                self::assert($found, 'Setup > NMS Integration: choose an active GLPI service user for alarm tickets on at least one connection');
             },
             'tickets/production-ranges' => static function (): void {
-                $ids = Config::ticketingConfig()['production_addressings'];
-                self::assert(\GlpiPlugin\Nms\Ticketing\AddressingRanges::load($ids) !== [], 'Setup > OpManager: select at least one valid production IP range, otherwise no ticket is created');
+                $store = new \GlpiPlugin\Nms\Connection\DbConnectionStore();
+                $found = false;
+                foreach ($store->active() as $conn) {
+                    $settings = Settings::fromJson((string) $conn->settings);
+                    $cfg = Config::ticketingConfigFromSettings($settings);
+                    if (\GlpiPlugin\Nms\Ticketing\AddressingRanges::load($cfg['production_addressings']) !== []) {
+                        $found = true;
+                        break;
+                    }
+                }
+                self::assert($found, 'Setup > NMS Integration: select at least one valid production IP range on at least one connection, otherwise no ticket is created');
             },
             'webhook/stateless' => static function (): void {
                 $request = \Symfony\Component\HttpFoundation\Request::create(Config::WEBHOOK_PATH, 'POST');
                 self::assert((new \Glpi\Http\SessionManager())->isResourceStateless($request), 'front/webhook.php is not registered as stateless (plugin_nms_boot)');
             },
             'webhook/token' => static function (): void {
-                self::assert(Config::webhookToken() !== '', 'Setup > OpManager: generate a webhook token (webhook disabled until then)');
-                self::assert(Config::get('webhook_token') !== Config::webhookToken(), 'webhook_token is stored in clear text');
+                $store = new \GlpiPlugin\Nms\Connection\DbConnectionStore();
+                foreach ($store->active() as $conn) {
+                    $token = $conn->webhook_token;
+                    if ($token !== '') {
+                        $decrypted = (new \GLPIKey())->decrypt($token);
+                        self::assert($decrypted !== false && $decrypted !== $token, 'webhook_token is stored in clear text');
+                    }
+                }
             },
             'webhook/lock' => static function (): void {
                 $lock = new \GlpiPlugin\Nms\Ticketing\DbSyncLock();
@@ -75,19 +100,26 @@ final class SelfCheck
                 self::assert((new \CronTask())->getFromDBbyName(Cron::class, 'OutboxSend'), 'OutboxSend cron not registered - re-run plugin:install');
             },
             'tickets/template-resolves' => static function (): void {
-                $cfg = Config::ticketingConfig();
-                if ($cfg['template_id'] > 0) {
-                    self::assert((new \TicketTemplate())->getFromDBWithData($cfg['template_id']), "ticket template {$cfg['template_id']} not found");
-                } else {
-                    $tt = (new \Ticket())->getITILTemplateToUse(0, \Ticket::INCIDENT_TYPE, 0, $cfg['entity_default']);
-                    self::assert($tt instanceof \TicketTemplate, 'no default ticket template resolved');
+                $store = new \GlpiPlugin\Nms\Connection\DbConnectionStore();
+                foreach ($store->active() as $conn) {
+                    $settings = Settings::fromJson((string) $conn->settings);
+                    $cfg = Config::ticketingConfigFromSettings($settings);
+                    if ($cfg['template_id'] > 0) {
+                        self::assert((new \TicketTemplate())->getFromDBWithData($cfg['template_id']), "ticket template {$cfg['template_id']} not found");
+                    } else {
+                        $tt = (new \Ticket())->getITILTemplateToUse(0, \Ticket::INCIDENT_TYPE, 0, $cfg['entity_default']);
+                        self::assert($tt instanceof \TicketTemplate, 'no default ticket template resolved');
+                    }
                 }
             },
             'config/api-key-secured' => static function (): void {
-                self::assert((new \GLPIKey())->isConfigSecured(Config::CONTEXT, 'opm_api_key'), 'opm_api_key is not a secured config');
-                $raw = Config::get('opm_api_key');
-                if ($raw !== '') {
-                    self::assert($raw !== Config::apiKey(), 'opm_api_key is stored in clear text');
+                $store = new \GlpiPlugin\Nms\Connection\DbConnectionStore();
+                foreach ($store->active() as $conn) {
+                    $raw = $conn->api_key;
+                    if ($raw !== '') {
+                        $decrypted = (new \GLPIKey())->decrypt($raw);
+                        self::assert($decrypted !== false && $decrypted !== $raw, 'opm_api_key is stored in clear text');
+                    }
                 }
             },
             'suite/lib-shas' => static function (): void {

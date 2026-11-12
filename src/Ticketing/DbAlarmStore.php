@@ -162,20 +162,24 @@ final class DbAlarmStore implements AlarmStore
     /**
      * Still-active alarms of a ticket, for the outbound notes/clears (Plan 3).
      *
-     * @return list<array{alarm_key: string, entity_key: string}>
+     * @return list<array{alarm_key: string, entity_key: string, connections_id: int}>
      */
-    public static function activeForTicket(int $tickets_id): array
+    public function activeForTicket(int $tickets_id): array
     {
         global $DB;
 
         $out = [];
         foreach ($DB->request([
-            'SELECT' => ['alarm_key', 'entity_key'],
+            'SELECT' => ['alarm_key', 'entity_key', 'connections_id'],
             'FROM'   => Alarm::getTable(),
             'WHERE'  => ['tickets_id' => $tickets_id, 'state' => 'active', 'NOT' => ['entity_key' => '']],
             'ORDER'  => 'id',
         ]) as $r) {
-            $out[] = ['alarm_key' => (string) $r['alarm_key'], 'entity_key' => (string) $r['entity_key']];
+            $out[] = [
+                'alarm_key'    => (string) $r['alarm_key'],
+                'entity_key'   => (string) $r['entity_key'],
+                'connections_id' => (int) $r['connections_id'],
+            ];
         }
         return $out;
     }

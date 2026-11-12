@@ -19,16 +19,17 @@ final class DriverFactory
 
     /**
      * @param Connection $c
+     * @param int|null $timeout curl timeout in seconds, passed to the driver
      * @return Driver
      * @throws InvalidArgumentException when the brand has no driver yet
      */
-    public static function for(Connection $c): Driver
+    public static function for(Connection $c, ?int $timeout = null): Driver
     {
         if (self::$testOverride !== null) {
-            return (self::$testOverride)($c);
+            return (self::$testOverride)($c, $timeout);
         }
         return match ($c->brand) {
-            'opmanager' => new \GlpiPlugin\Nms\Driver\OpManager\OpManagerDriver($c),
+            'opmanager' => new \GlpiPlugin\Nms\Driver\OpManager\OpManagerDriver($c, null, null, $timeout),
             default     => throw new InvalidArgumentException('No NMS driver for brand: ' . $c->brand),
         };
     }

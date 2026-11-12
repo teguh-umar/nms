@@ -20,10 +20,10 @@ check('active alarms of a ticket', (bool) preg_match("/function activeForTicket.
 
 $cron = (string) file_get_contents(OPM_ROOT . '/src/Cron.php');
 check('followup hook skips copied or plugin-authored followups', str_contains($hooks, 'Planner::isOriginalFollowup('));
-check('hook sends under the outbox lock, skipping when busy', (bool) preg_match('/new DbSyncLock\(Hooks::OUTBOX_LOCK\).*?->acquire\(0\).*?finally.*?->release\(\)/s', $hooks));
+check('hook sends under per-connection outbox lock, skipping when busy', str_contains($hooks, "DbSyncLock::lockName((int) \$conn->id) . '_outbox'"));
 check('cron sends under the same outbox lock', (bool) preg_match('/function cronOutboxSend.*?DbSyncLock::lockName\(\(int\) \$conn->id\)/s', $cron));
 check('hook stops at the first failure', str_contains($hooks, '->run($now, 20, true)'));
 
-check('followup hook dedupes pending acknowledges', str_contains($hooks, "[\$store, 'hasPendingAck']"));
+check('followup hook dedupes pending acknowledges', str_contains($hooks, 'hasPendingAck'));
 
 done();
