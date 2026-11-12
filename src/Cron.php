@@ -71,7 +71,6 @@ final class Cron extends \CommonGLPI
 
 
                 $store->recordStatus((int) $conn->id, 'device', 'ok', '', $now);
-                \Config::set(['last_device_sync' => $now, 'last_device_sync_error' => '']);
                 $task->addVolume($stats['fetched']);
                 $task->log(sprintf(
                     'conn %d: fetched %d, matched %d, review %d, unmatched %d, pinned %d, skipped %d',
@@ -96,14 +95,16 @@ final class Cron extends \CommonGLPI
         $total  = 0;
         foreach ($store->active() as $conn) {
             try {
-                $cfg = Config::ticketingConfigFromSettings(Settings::fromJson((string) $conn->settings));
+                $settings = Settings::fromJson((string) $conn->settings);
+                $cfg = Config::ticketingConfigFromSettings($settings);
                 $cfg['tickets_enabled'] = (int) $conn->tickets_enabled;
                 $cfg['writeback_enabled'] = (int) $conn->writeback_enabled;
 
-                if ($cfg['service_user'] <= 0) {
-                    $msg = 'no service user configured in Setup; alarm tickets would have no author';
+                // A connection without tickets (subsidiary default) still syncs alarms for the
+                // asset tab; only a ticket needs an author.
+                if ($cfg['tickets_enabled'] === 1 && $cfg['service_user'] <= 0) {
+                    $msg = 'no service user configured on this connection; alarm tickets would have no author';
                     $store->recordStatus((int) $conn->id, 'alarm', 'error', $msg, $now);
-                    \Config::set(['last_alarm_sync_error' => $msg]);
                     $task->log('conn ' . (int) $conn->id . ': ' . $msg);
                     continue;
                 }
@@ -132,7 +133,6 @@ final class Cron extends \CommonGLPI
                 }
 
                 $store->recordStatus((int) $conn->id, 'alarm', 'ok', '', $now);
-                \Config::set(['last_alarm_sync' => $now, 'last_alarm_sync_error' => '']);
                 $task->addVolume($stats['fetched']);
                 $task->log('conn ' . (int) $conn->id . ': ' . implode(', ', array_map(fn ($k, $v) => "{$k} {$v}", array_keys($stats), $stats)));
                 $total += $stats['fetched'];
@@ -144,19 +144,15 @@ final class Cron extends \CommonGLPI
             }
         }
 
-        // Keep every problem of this run visible in Setup (hub §4: a run that half
-        // failed must not look successful).
-        $problems = [];
-        foreach ($store->active() as $conn) {
-            $row = $store->get((int) $conn->id);
-            if ($row !== null && $row->last_status === 'error') {
-                $problems[] = 'conn ' . (int) $conn->id . ': ' . $row->last_error;
-            }
-        }
-        if ($problems !== []) {
-            \Config::set(['last_alarm_sync_error' => substr(implode(' | ', $problems), 0, 1000)]);
-        }
+        // Every problem stays visible per connection in Setup (last_status / last_error).
         return $total > 0 ? 1 : 0;
+    }
+
+    /** Device data younger than the stale threshold; '' (never synced) is never fresh. Pure. */
+    public static function deviceDataFresh(string $last_device_sync, string $now, int $stale_minutes): bool
+    {
+        return $last_device_sync !== ''
+            && strtotime($now) - strtotime($last_device_sync) <= 60 * max(1, $stale_minutes);
     }
 
     /** D34: daily NMS hygiene; tickets every hygiene_frequency_days (spec §7). */
@@ -176,8 +172,8 @@ final class Cron extends \CommonGLPI
                 $due  = $last === '' || strtotime($now) >= strtotime($last) + $cfg['frequency_days'] * 86400;
                 if ($due && $cfg['enabled'] && $tcf['service_user'] <= 0) {
                     $msg = 'no service user configured in Setup; hygiene tickets would have no author';
-                    $store->recordStatus((int) $conn->id, 'alarm', 'error', $msg, $now);
-                    \Config::set(['last_hygiene_error' => $msg]);
+                    $store->recordStatus((int) $conn->id, 'hygiene', 'error', $msg, $now);
+                    $store->saveSettings((int) $conn->id, $settings->with(['last_hygiene_error' => $msg]), $now);
                     $task->log('conn ' . (int) $conn->id . ': ' . $msg);
                     continue;
                 }
@@ -194,24 +190,18 @@ final class Cron extends \CommonGLPI
                         'service_user'   => $tcf['service_user'],
                         'entity_default' => $tcf['entity_default'],
                         'list_url'       => Device::getSearchURL(true),
-                        // Final review #3: no ticket run on stale OpManager data.
-                        'device_data_fresh' => $settings->get('last_device_sync_error') === ''
-                            && $settings->get('last_device_sync') !== ''
-                            && strtotime($now) - strtotime($settings->get('last_device_sync')) <= 60 * max(1, (int) Config::get('stale_warning_minutes')),
+                        // Final review #3: no ticket run on stale NMS data. last_device_sync
+                        // moves only on a successful device sync of this connection.
+                        'device_data_fresh' => self::deviceDataFresh($conn->last_device_sync, $now, (int) Config::get('stale_warning_minutes')),
                     ]
                 );
                 $stats = $run->run($now, $due);
 
-                $store->recordStatus((int) $conn->id, 'alarm', 'ok', '', $now);
-                $newSettings = $settings->with([
-                    'last_hygiene_run' => $now,
-                    'last_hygiene_error' => '',
-                ]);
-                $store->save(array_merge((array) $conn, ['settings' => $newSettings->toJson()]));
+                $done = ['last_hygiene_run' => $now, 'last_hygiene_error' => ''];
                 if ($due && $cfg['enabled'] && $stats['ticket_errors'] === []) {
-                    $newSettings = $settings->with(['last_hygiene_ticket_run' => $now]);
-                    $store->save(array_merge((array) $conn, ['settings' => $newSettings->toJson()]));
+                    $done['last_hygiene_ticket_run'] = $now;
                 }
+                $store->saveSettings((int) $conn->id, $settings->with($done), $now);
                 foreach ($stats['errors'] as $error) {
                     \Toolbox::logInFile('nms', 'HygieneCheck conn ' . (int) $conn->id . ': ' . $error . "\n");
                 }
@@ -220,7 +210,8 @@ final class Cron extends \CommonGLPI
                 $total += $stats['classified'];
             } catch (\Throwable $e) {
                 $msg = self::sanitizeError($conn, $e->getMessage());
-                $store->recordStatus((int) $conn->id, 'alarm', 'error', $msg, $now);
+                $store->recordStatus((int) $conn->id, 'hygiene', 'error', $msg, $now);
+                $store->saveSettings((int) $conn->id, Settings::fromJson((string) $conn->settings)->with(['last_hygiene_error' => $msg]), $now);
                 \Toolbox::logInFile('nms', 'HygieneCheck conn ' . (int) $conn->id . ': ' . $msg . "\n");
                 $task->log($msg);
             }
@@ -252,7 +243,6 @@ final class Cron extends \CommonGLPI
                 } finally {
                     $lock->release();
                 }
-                $store->recordStatus((int) $conn->id, 'alarm', 'ok', '', $now);
                 foreach ($sender->lastErrors() as $error) {
                     $task->log('Outbound conn ' . (int) $conn->id . ': ' . $error);
                 }
@@ -260,7 +250,7 @@ final class Cron extends \CommonGLPI
                 $total += $stats['sent'] + $stats['retried'] + $stats['failed'];
             } catch (\Throwable $e) {
                 $msg = self::sanitizeError($conn, $e->getMessage());
-                $store->recordStatus((int) $conn->id, 'alarm', 'error', $msg, $now);
+                $store->recordStatus((int) $conn->id, 'outbox', 'error', $msg, $now);
                 \Toolbox::logInFile('nms', 'Outbound conn ' . (int) $conn->id . ': ' . $msg . "\n");
                 $task->log($msg);
             }

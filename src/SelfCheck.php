@@ -47,31 +47,21 @@ final class SelfCheck
                 self::assert((int) $task->fields['mode'] === \CronTask::MODE_EXTERNAL, 'AlarmSync is not in CLI mode');
             },
             'tickets/service-user' => static function (): void {
-                $store = new \GlpiPlugin\Nms\Connection\DbConnectionStore();
-                $found = false;
-                foreach ($store->active() as $conn) {
-                    $settings = Settings::fromJson((string) $conn->settings);
-                    $uid = (int) $settings->get('service_user');
+                foreach (self::ticketConnections() as [$conn, $cfg]) {
                     $user = new \User();
-                    if ($uid > 0 && $user->getFromDB($uid) && !empty($user->fields['is_active'])) {
-                        $found = true;
-                        break;
-                    }
+                    self::assert(
+                        $cfg['service_user'] > 0 && $user->getFromDB($cfg['service_user']) && !empty($user->fields['is_active']),
+                        "connection {$conn->name}: choose an active GLPI service user for alarm tickets"
+                    );
                 }
-                self::assert($found, 'Setup > NMS Integration: choose an active GLPI service user for alarm tickets on at least one connection');
             },
             'tickets/production-ranges' => static function (): void {
-                $store = new \GlpiPlugin\Nms\Connection\DbConnectionStore();
-                $found = false;
-                foreach ($store->active() as $conn) {
-                    $settings = Settings::fromJson((string) $conn->settings);
-                    $cfg = Config::ticketingConfigFromSettings($settings);
-                    if (\GlpiPlugin\Nms\Ticketing\AddressingRanges::load($cfg['production_addressings']) !== []) {
-                        $found = true;
-                        break;
-                    }
+                foreach (self::ticketConnections() as [$conn, $cfg]) {
+                    self::assert(
+                        \GlpiPlugin\Nms\Ticketing\AddressingRanges::load($cfg['production_addressings']) !== [],
+                        "connection {$conn->name}: select at least one valid production IP range, otherwise no ticket is created"
+                    );
                 }
-                self::assert($found, 'Setup > NMS Integration: select at least one valid production IP range on at least one connection, otherwise no ticket is created');
             },
             'webhook/stateless' => static function (): void {
                 $request = \Symfony\Component\HttpFoundation\Request::create(Config::WEBHOOK_PATH, 'POST');
@@ -83,7 +73,7 @@ final class SelfCheck
                     $token = $conn->webhook_token;
                     if ($token !== '') {
                         $decrypted = (new \GLPIKey())->decrypt($token);
-                        self::assert($decrypted !== false && $decrypted !== $token, 'webhook_token is stored in clear text');
+                        self::assert($decrypted !== false && $decrypted !== $token, "connection {$conn->name}: webhook token is stored in clear text");
                     }
                 }
             },
@@ -118,7 +108,7 @@ final class SelfCheck
                     $raw = $conn->api_key;
                     if ($raw !== '') {
                         $decrypted = (new \GLPIKey())->decrypt($raw);
-                        self::assert($decrypted !== false && $decrypted !== $raw, 'opm_api_key is stored in clear text');
+                        self::assert($decrypted !== false && $decrypted !== $raw, "connection {$conn->name}: API key is stored in clear text");
                     }
                 }
             },
@@ -152,17 +142,19 @@ final class SelfCheck
                 self::assert((int) $task->fields['mode'] === \CronTask::MODE_EXTERNAL, 'HygieneCheck is not in CLI mode');
             },
             'hygiene/groups' => static function (): void {
-                $cfg = Config::hygieneConfig();
-                if (!$cfg['enabled']) {
-                    return;
-                }
-                foreach (array_merge($cfg['glpi_groups'], [$cfg['nms_group']]) as $gid) {
-                    self::assert((new \Group())->getFromDB($gid), "hygiene group {$gid} not found");
-                }
-                // rc7: the asset technician(s) own the "not in GLPI" ticket.
-                self::assert($cfg['glpi_users'] !== [], 'no asset technician set: the "not in GLPI" ticket would have no owner');
-                foreach ($cfg['glpi_users'] as $uid) {
-                    self::assert((new \User())->getFromDB($uid), "asset technician {$uid} not found");
+                foreach ((new \GlpiPlugin\Nms\Connection\DbConnectionStore())->active() as $conn) {
+                    $cfg = Config::hygieneConfigFromSettings(Settings::fromJson((string) $conn->settings));
+                    if (!$cfg['enabled']) {
+                        continue;
+                    }
+                    foreach (array_merge($cfg['glpi_groups'], [$cfg['nms_group']]) as $gid) {
+                        self::assert((new \Group())->getFromDB($gid), "connection {$conn->name}: hygiene group {$gid} not found");
+                    }
+                    // rc7: the asset technician(s) own the "not in GLPI" ticket.
+                    self::assert($cfg['glpi_users'] !== [], "connection {$conn->name}: no asset technician set: the \"not in GLPI\" ticket would have no owner");
+                    foreach ($cfg['glpi_users'] as $uid) {
+                        self::assert((new \User())->getFromDB($uid), "connection {$conn->name}: asset technician {$uid} not found");
+                    }
                 }
             },
             'matching/lookup-smoke' => static function (): void {
@@ -171,6 +163,22 @@ final class SelfCheck
                 self::assert($lookup->byIp('192.0.2.254') === [], 'IP lookup returned rows for TEST-NET-1');
             },
         ];
+    }
+
+    /**
+     * Active connections that create tickets, with their ticketing config.
+     *
+     * @return list<array{0: \GlpiPlugin\Nms\Connection\Connection, 1: array<string, mixed>}>
+     */
+    private static function ticketConnections(): array
+    {
+        $out = [];
+        foreach ((new \GlpiPlugin\Nms\Connection\DbConnectionStore())->active() as $conn) {
+            if ((int) $conn->tickets_enabled === 1) {
+                $out[] = [$conn, Config::ticketingConfigFromSettings(Settings::fromJson((string) $conn->settings))];
+            }
+        }
+        return $out;
     }
 
     private static function assert(bool $cond, string $msg): void

@@ -91,4 +91,41 @@ $copy = $orig->with(['match_mode' => 'manual']);
 check('with() returns changed value', $copy->get('match_mode') === 'manual');
 check('with() does not mutate original', $orig->get('match_mode') === Settings::DEFAULTS['match_mode']);
 
+// ---- R2.7 (owner review): the same over src/, front/ and tools/, and every global helper ----
+$code = [];
+foreach (['src', 'front', 'tools'] as $dir) {
+    foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(OPM_ROOT . '/' . $dir, \FilesystemIterator::SKIP_DOTS)) as $f) {
+        $path = str_replace('\\', '/', $f->getPathname());
+        if ($f->getExtension() === 'php' && !str_contains($path, '/src/Migration/')) {
+            $code[$path] = (string) file_get_contents($path);
+        }
+    }
+}
+$hits = static function (string $pattern) use ($code): array {
+    $out = [];
+    foreach ($code as $path => $text) {
+        if (preg_match($pattern, $text)) {
+            $out[] = basename(dirname($path)) . '/' . basename($path);
+        }
+    }
+    return $out;
+};
+$bad = $hits($moved_key_pattern);
+check('no Config::get(<moved key>) in src/, front/, tools/', $bad === [], implode(', ', $bad));
+$bad = $hits('/Config::(ticketingConfig|hygieneConfig|coverageStates|apiKey|webhookToken)\(\)/');
+check('no global settings helper is called', $bad === [], implode(', ', $bad));
+$bad = $hits('/\\\\Config::set\(/');
+check('core \Config has no set(): never called', $bad === [], implode(', ', $bad));
+$bad = $hits("/Config::get\\('(last_device_sync|last_alarm_sync|last_device_sync_error|last_alarm_sync_error|webhook_token|opm_[a-z_]+)'\\)/");
+check('sync status and secrets are never read globally', $bad === [], implode(', ', $bad));
+check('Config::DEFAULTS holds only the two global keys', array_keys(Config::DEFAULTS) === ['asset_itemtypes', 'stale_warning_minutes']);
+
+// The alarm cron reads match_mode from the connection it works for.
+$cron = $code[str_replace('\\', '/', OPM_ROOT) . '/src/Cron.php'] ?? '';
+check('cronAlarmSync defines the settings it uses', (bool) preg_match('/function cronAlarmSync.*?\$settings\s*=\s*Settings::fromJson.*?\$settings->get\(\'match_mode\'\)/s', $cron));
+check('hygiene judges freshness from the connection row', str_contains($cron, "self::deviceDataFresh(\$conn->last_device_sync, \$now,"));
+check('hygiene saves only the settings column', !str_contains($cron, '->save(array_merge((array) $conn') && substr_count($cron, '->saveSettings(') >= 2);
+check('alarm sync without tickets needs no service user', str_contains($cron, "\$cfg['tickets_enabled'] === 1 && \$cfg['service_user'] <= 0"));
+check('a failed sync never stamps the sync time', !preg_match("/recordStatus\\([^;]*'error'[^;]*\\);\\s*\\\\?Config::set/", $cron));
+
 done();

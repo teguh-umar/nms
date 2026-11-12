@@ -243,17 +243,31 @@ check('byWebhookToken() ignores inactive', $store->byWebhookToken('token-xyz') !
 // Unknown token returns null
 check('byWebhookToken() unknown returns null', $store->byWebhookToken('nope') === null);
 
-// recordStatus: device kind
+// recordStatus: a failure records the error but never moves a sync column (review R2:
+// a failed sync must not make old data look fresh).
 $store->recordStatus(1, 'device', 'error', 'connection failed', '2026-11-11 00:05:00');
 $row1 = $store->get(1);
-check('recordStatus device sets last_status', $row1->last_status === 'error');
-check('recordStatus device sets last_error', $row1->last_error === 'connection failed');
-check('recordStatus device sets last_device_sync', $row1->last_device_sync === '2026-11-11 00:05:00');
+check('recordStatus device error sets last_status', $row1->last_status === 'error');
+check('recordStatus device error names the kind', $row1->last_error === 'device: connection failed');
+check('recordStatus device error leaves last_device_sync', $row1->last_device_sync === '');
 check('recordStatus device does not touch last_alarm_sync', $row1->last_alarm_sync === '');
+
+$store->recordStatus(1, 'device', 'ok', '', '2026-11-11 00:05:30');
+$row1 = $store->get(1);
+check('recordStatus device ok stamps last_device_sync and clears the error', $row1->last_device_sync === '2026-11-11 00:05:30' && $row1->last_status === 'ok' && $row1->last_error === '');
 
 // recordStatus: alarm kind
 $store->recordStatus(1, 'alarm', 'ok', '', '2026-11-11 00:06:00');
 $row1 = $store->get(1);
 check('recordStatus alarm sets last_alarm_sync', $row1->last_alarm_sync === '2026-11-11 00:06:00');
+
+// hygiene / outbox: success is silent, failure is recorded without a sync stamp.
+$store->recordStatus(1, 'device', 'error', 'timeout', '2026-11-11 00:07:00');
+$store->recordStatus(1, 'hygiene', 'ok', '', '2026-11-11 00:08:00');
+$row1 = $store->get(1);
+check('a hygiene success does not hide a device error', $row1->last_status === 'error' && $row1->last_error === 'device: timeout');
+$store->recordStatus(1, 'outbox', 'error', 'HTTP 500', '2026-11-11 00:09:00');
+$row1 = $store->get(1);
+check('an outbox failure is recorded without touching sync columns', $row1->last_error === 'outbox: HTTP 500' && $row1->last_alarm_sync === '2026-11-11 00:06:00' && $row1->last_device_sync === '2026-11-11 00:05:30');
 
 done();

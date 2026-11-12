@@ -19,7 +19,7 @@ final class HygieneRun
 
     /**
      * @param array<string, callable> $providers name => provider (Providers::all())
-     * @param array<string, mixed>    $cfg Config::hygieneConfig() + service_user, entity_default, list_url
+     * @param array<string, mixed>    $cfg Config::hygieneConfigFromSettings($settings) + service_user, entity_default, list_url, device_data_fresh
      */
     public function __construct(private HygieneStore $store, private array $providers, private HygieneGateway $gateway, private array $cfg)
     {

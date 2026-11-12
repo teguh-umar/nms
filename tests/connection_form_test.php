@@ -6,8 +6,8 @@ class CommonGLPI {}
 class CommonDBTM extends CommonGLPI {}
 class Html
 {
-    public static function submit($label, $options = []): string { return ''; }
-    public static function hidden($name, $options = []): string { return ''; }
+    public static function submit($label, $options = []): string { return '<input type="submit" name="' . ($options['name'] ?? '') . '">'; }
+    public static function hidden($name, $options = []): string { return '<input type="hidden" name="' . $name . '" value="' . ($options['value'] ?? '') . '">'; }
     public static function closeForm(): void { }
     public static function getPrefixedUrl($url): string { return $url; }
 }
@@ -84,6 +84,7 @@ require OPM_ROOT . '/src/RightDefinition.php';
 require OPM_ROOT . '/src/Driver/Driver.php';
 require OPM_ROOT . '/src/Driver/DriverFactory.php';
 require OPM_ROOT . '/src/Driver/Capabilities.php';
+require OPM_ROOT . '/src/Config.php';
 require OPM_ROOT . '/src/Connection/ConnectionForm.php';
 
 use GlpiPlugin\Nms\Connection\Connection;
@@ -93,6 +94,7 @@ use GlpiPlugin\Nms\Driver\Driver;
 use GlpiPlugin\Nms\Driver\DriverFactory;
 use GlpiPlugin\Nms\Driver\Capabilities;
 use GlpiPlugin\Nms\RightDefinition;
+use GlpiPlugin\Nms\Connection\Settings;
 
 /** Driver that reports capabilities per brand. */
 final class FakeDriver implements Driver
@@ -107,7 +109,7 @@ final class FakeDriver implements Driver
             false,
             false,
             false,
-            false,
+            $this->conn->brand === 'opmanager',
             false
         );
     }
@@ -235,13 +237,18 @@ $id2 = $store->save(array_merge($connFields, [
 
 // --- Static render tests ---
 $form = new ConnectionForm($store);
+ConnectionForm::$lookups = static fn (int $cid): array => [
+    'ranges'      => [7 => '10.20.0.0/16 (prod)'],
+    'event_types' => ['deviceDown'],
+    'outbox'      => ['pending' => 0, 'failed' => 0, 'last_error' => ''],
+    'hygiene'     => [],
+];
 
 // No secret value appears in rendered HTML.
 $html = $form->renderList();
 check('no secret in list HTML', strpos($html, 'key-xyz') === false && strpos($html, 'token-xyz') === false);
 
 $html = $form->renderForm(1);
-fwrite(STDERR, 'RENDER FORM HTML: ' . substr($html, 0, 1000) . PHP_EOL);
 check('no secret in form HTML', strpos($html, 'key-xyz') === false && strpos($html, 'token-xyz') === false);
 check('secret shown as set/not set', str_contains($html, 'Stored') || str_contains($html, 'Not set'), 'html=' . substr($html, 0, 500));
 
@@ -281,5 +288,78 @@ check('webhook token unchanged', $c->secret('webhook_token') === 'token-xyz');
 $brands = ConnectionForm::supportedBrands();
 check('supported brands excludes brands without driver', !in_array('zabbix', $brands, true));
 check('supported brands includes opmanager', in_array('opmanager', $brands, true));
+
+// ---- Review R2: every per-connection setting is edited on the connection form ----
+$html = $form->renderForm(1);
+$names = [];
+preg_match_all('/name="([^"]+)"/', $html, $m);
+foreach ($m[1] as $n) {
+    $names[rtrim($n, '[]')] = true;
+}
+// Rendered by GLPI dropdowns (stubbed here): checked through their call sites instead.
+$dropdowns = ['match_mode', 'coverage_states', 'ticket_template', 'service_user', 'ticket_entity_default',
+    'hygiene_glpi_groups', 'hygiene_glpi_users', 'hygiene_itil_category', 'hygiene_nms_group', 'hygiene_ticket_template'];
+$src = (string) file_get_contents(OPM_ROOT . '/src/Connection/ConnectionForm.php');
+// Run state written by the cron, not by a person.
+$runState = ['last_hygiene_run', 'last_hygiene_ticket_run', 'last_hygiene_error'];
+$missing = [];
+foreach (array_keys(Settings::DEFAULTS) as $key) {
+    if (in_array($key, $runState, true)) {
+        continue;
+    }
+    $shown = in_array($key, $dropdowns, true)
+        ? ((bool) preg_match("/'name'\s*=>\s*'" . preg_quote($key, '/') . "(\[\])?'/", $src) || str_contains($src, "showFromArray('{$key}'"))
+        : isset($names[$key]);
+    if (!$shown) {
+        $missing[] = $key;
+    }
+}
+check('connection form edits every Settings key', $missing === [], implode(', ', $missing));
+check('form posts to its own controller with the id', str_contains($html, 'action="/plugins/nms/front/connection.form.php?id=1"'));
+check('form carries the settings marker', str_contains($html, 'name="_nms_settings"'));
+check('webhook token is generated, never typed in', !isset($names['webhook_token']) && isset($names['generate_webhook_token']));
+
+// Saving validates with the 1.3.2 rules and stores per connection.
+$post = [
+    '_nms_settings' => 1, 'name' => 'opm.example.test', 'brand' => 'opmanager', 'url' => 'https://opm.example.test',
+    'is_active' => 1, 'tickets_enabled' => 1, 'writeback_enabled' => 1, 'entities_id' => 1,
+    'match_mode' => 'ip_only', 'ticket_source' => 'rules', 'ticket_severities' => ['1', '2'], 'service_user' => '12',
+    'production_addressings' => ['7'], 'storm_threshold' => '5', 'storm_window_minutes' => '15', 'relink_window_hours' => '24',
+    'outbound_max_attempts' => '10', 'ticket_title_pattern' => 'T {alarm_key}', 'ticket_content_pattern' => 'C {message}',
+    'hygiene_frequency_days' => '7', 'hygiene_agent_stale_days' => '30', 'hygiene_mist_stale_days' => '30',
+    'hygiene_probe_timeout_ms' => '1000', 'hygiene_unmanaged_availabilities' => 'Unmanaged',
+];
+$r = $form->handleSave(1, $post);
+$s = Settings::fromJson($store->get(1)->settings);
+check('settings saved on the connection', $r['ok'] && $r['errors'] === [] && $s->get('match_mode') === 'ip_only' && $s->get('service_user') === '12', implode(' | ', $r['errors']));
+check('array fields stored as JSON, not "Array"', json_decode($s->get('ticket_severities'), true) === [1, 2] && json_decode($s->get('production_addressings'), true) === [7]);
+check('settings of connection 2 untouched', Settings::fromJson($store->get(2)->settings)->get('match_mode') === Settings::DEFAULTS['match_mode']);
+
+$r = $form->handleSave(1, ['match_mode' => 'magic'] + $post);
+check('invalid setting reported', $r['errors'] !== []);
+
+$r = $form->handleSave(1, ['url' => 'ftp://x'] + $post);
+check('bad URL refused', $r['ok'] === false);
+
+$r = $form->handleSave(1, ['name' => 'opm.example.test', 'brand' => 'opmanager']);
+check('a POST without the marker leaves settings alone', Settings::fromJson($store->get(1)->settings)->get('service_user') === '12');
+check('save keeps date_creation', $store->get(1)->date_creation === '2026-11-11 00:00:00');
+
+$r = $form->handleSave(1, ['api_key_clear' => '1'] + $post);
+check('stored API key can be removed', $store->get(1)->api_key === '');
+
+// A new connection (id 0) is created inactive unless ticked.
+$r = $form->handleSave(0, ['name' => 'vm-app-01 nms', 'brand' => 'opmanager', 'url' => 'https://opm.example.test']);
+check('id 0 creates a connection', $r['ok'] && $r['id'] > 2 && $store->get($r['id'])->name === 'vm-app-01 nms' && $store->get($r['id'])->is_active === 0);
+check('new connection form renders', str_contains($form->renderForm(0), 'name="update_connection"'));
+
+// Inactive connections stay listed (the migrated one starts disabled).
+check('list shows inactive connections', str_contains($form->renderList(), 'core-sw-01'));
+
+// The webhook token is generated per connection and stored encrypted.
+$token = $form->generateToken(2);
+check('token generated for one connection', is_string($token) && strlen($token) >= 32 && $store->get(2)->secret('webhook_token') === $token && $store->get(2)->webhook_token !== $token);
+check('other connection token unchanged', $store->get(1)->secret('webhook_token') === 'token-xyz');
+check('generated token not rendered later', !str_contains($form->renderForm(2), $token));
 
 done();

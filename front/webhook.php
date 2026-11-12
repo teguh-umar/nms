@@ -55,8 +55,8 @@ $receiver = new Receiver(
     $conn,
     $driver,
     new DbSyncLock(DbSyncLock::lockName($cid)),
-    static function (array $alarm) use ($driver, $cfg, $cid): array {
-        if ($cfg['service_user'] <= 0) {
+    static function (array $alarm) use ($driver, $cfg, $cid, $settings): array {
+        if ($cfg['tickets_enabled'] === 1 && $cfg['service_user'] <= 0) {
             // Same guard as the AlarmSync cron: a ticket without an author is never created.
             \Toolbox::logInFile('nms', "Webhook: no service user configured in Setup; alarm left to AlarmSync\n");
             throw new \RuntimeException('no service user configured');
@@ -65,7 +65,7 @@ $receiver = new Receiver(
             $driver,
             new DbAlarmStore($cid),
             new GlpiTicketGateway($cfg),
-            new AlarmAssetResolver(new DbDeviceIndex($cid), new Matcher(new DbAssetLookup(Config::assetItemtypes())), Config::get('match_mode')),
+            new AlarmAssetResolver(new DbDeviceIndex($cid), new Matcher(new DbAssetLookup(Config::assetItemtypes())), $settings->get('match_mode')),
             new RangeProductionCheck(AddressingRanges::load($cfg['production_addressings']), [AddressingRanges::class, 'assetIps']),
             $cfg,
             new DbTicketRequestStore($cid)

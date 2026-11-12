@@ -6,6 +6,7 @@
  */
 
 use GlpiPlugin\Nms\Config;
+use GlpiPlugin\Nms\Connection\DbConnectionStore;
 use GlpiPlugin\Nms\Coverage\Csv;
 use GlpiPlugin\Nms\Coverage\DbCoverageSource;
 use GlpiPlugin\Nms\Coverage\Page;
@@ -23,13 +24,16 @@ $state = [
     'production_only' => !empty($_GET['production_only']),
     'category'        => (string) ($_GET['category'] ?? ''),
 ];
-$cfg    = Config::ticketingConfig();
-$source = new DbCoverageSource();
-$report = Report::build($source->devices(), $source->assets(Config::assetItemtypes(), Config::coverageStates()), [
-    'ranges'           => AddressingRanges::load($cfg['production_addressings']),
+// Spans every active connection: production ranges and counted states are their union,
+// and the data is as old as the oldest connection's last successful device sync.
+$connStore = new DbConnectionStore();
+$active    = $connStore->active();
+$source    = new DbCoverageSource();
+$report    = Report::build($source->devices(), $source->assets(Config::assetItemtypes(), Config::coverageStatesOf($active)), [
+    'ranges'           => AddressingRanges::load(Config::productionAddressingsOf($active)),
     'production_only'  => $state['production_only'],
     'category'         => $state['category'],
-    'last_device_sync' => Config::get('last_device_sync'),
+    'last_device_sync' => $connStore->oldestDeviceSync(),
     'stale_minutes'    => max(1, (int) Config::get('stale_warning_minutes')),
 ]);
 

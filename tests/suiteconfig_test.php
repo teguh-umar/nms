@@ -1,5 +1,12 @@
 <?php
 
+namespace Glpi\Asset {
+    class AssetDefinition
+    {
+        public static function getTable() { return 'glpi_assets_assetdefinitions'; }
+    }
+}
+
 namespace {
     require __DIR__ . '/bootstrap.php';
 
@@ -26,6 +33,11 @@ namespace {
         public static function scriptBlock($js) { return '<script>' . $js . '</script>'; }
     }
 
+    class Config
+    {
+        public static function getConfigurationValues($context, $keys = []) { return $GLOBALS['CFG_VALUES']; }
+    }
+
     class ConfigTab
     {
         public static function getReturnUrl($section) { return '/'; }
@@ -45,6 +57,10 @@ namespace {
     require OPM_ROOT . '/src/Outbound/OutboxStore.php';
     require OPM_ROOT . '/src/Outbound/DbOutboxStore.php';
     require OPM_ROOT . '/src/SetupStatus.php';
+    require OPM_ROOT . '/src/Connection/Connection.php';
+    require OPM_ROOT . '/src/Connection/Settings.php';
+    require OPM_ROOT . '/src/Connection/ConnectionForm.php';
+    require OPM_ROOT . '/src/CustomAssets.php';
     require OPM_ROOT . '/src/SuiteConfig.php';
     require OPM_ROOT . '/src/Migration/FromOpmanager.php';
 
@@ -63,9 +79,9 @@ namespace {
     SuiteConfig::showForm(true);
     $html = (string) ob_get_clean();
     check('api key never rendered', !str_contains($html, 'ENCRYPTED-SECRET-VALUE'));
-    check('read-only user sees no save button', !str_contains($html, "name='update'"));
+    check('read-only user sees no save button', !str_contains($html, 'name="update"'));
     check('suite marker present when rendered in the tab', str_contains($html, 'name="_from_pgnsuite"'));
-    check('posts to own controller', str_contains($html, '/plugins/opmanager/front/config.php'));
+    check('posts to own controller', str_contains($html, 'action="/plugins/nms/front/config.php"'));
     check('manual link present', str_contains($html, 'front/manual.php'));
     check('manage connections link present', str_contains($html, 'front/connection.php'));
     check('manage connections label', str_contains($html, 'Manage connections'));
@@ -81,7 +97,15 @@ namespace {
     check('standalone page has no suite marker', !str_contains($html, '_from_pgnsuite'));
 
     // Status strip present.
-    check('status strip present', str_contains($html, 'opm-status'));
+    check('status strip present', str_contains($html, 'nms-status'));
+    check('no active connection is reported', str_contains($html, 'No active NMS connection'));
+
+    // Review R2: the global Setup edits only the keys shared by every connection.
+    preg_match_all('/name="([^"]+)"/', $html, $m);
+    $fields = array_values(array_diff(array_unique(array_map(static fn ($n) => rtrim($n, '[]'), $m[1])), ['update']));
+    sort($fields);
+    check('global Setup edits only asset_itemtypes and stale_warning_minutes', $fields === ['asset_itemtypes', 'stale_warning_minutes'], implode(',', $fields));
+    check('no nested form', substr_count($html, '<form') === 1);
 
     // Per-connection status lines not present (no active connections).
     check('no per-connection status when no connections', !str_contains($html, 'conn_'));

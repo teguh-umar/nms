@@ -66,11 +66,8 @@ final class Config
         // 1.3.2 default moved per connection lives in Connection\Settings::DEFAULTS.
         'asset_itemtypes'        => '["Computer","NetworkEquipment"]',
         'stale_warning_minutes'  => '90',
-        // Per-connection sync status (read via Connection\Settings in the cron loop).
-        'last_device_sync'       => '',
-        'last_device_sync_error' => '',
-        'last_alarm_sync'        => '',
-        'last_alarm_sync_error'  => '',
+        // Sync status lives on each connection row (last_device_sync, last_alarm_sync,
+        // last_status, last_error), never here.
     ];
 
     /** HygieneCheck frequency: daily; tickets follow hygiene_frequency_days (spec §7). */
@@ -86,20 +83,6 @@ final class Config
     public static function set(array $values): void
     {
         \Config::setConfigurationValues(self::CONTEXT, $values);
-    }
-
-    /** Core encrypts secured values on write but never decrypts on read. */
-    public static function apiKey(): string
-    {
-        $raw = self::get('opm_api_key');
-        return $raw === '' ? '' : (string) ((new \GLPIKey())->decrypt($raw) ?? '');
-    }
-
-    /** Decrypted webhook token; '' = webhook disabled. */
-    public static function webhookToken(): string
-    {
-        $raw = self::get('webhook_token');
-        return $raw === '' ? '' : (string) ((new \GLPIKey())->decrypt($raw) ?? '');
     }
 
     public static function newWebhookToken(): string
@@ -148,6 +131,27 @@ final class Config
      * @param string[]             $allowed_itemtypes itemtypes the form offered
      * @return array{values: array<string, string>, errors: list<string>}
      */
+    /**
+     * The global Setup keys only (asset_itemtypes, stale_warning_minutes).
+     *
+     * @param list<string> $allowed_itemtypes
+     * @return array{values: array<string, string>, errors: list<string>}
+     */
+    public static function sanitizeGlobal(array $post, array $allowed_itemtypes): array
+    {
+        $values = [];
+        $errors = [];
+        $posted = array_filter((array) ($post['asset_itemtypes'] ?? []), 'is_string');
+        $values['asset_itemtypes'] = (string) json_encode(array_values(array_intersect($posted, $allowed_itemtypes)));
+        $stale = (int) ($post['stale_warning_minutes'] ?? 0);
+        if ($stale >= 5 && $stale <= 1440) {
+            $values['stale_warning_minutes'] = (string) $stale;
+        } else {
+            $errors[] = __('Stale warning must be between 5 and 1440 minutes', 'nms');
+        }
+        return ['values' => $values, 'errors' => $errors];
+    }
+
     public static function sanitize(array $post, array $allowed_itemtypes): array
     {
         $values = [];
@@ -335,24 +339,66 @@ final class Config
     }
 
     /**
-     * @return array{enabled: bool, frequency_days: int, unmanaged_values: list<string>, agent_stale_days: int, mist_stale_days: int,
-     *   probe_cidrs: list<string>, probe_ports: list<int>, probe_timeout_ms: int, template_id: int, glpi_groups: list<int>, glpi_users: list<int>, itil_category: int, nms_group: int}
+     * Validate the per-connection settings posted by the connection form, with the 1.3.2
+     * rules. Values are keyed by Settings::DEFAULTS keys.
+     *
+     * @return array{values: array<string, string>, errors: list<string>}
      */
-    public static function hygieneConfig(): array
+    public static function sanitizeConnectionSettings(array $post): array
     {
-        $s = Settings::fromJson('{}')->with(self::storedOrDefaults());
-        return self::hygieneConfigFromSettings($s);
+        $values = [];
+        $errors = [];
+
+        $mode = (string) ($post['match_mode'] ?? '');
+        if (in_array($mode, self::MATCH_MODES, true)) {
+            $values['match_mode'] = $mode;
+        } else {
+            $errors[] = __('Unknown match mode', 'nms');
+        }
+        $states = array_values(array_unique(array_filter(array_map('intval', (array) ($post['coverage_states'] ?? [])), static fn (int $id) => $id > 0)));
+        $values['coverage_states'] = (string) json_encode($states);
+
+        $tickets = self::sanitizeTicketing($post);
+        $hygiene = self::sanitizeHygiene($post);
+        return [
+            'values' => $values + $tickets['values'] + $hygiene['values'],
+            'errors' => array_merge($errors, $tickets['errors'], $hygiene['errors']),
+        ];
     }
 
-    /** Read stored values for per-connection keys from glpi_configs; fall back to Settings defaults. @return array<string, string> */
-    private static function storedOrDefaults(): array
+    /**
+     * Production ranges of several connections together (pages that span connections).
+     *
+     * @param list<Connection\Connection> $connections
+     * @return list<int>
+     */
+    public static function productionAddressingsOf(array $connections): array
     {
-        $out = [];
-        foreach (Settings::DEFAULTS as $k => $d) {
-            $v = self::get($k);
-            $out[$k] = $v !== '' ? $v : $d;
+        $ids = [];
+        foreach ($connections as $c) {
+            $ids = array_merge($ids, self::ticketingConfigFromSettings(Settings::fromJson((string) $c->settings))['production_addressings']);
         }
-        return $out;
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * GLPI states counted as "in use" over several connections; [] = every state (D28).
+     * One connection counting every state makes the union every state.
+     *
+     * @param list<Connection\Connection> $connections
+     * @return list<int>
+     */
+    public static function coverageStatesOf(array $connections): array
+    {
+        $ids = [];
+        foreach ($connections as $c) {
+            $own = self::coverageStatesFromSettings(Settings::fromJson((string) $c->settings));
+            if ($own === []) {
+                return [];
+            }
+            $ids = array_merge($ids, $own);
+        }
+        return array_values(array_unique($ids));
     }
 
     /**
@@ -363,13 +409,6 @@ final class Config
     public static function stormIdleMinutes(int $window): int
     {
         return max($window, self::ALARM_SYNC_MINUTES + 1);
-    }
-
-    /** @return array{ticket_severities: list<int>, ticket_source: string, relink_window_hours: int, storm_threshold: int, storm_window_minutes: int, storm_idle_minutes: int, service_user: int, template_id: int, title_pattern: string, content_pattern: string, entity_default: int, use_ipnetwork: bool} */
-    public static function ticketingConfig(): array
-    {
-        $s = Settings::fromJson('{}')->with(self::storedOrDefaults());
-        return self::ticketingConfigFromSettings($s);
     }
 
     /** @return array{filter_mode: string, filter_event_types: list<string>, filter_keywords: list<string>} */
@@ -456,16 +495,6 @@ final class Config
             return [];
         }
         return array_values(array_intersect(array_filter($decoded, 'is_string'), $offered));
-    }
-
-    /** @return list<int> GLPI states counted by the Coverage page; [] = every state (D28). */
-    public static function coverageStates(): array
-    {
-        $stored = self::get('coverage_states');
-        if ($stored !== '') {
-            return array_values(array_map('intval', (array) (json_decode($stored, true) ?: [])));
-        }
-        return self::coverageStatesFromSettings(Settings::fromJson('{}'));
     }
 
     /** @return list<string> configured asset itemtypes still on offer */

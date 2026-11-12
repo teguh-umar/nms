@@ -154,11 +154,12 @@ final class Cards
         return self::cached($_SESSION['plugin_nms_cards'], $key, self::TTL, time(), static function (): array {
             $src     = new DbCoverageSource(0);
             $devices = $src->devices();
-            $report  = Report::build($devices, $src->assets(Config::assetItemtypes(), Config::coverageStates()), [
+            $conns   = new \GlpiPlugin\Nms\Connection\DbConnectionStore();
+            $report  = Report::build($devices, $src->assets(Config::assetItemtypes(), Config::coverageStatesOf($conns->active())), [
                 'ranges'           => [],
                 'production_only'  => false,
                 'category'         => '',
-                'last_device_sync' => Config::get('last_device_sync'),
+                'last_device_sync' => $conns->oldestDeviceSync(),
                 'stale_minutes'    => max(1, (int) Config::get('stale_warning_minutes')),
             ]);
             return [

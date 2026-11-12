@@ -7,7 +7,8 @@ check('stateless path registered in plugin_nms_boot', (bool) preg_match('/functi
 check('not registered in plugin_init (too late)', !preg_match('/function plugin_init_nms\(\).*?registerPluginStatelessPath/s', $setup));
 
 $hook = (string) @file_get_contents(OPM_ROOT . '/front/webhook.php');
-$cfg  = (string) file_get_contents(OPM_ROOT . '/front/config.php');
+// Review R2: the token is per connection, generated on the connection form.
+$cfg  = (string) file_get_contents(OPM_ROOT . '/front/connection.form.php');
 check('endpoint exists', $hook !== '');
 check('endpoint reads the token from the header only', str_contains($hook, "HTTP_X_OPM_TOKEN") && !str_contains($hook, '$_GET') && !str_contains($hook, '$_REQUEST'));
 check('endpoint sets status and JSON', str_contains($hook, 'http_response_code(') && str_contains($hook, 'application/json'));
@@ -16,7 +17,7 @@ check('endpoint uses the shared engine', str_contains($hook, '->processOne('));
 check('engine runs with system rights and all entities, like cron', str_contains($hook, 'Session::callAsSystem(') && str_contains($hook, 'Session::loadEntity(0, true)'));
 check('every answer is logged, 200 included', str_contains($hook, 'Webhook: HTTP %d') && !str_contains($hook, "\$result['status'] !== 200") && !str_contains($hook, "\$result['status'] >= 400"));
 check('refused body is logged for diagnosis', str_contains($hook, "\$result['body']['received']"));
-check('token is not put in a toast message', !preg_match('/addMessageAfterRedirect\([^;]*\$token/s', $cfg) && str_contains($cfg, '$_SESSION[SuiteConfig::NEW_TOKEN_KEY]'));
+check('token is not put in a toast message', !preg_match('/addMessageAfterRedirect\([^;]*\$token/s', $cfg) && str_contains($cfg, '$_SESSION[ConnectionForm::NEW_TOKEN_KEY][$id]'));
 
 check('token regeneration needs config UPDATE', (bool) preg_match('/generate_webhook_token.*?checkRight\(RightDefinition::CONFIG, UPDATE\)/s', $cfg));
 

@@ -50,7 +50,11 @@ final class AssetSections
             $devices,
             (int) strtotime((string) \Session::getCurrentTime()),
             (int) Config::get('stale_warning_minutes'),
-            Config::get('last_device_sync'),
+            // The asset's data is as old as the oldest sync of the connections that list it
+            // (every active connection when none does).
+            (new \GlpiPlugin\Nms\Connection\DbConnectionStore())->oldestDeviceSync(
+                $devices === [] ? null : array_values(array_unique(array_map(static fn (array $d): int => (int) ($d['connections_id'] ?? 0), $devices)))
+            ),
             Alarm::forAsset($item::class, $id, self::MAX_ROWS),
             Alarm::countForAsset($item::class, $id)
         ));

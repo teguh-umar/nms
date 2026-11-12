@@ -26,6 +26,18 @@ final class DbConnectionStore implements ConnectionStore
         return $out;
     }
 
+    /** Every connection, active or not, by name (the list page: a disabled one must stay editable). */
+    public function all(): array
+    {
+        global $DB;
+
+        $out = [];
+        foreach ($DB->request(['FROM' => self::TABLE, 'ORDER' => 'name']) as $row) {
+            $out[] = new Connection($row);
+        }
+        return $out;
+    }
+
     public function get(int $id): ?Connection
     {
         global $DB;
@@ -66,10 +78,7 @@ final class DbConnectionStore implements ConnectionStore
         }
 
         $now = date('Y-m-d H:i:s');
-        $fields = array_merge([
-            'date_creation' => $now,
-            'date_mod'      => $now,
-        ], $fields);
+        $fields += ['date_mod' => $now];
 
         $id = (int) ($fields['id'] ?? 0);
         if ($id > 0) {
@@ -85,20 +94,58 @@ final class DbConnectionStore implements ConnectionStore
             }
         }
         unset($fields['id']);
-        $DB->insert(self::TABLE, $fields);
+        $DB->insert(self::TABLE, $fields + ['date_creation' => $now]);
         return (int) $DB->insertId();
     }
 
+    /** Update only the settings column (a cron must not rewrite the status it just recorded). */
+    public function saveSettings(int $id, Settings $settings, string $now): void
+    {
+        global $DB;
+
+        $DB->update(self::TABLE, ['settings' => $settings->toJson(), 'date_mod' => $now], ['id' => $id]);
+    }
+
+    /**
+     * $kind 'device' or 'alarm': a success stamps that sync column and clears the error.
+     * Any other kind (hygiene, outbox) only records a failure, so its success never hides a
+     * device or alarm error. A failure never moves a sync column: a failed sync must not
+     * make old data look fresh.
+     */
     public function recordStatus(int $id, string $kind, string $status, string $error, string $now): void
     {
         global $DB;
 
-        $syncCol = $kind === 'device' ? 'last_device_sync' : 'last_alarm_sync';
-        $DB->update(self::TABLE, [
-            'last_status' => $status,
-            'last_error'  => $error,
-            $syncCol      => $now,
-            'date_mod'    => $now,
-        ], ['id' => $id]);
+        $syncCol = ['device' => 'last_device_sync', 'alarm' => 'last_alarm_sync'][$kind] ?? null;
+        if ($status === 'ok') {
+            if ($syncCol === null) {
+                return;
+            }
+            $fields = ['last_status' => 'ok', 'last_error' => '', $syncCol => $now];
+        } else {
+            $fields = ['last_status' => 'error', 'last_error' => substr($kind . ': ' . $error, 0, 1000)];
+        }
+        $DB->update(self::TABLE, $fields + ['date_mod' => $now], ['id' => $id]);
+    }
+
+    /**
+     * The oldest successful device sync over the given connections (all active ones by
+     * default), for pages that span connections: '' when one of them never synced.
+     *
+     * @param list<int>|null $ids
+     */
+    public function oldestDeviceSync(?array $ids = null): string
+    {
+        $oldest = null;
+        foreach ($this->active() as $c) {
+            if ($ids !== null && !in_array((int) $c->id, $ids, true)) {
+                continue;
+            }
+            if ($c->last_device_sync === '') {
+                return '';
+            }
+            $oldest = $oldest === null ? $c->last_device_sync : min($oldest, $c->last_device_sync);
+        }
+        return $oldest ?? '';
     }
 }

@@ -3,6 +3,7 @@
 namespace GlpiPlugin\Nms;
 
 use GlpiPlugin\Nms\Connection\Connection;
+use GlpiPlugin\Nms\Connection\Settings;
 
 /**
  * Pure: the health badges at the top of the Setup section (spec §15.2).
@@ -60,6 +61,46 @@ final class SetupStatus
             }
             $items[] = ['key' => 'conn_' . (int) $conn->id, 'label' => $label, 'level' => $level, 'text' => $text];
         }
+        return $items;
+    }
+
+    /**
+     * The health badges of one connection, labelled with its name. The row keeps one error
+     * slot; recordStatus() prefixes it with the kind ("device: ...", "alarm: ...").
+     *
+     * @param array{pending: int, failed: int} $outbox
+     * @return list<array{key: string, label: string, level: string, text: string}>
+     */
+    public static function forConnection(Connection $c, array $outbox, int $stale_minutes, string $now): array
+    {
+        $s     = Settings::fromJson($c->settings);
+        $error = static fn (string $kind): string => $c->last_status === 'error' && str_starts_with($c->last_error, $kind . ': ')
+            ? substr($c->last_error, strlen($kind) + 2) : '';
+        $items = self::items([
+            'api_key_set'            => $c->api_key !== '',
+            'last_device_sync'       => $c->last_device_sync,
+            'last_device_sync_error' => $error('device'),
+            'stale_minutes'          => max(1, $stale_minutes),
+            'last_alarm_sync'        => $c->last_alarm_sync,
+            'last_alarm_sync_error'  => $error('alarm'),
+            'alarm_minutes'          => Config::ALARM_SYNC_MINUTES,
+            'webhook_token_set'      => $c->webhook_token !== '',
+            'ticket_source'          => $s->get('ticket_source'),
+            'outbox_pending'         => (int) $outbox['pending'],
+            'outbox_failed'          => (int) $outbox['failed'],
+            'hygiene_enabled'        => $s->get('hygiene_enabled') === '1',
+            'last_hygiene_run'       => $s->get('last_hygiene_run'),
+            'last_hygiene_error'     => $s->get('last_hygiene_error'),
+        ], $now);
+        if ((int) $c->tickets_enabled !== 1) {
+            // Tickets off (subsidiary default): the webhook only feeds the asset tab.
+            $items = array_values(array_filter($items, static fn (array $i): bool => $i['key'] !== 'webhook'));
+        }
+        foreach ($items as &$item) {
+            $item['key']   = 'conn_' . (int) $c->id . '_' . $item['key'];
+            $item['label'] = $c->name . ' - ' . $item['label'];
+        }
+        unset($item);
         return $items;
     }
 

@@ -59,7 +59,7 @@ $menu = (string) file_get_contents(OPM_ROOT . '/src/Menu.php');
 check('menu option manual with ti ti-book', (bool) preg_match("/'manual'\s*=> \[[^\]]*'icon'\s*=> 'ti ti-book'/s", $menu) && str_contains($menu, "'/plugins/opmanager/front/manual.php'"));
 
 $setup = (string) file_get_contents(OPM_ROOT . '/src/SuiteConfig.php');
-check('Setup links the manual', str_contains($setup, "/plugins/opmanager/front/manual.php") && str_contains($setup, 'ti ti-book'));
+check('Setup links the manual', str_contains($setup, "/plugins/nms/front/manual.php") && str_contains($setup, 'ti ti-book'));
 
 $attr = (string) file_get_contents(OPM_ROOT . '/.gitattributes');
 check('docs still kept out of the zip', str_contains($attr, 'docs/** export-ignore'));

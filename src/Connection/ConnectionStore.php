@@ -14,6 +14,9 @@ interface ConnectionStore
     public function active(): array;
 
     /** @return Connection|null */
+    /** @return list<Connection> every connection, active or not */
+    public function all(): array;
+
     public function get(int $id): ?Connection;
 
     /**
