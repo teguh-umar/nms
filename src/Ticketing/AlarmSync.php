@@ -69,11 +69,11 @@ final class AlarmSync
 
         foreach ($this->store->activeNotSeen($seen) as $row) {
             try {
-                $current = $this->driver->alarmByKey($row['alarm_key']);
+                $current = $this->driver->alarmByKey($row['alarm_key'], (string) ($row['entity_key'] ?? ''));
             } catch (\Throwable) {
                 continue;
             }
-            if ($current !== null && (int) ($current['severity'] ?? 0) === self::CLEAR) {
+            if ($current !== null && $current['alarm_key'] === $row['alarm_key'] && (int) ($current['severity'] ?? 0) === self::CLEAR) {
                 if ($this->guarded($current, $now, $stats, false)) {
                     // M1: a deferred Clear must not leave a request that a later activation would inherit.
                     $this->requests?->delete($current['alarm_key']);

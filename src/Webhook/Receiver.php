@@ -72,7 +72,7 @@ final class Receiver
         }
         try {
             try {
-                $alarm = $this->source->alarmByKey($alarm_id);
+                $alarm = $this->source->alarmByKey($alarm_id, $entity);
             } catch (\Throwable $e) {
                 return $this->defer('NMS API unavailable; deferred to AlarmSync cron', $alarm_id, $entity);
             }

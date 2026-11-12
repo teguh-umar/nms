@@ -31,7 +31,7 @@ final class Opm implements Driver
     public function testConnection(): array { return ['ok' => true, 'message' => '']; }
     public function listDevices(): array { return []; }
     public function listActiveAlarms(): array { return []; }
-    public function alarmByKey(string $alarm_key): ?array { return null; }
+    public function alarmByKey(string $alarm_key, string $entity_key = ''): ?array { return null; }
     public function addNote(string $alarm_key, string $text): void { $this->calls[] = "note {$alarm_key} {$text}"; if (in_array($alarm_key, $this->down, true)) { throw new ClientException('OpManager down'); } }
     public function acknowledge(string $alarm_key): void { $this->calls[] = "ack {$alarm_key}"; if (in_array($alarm_key, $this->down, true)) { throw new ClientException('OpManager down'); } }
     public function clear(string $alarm_key): void { $this->calls[] = "clear {$alarm_key}"; if (in_array($alarm_key, $this->down, true)) { throw new ClientException('OpManager down'); } }

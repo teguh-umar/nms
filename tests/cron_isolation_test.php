@@ -281,7 +281,7 @@ final class IsolationDriver implements Driver
             ],
         ];
     }
-    public function alarmByKey(string $key): ?array { return null; }
+    public function alarmByKey(string $key, string $entity_key = ''): ?array { return null; }
     public function listActiveAlarms(): array { return []; }
     public function addNote(string $alarm_key, string $text): void {}
     public function acknowledge(string $alarm_key): void {}

@@ -60,9 +60,9 @@ try {
     check('GET to the device list path', ($seen['method'] ?? '') === 'GET' && ($seen['path'] ?? '') === OpManagerDriver::DEVICE_LIST_PATH);
     check('api key sent in the apiKey header', ($seen['apikey'] ?? null) === 'S3CRET' && !isset($seen['query']['apiKey']));
 
-    $driver->alarmByKey('E 1&x');
+    $driver->alarmByKey('1', 'E 1&x');
     $seen = json_decode((string) file_get_contents($log), true);
-    check('active alarms use the ActiveAlarms filter', ($seen['query'] ?? null) === ['alertType' => 'ActiveAlarms']);
+    check('query parameters encoded', ($seen['query'] ?? null) === ['entity' => 'E 1&x']);
 
     $driver->addNote('IF-1.2_Poll', 'note from test');
     $seen = json_decode((string) file_get_contents($log), true);

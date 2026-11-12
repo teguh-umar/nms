@@ -44,7 +44,7 @@ final class RoutingDriver implements Driver
     public function testConnection(): array { return ['ok' => true, 'message' => '']; }
     public function listDevices(): array { return []; }
     public function listActiveAlarms(): array { return []; }
-    public function alarmByKey(string $k): ?array { $this->sawAlarm = $k; return ['alarm_key' => $k, 'entity_key' => 'E1', 'severity' => 1]; }
+    public function alarmByKey(string $k, string $entity_key = ''): ?array { $this->sawAlarm = $k; return ['alarm_key' => $k, 'entity_key' => 'E1', 'severity' => 1]; }
     public function addNote(string $alarm_key, string $text): void {}
     public function acknowledge(string $alarm_key): void {}
     public function clear(string $alarm_key): void {}

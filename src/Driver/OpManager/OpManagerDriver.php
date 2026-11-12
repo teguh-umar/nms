@@ -61,10 +61,15 @@ final class OpManagerDriver implements Driver
         return AlarmParser::parse($this->get(self::ALARM_LIST_PATH, ['alertType' => 'ActiveAlarms']));
     }
 
-    public function alarmByKey(string $key): ?array
+    /**
+     * 1.3.2 alarmByEntity(): listAlarms filtered by entity, WITHOUT the ActiveAlarms
+     * filter, so a cleared alarm is still returned. Callers compare alarm_key.
+     */
+    public function alarmByKey(string $alarm_key, string $entity_key = ''): ?array
     {
-        foreach ($this->listActiveAlarms() as $alarm) {
-            if ($alarm['alarm_key'] === $key) {
+        $entity = $entity_key !== '' ? $entity_key : $alarm_key;
+        foreach (AlarmParser::parse($this->get(self::ALARM_LIST_PATH, ['entity' => $entity])) as $alarm) {
+            if ($alarm['entity_key'] === $entity) {
                 return $alarm;
             }
         }
@@ -103,7 +108,7 @@ final class OpManagerDriver implements Driver
     {
         $data = json_decode($this->request($path, [], $form), true);
         if (is_array($data) && array_key_exists('error', $data)) {
-            throw new \RuntimeException(sprintf('OpManager %s refused: %s', $path, ResponseGuard::errorMessage($data['error'])));
+            throw new ClientException(sprintf('OpManager %s refused: %s', $path, ResponseGuard::errorMessage($data['error'])));
         }
     }
 
@@ -121,15 +126,15 @@ final class OpManagerDriver implements Driver
     private function request(string $path, array $query = [], ?array $form = null): string
     {
         if ($this->connection->url === '' || $this->connection->secret('api_key') === '') {
-            throw new \RuntimeException('OpManager URL or API key is not configured');
+            throw new ClientException('OpManager URL or API key is not configured');
         }
         try {
             $response = ($this->transport)(rtrim($this->connection->url, '/') . $path, $query, ['apiKey' => $this->connection->secret('api_key')], $form);
         } catch (\Throwable $e) {
-            throw new \RuntimeException(sprintf('OpManager %s failed: %s', $path, $e->getMessage()));
+            throw new ClientException(ResponseGuard::redact(sprintf('OpManager %s failed: %s', $path, $e->getMessage())));
         }
         if ($response['status'] < 200 || $response['status'] >= 300) {
-            throw new \RuntimeException(sprintf('OpManager %s answered HTTP %d', $path, $response['status']));
+            throw new ClientException(sprintf('OpManager %s answered HTTP %d', $path, $response['status']));
         }
         return $response['body'];
     }

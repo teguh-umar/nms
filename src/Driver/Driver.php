@@ -20,7 +20,12 @@ interface Driver
     /** @return list<array<string, mixed>> same shape as AlarmParser::parse() */
     public function listActiveAlarms(): array;
 
-    public function alarmByKey(string $key): ?array;
+    /**
+     * The alarm in its CURRENT state, active or cleared, or null when the NMS no longer
+     * knows it. Must not be limited to active alarms: AlarmSync and the webhook use it
+     * to see a Clear. OpManager looks the alarm up by its entity (as 1.3.2 did).
+     */
+    public function alarmByKey(string $alarm_key, string $entity_key = ''): ?array;
 
     public function addNote(string $alarm_key, string $text): void;
 

@@ -28,7 +28,7 @@ final class Src implements Driver
     public function testConnection(): array { return ['ok' => true, 'message' => '']; }
     public function listDevices(): array { return []; }
     public function listActiveAlarms(): array { if ($this->fail) { throw $this->fail; } return $this->active; }
-    public function alarmByKey(string $k): ?array { $this->entityCalls[] = $k; foreach ($this->byEntity as $a) { if (($a['alarm_key'] ?? '') === $k) { if ($a instanceof ClientException) { throw $a; } return $a; } } return null; }
+    public function alarmByKey(string $k, string $entity_key = ''): ?array { $this->entityCalls[] = $k; foreach ($this->byEntity as $a) { if (($a['alarm_key'] ?? '') === $k) { if ($a instanceof ClientException) { throw $a; } return $a; } } return null; }
     public function addNote(string $alarm_key, string $text): void {}
     public function acknowledge(string $alarm_key): void {}
     public function clear(string $alarm_key): void {}

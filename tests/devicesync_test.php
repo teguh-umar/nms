@@ -25,7 +25,7 @@ final class FakeSource implements Driver
         return $this->result;
     }
     public function listActiveAlarms(): array { return []; }
-    public function alarmByKey(string $key): ?array { return null; }
+    public function alarmByKey(string $key, string $entity_key = ''): ?array { return null; }
     public function addNote(string $alarm_key, string $text): void {}
     public function acknowledge(string $alarm_key): void {}
     public function clear(string $alarm_key): void {}

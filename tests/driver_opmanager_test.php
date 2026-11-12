@@ -100,4 +100,50 @@ catch (UnsupportedOperation) { check('acknowledge throws UnsupportedOperation', 
 try { $nocapDriver->clear('A1'); check('clear throws UnsupportedOperation', false); }
 catch (UnsupportedOperation) { check('clear throws UnsupportedOperation', true); }
 
+// ---- Restored from the 1.3.2 client_test (owner review 2026-11-12) ----
+use GlpiPlugin\Nms\Driver\OpManager\ClientException;
+
+$driverWith = static fn (callable $t, ?Connection $c = null): OpManagerDriver => new OpManagerDriver($c ?? $conn, $t);
+$threwClient = static function (callable $fn): ?ClientException {
+    try { $fn(); } catch (ClientException $e) { return $e; }
+    return null;
+};
+
+// Exact endpoints.
+$calls = [];
+$rec = function (string $url, array $query, array $headers, ?array $form = null) use (&$calls): array {
+    $calls[] = [$url, $query, $form];
+    return ['status' => 200, 'body' => json_encode([
+        ['alarmId' => '1', 'entity' => 'E1', 'numericSeverity' => 1, 'severityString' => 'Critical'],
+        ['alarmId' => '2', 'entity' => 'E2', 'numericSeverity' => 5, 'severityString' => 'Clear'],
+    ])];
+};
+$d = $driverWith($rec);
+$d->listActiveAlarms();
+check('active alarms use the ActiveAlarms filter', $calls[0][0] === 'https://opm.example.test/api/json/alarm/listAlarms' && $calls[0][1] === ['alertType' => 'ActiveAlarms']);
+
+// Review 2026-11-12: the lookup must see CLEARED alarms (no ActiveAlarms filter), by entity.
+$one = $d->alarmByKey('2', 'E2');
+check('alarm lookup filters on entity, not on active', $calls[1][1] === ['entity' => 'E2']);
+check('alarm lookup returns a cleared alarm', ($one['alarm_key'] ?? null) === '2' && (int) ($one['severity'] ?? 0) === 5);
+check('alarm lookup returns null when entity absent', $d->alarmByKey('9', 'E9') === null);
+
+// HTTP and transport errors.
+$e = $threwClient(fn () => $driverWith(fn () => ['status' => 401, 'body' => 'nope'])->listDevices());
+check('HTTP error throws ClientException with status', $e !== null && str_contains($e->getMessage(), '401'));
+check('HTTP error message has no key', $e !== null && !str_contains($e->getMessage(), 'key-xyz'));
+$e = $threwClient(fn () => $driverWith(function () { throw new RuntimeException('cURL error 28 for https://opm/api?apiKey=key-xyz'); })->listDevices());
+check('transport failure throws ClientException', $e !== null);
+check('transport failure message redacted', $e !== null && !str_contains($e->getMessage(), 'key-xyz'));
+$blank = new Connection(['name' => 'blank', 'brand' => 'opmanager', 'url' => '', 'api_key' => '']);
+check('unconfigured driver refuses', $threwClient(fn () => $driverWith($rec, $blank)->listDevices()) !== null);
+
+// Write answers seen on production.
+$ok = $threwClient(fn () => $driverWith(fn () => ['status' => 200, 'body' => '{"ackMessage":"Alarm has been successfully Cleared!","AlarmProperty":{}}'])->clear('E')) === null;
+check('clear ackMessage answer is success', $ok);
+$e = $threwClient(fn () => $driverWith(fn () => ['status' => 200, 'body' => '{"error":{"message":"You are not authorized to perform this operation","errorcode":"AUTHORIZATION_FAILED"}}'])->addNote('E', 'x'));
+check('write error object throws', $e !== null && str_contains($e->getMessage(), 'AUTHORIZATION_FAILED'));
+$ok = $threwClient(fn () => $driverWith(fn () => ['status' => 200, 'body' => '{"ackMessage":"The selected Alarm is not Acknowledged","AlarmProperty":{}}'])->acknowledge('E')) === null;
+check('repeat acknowledge is not a failure', $ok);
+
 done();
