@@ -8,7 +8,8 @@
  * as the AlarmSync poll.
  */
 
-use GlpiPlugin\Nms\Connection\ConnectionStore;
+use GlpiPlugin\Nms\Config;
+use GlpiPlugin\Nms\Connection\DbConnectionStore;
 use GlpiPlugin\Nms\Connection\Settings;
 use GlpiPlugin\Nms\Driver\DriverFactory;
 use GlpiPlugin\Nms\Matching\DbAssetLookup;
@@ -32,7 +33,7 @@ $rawBody = (string) file_get_contents('php://input', false, null, 0, Receiver::M
 
 $remote = $_SERVER['REMOTE_ADDR'] ?? '?';
 
-$connStore = new ConnectionStore();
+$connStore = new DbConnectionStore();
 $conn      = $connStore->byWebhookToken($headerToken);
 if ($conn === null) {
     http_response_code(403);
