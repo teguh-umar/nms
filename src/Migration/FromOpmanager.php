@@ -160,7 +160,7 @@ final class FromOpmanager
         return $got;
     }
 
-    /** Entity: lowest configured entities_id among linked devices; 0 if none. */
+    /** Entity: lowest common ancestor of the entities of linked devices; root (0) if none. */
     private static function lowestCommonAncestorEntity($db): int
     {
         $entities = [];
@@ -175,14 +175,58 @@ final class FromOpmanager
                 $entities[] = $e;
             }
         }
-        return $entities === [] ? 0 : min($entities);
+        if ($entities === []) {
+            return 0;
+        }
+
+        // Build parent map from glpi_entities if available.
+        $parentMap = [];
+        if ($db->tableExists('glpi_entities')) {
+            foreach ($db->request([
+                'SELECT' => ['id', 'entities_id'],
+                'FROM'   => 'glpi_entities',
+            ]) as $row) {
+                $parentMap[(int) $row['id']] = (int) $row['entities_id'];
+            }
+        }
+
+        // Get all ancestors of each entity (including itself).
+        $ancestorSets = [];
+        foreach ($entities as $e) {
+            $ancestors = [];
+            $current = $e;
+            while ($current > 0) {
+                $ancestors[] = $current;
+                if (!isset($parentMap[$current])) {
+                    break;
+                }
+                $current = $parentMap[$current];
+            }
+            $ancestors[] = $current; // root (0 or entity with no parent row)
+            $ancestorSets[] = $ancestors;
+        }
+
+        // Find common ancestors; return the deepest (highest ID in GLPI's numbering).
+        $common = array_intersect(...$ancestorSets);
+        if ($common === []) {
+            return 0;
+        }
+        return max($common);
     }
 
-    /** @return array<string, string> the opmanager config row (single row) */
+    /** @return array<string, string> the opmanager config row (single row) from glpi_configs context plugin:opmanager */
     private static function fetchConfigRow($db): array
     {
-        $row = $db->request(['SELECT' => ['*'], 'FROM' => 'glpi_plugin_opmanager_config', 'LIMIT' => 1])->current();
-        return $row ? (array) $row : [];
+        $rows = $db->request([
+            'SELECT' => ['name', 'value'],
+            'FROM'   => 'glpi_configs',
+            'WHERE'  => ['context' => 'plugin:opmanager'],
+        ]);
+        $row = [];
+        foreach ($rows as $r) {
+            $row[$r['name']] = $r['value'];
+        }
+        return $row;
     }
 
     /** Decrypt a possibly-empty value; returns '' on failure. */

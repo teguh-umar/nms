@@ -179,13 +179,11 @@ function opmRow(string $table, array $fields): array
 }
 
 // --- Seed opmanager tables ---
-$GLOBALS['DB']->tables['glpi_plugin_opmanager_config'] = [
-    [
-        'opm_url'             => 'https://opm.example.test',
-        'opm_api_key'         => $enc->encrypt('key-xyz'),
-        'opm_verify_ssl'      => '1',
-        'webhook_token'       => $enc->encrypt('token-xyz'),
-    ],
+$GLOBALS['DB']->tables['glpi_configs'] = [
+    ['name' => 'opm_url', 'value' => 'https://opm.example.test', 'context' => 'plugin:opmanager'],
+    ['name' => 'opm_api_key', 'value' => $enc->encrypt('key-xyz'), 'context' => 'plugin:opmanager'],
+    ['name' => 'opm_verify_ssl', 'value' => '1', 'context' => 'plugin:opmanager'],
+    ['name' => 'webhook_token', 'value' => $enc->encrypt('token-xyz'), 'context' => 'plugin:opmanager'],
 ];
 
 $GLOBALS['DB']->tables['glpi_plugin_opmanager_devices'] = [
