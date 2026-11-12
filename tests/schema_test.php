@@ -30,7 +30,7 @@ foreach ($tables as [, $table, $body]) {
 foreach (['glpi_plugin_nms_alarms', 'glpi_plugin_nms_storms'] as $t) {
     check("install creates {$t}", in_array($t, array_column($tables, 1), true));
 }
-check('alarms.alarm_key is UNIQUE (D3)', (bool) preg_match('/UNIQUE KEY `alarm_key` \(`alarm_key`\)/', $src));
+check('alarms.alarm_key is UNIQUE per connection (D3)', (bool) preg_match("/'glpi_plugin_nms_alarms'.*?UNIQUE KEY `alarm_key` \(`connections_id`, `alarm_key`\)/s", $src));
 check('alarms keep entity_key for notes/clear', str_contains($src, '`entity_key` VARCHAR(255)'));
 check('uninstall drops the new tables', str_contains((string) file_get_contents(OPM_ROOT . '/install/uninstall.php'), 'glpi_plugin_nms_alarms')
     && str_contains((string) file_get_contents(OPM_ROOT . '/install/uninstall.php'), 'glpi_plugin_nms_storms'));
@@ -47,7 +47,7 @@ check('alarms unique key is (connections_id, alarm_key)', (bool) preg_match('/UN
 
 // v1.1.0 (D32): deferred webhook requests.
 check('install creates glpi_plugin_nms_ticketrequests', in_array('glpi_plugin_nms_ticketrequests', array_column($tables, 1), true));
-check('ticketrequests.alarm_key is UNIQUE', (bool) preg_match('/ticketrequests.*?UNIQUE KEY `alarm_key` \(`alarm_key`\)/s', $src));
+check('ticketrequests.alarm_key is UNIQUE per connection', (bool) preg_match('/ticketrequests.*?UNIQUE KEY `alarm_key` \(`connections_id`, `alarm_key`\)/s', $src));
 check('uninstall drops ticketrequests', str_contains((string) file_get_contents(OPM_ROOT . '/install/uninstall.php'), 'glpi_plugin_nms_ticketrequests'));
 
 // v1.3.0 (D34): NMS hygiene.

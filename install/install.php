@@ -161,7 +161,7 @@ function plugin_nms_install()
             `date_mod` TIMESTAMP NULL DEFAULT NULL,
             PRIMARY KEY (`id`),
             KEY `connections_id` (`connections_id`),
-            UNIQUE KEY `alarm_key` (`alarm_key`),
+            UNIQUE KEY `alarm_key` (`connections_id`, `alarm_key`),
             KEY `date_mod` (`date_mod`)
         ) ENGINE=InnoDB DEFAULT CHARSET=$charset COLLATE=$collation");
     }
