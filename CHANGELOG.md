@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0-rc1 (nms)
+
+First release candidate of **NMS Integration** (`nms`), the multi-NMS successor of opmanager. It starts from opmanager 1.3.2 and behaves the same for OpManager. Install and cutover: `docs/runbook-1.0.0.md`.
+
+- **Connections.** Each NMS is a connection with its own URL, API key, webhook token, entity, and switches for Active, Tickets and Write-back. Each connection has its own matching, ticket, alarm filter, write-back and hygiene settings. The global Setup keeps only the asset types and the stale limit, plus one row of status badges per active connection. Release 1.0.0 drives OpManager only.
+- **Migration from opmanager.** Install creates the disabled connection **OpManager (migrated)** and copies opmanager's config, devices, alarms with their tickets, outbox, storms, ticket requests, hygiene exceptions, hygiene tickets and profile rights. The copy is idempotent. Run it again from Setup ("Copy from opmanager again") or with `tools/migrate_from_opmanager.php`.
+- **Webhook** at `/plugins/nms/front/webhook.php`. The token in `X-NMS-Token` (or `X-OPM-Token`) picks the connection. A missing or unknown token gets HTTP 403.
+- **Write-back** (notes, acknowledges, clears) goes to the connection the ticket's alarm came from, under that connection's service user and lock.
+- **Status per connection.** A failed sync shows its error on the connection and no longer counts as a fresh sync.
+- A connection without tickets (the default for a new one) syncs alarms for the asset tab and needs no service user.
+- opmanager stays untouched. Its own locks, hooks and paths are no longer shared: `nms_alarm_sync`, the `nms_liveness` hook, ticket external ids `nms:<connection>:…`.
+
 ## 1.3.2
 
 Same as 1.3.2-rc1, which passed the production check on 2026-11-10 (the Manual page shows "Manual for version 1.3.1" with no lag warning).

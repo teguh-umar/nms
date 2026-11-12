@@ -5,6 +5,13 @@ Written 2026-11-11. **Round 2 added 2026-11-12: start at §0. Round 1 (Tasks 1�
 
 ## 0. Round 2: review fixes (do these, in order, one commit each)
 
+**Closed 2026-11-12.** OpenCode committed partial R2 (`0309e68`) and R3 (`6c94da9`), then crashed during R1.
+The owner finished R1 (`baa222f`), R2 (`2e56ee3`), R3 (`9a3392d`), R4 (`08ca401`) and a webhook fatal found on
+the way (`9348712`). The commit messages list what each one fixed. Lessons for the next handoff:
+- a test file is run only when its name ends in `_test.php`;
+- fakes must have the real column names (`tests/fixtures/opmanager_1.3.2_columns.json`);
+- `tests/static_names_test.php` must pass before a commit.
+
 The owner reviewed Tasks 1–9 at `2d4bfac` and fixed one blocker itself (`f3a2a9d`: the OpManager alarm lookup
 missed cleared alarms; `Driver::alarmByKey(string $alarm_key, string $entity_key = '')` now returns an alarm in any
 state). Base for round 2: `f3a2a9d` or later on `main-nms`. §2 and §3 below still apply. Every fix starts with a
