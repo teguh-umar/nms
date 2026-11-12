@@ -164,7 +164,7 @@ final class DbAlarmStore implements AlarmStore
      *
      * @return list<array{alarm_key: string, entity_key: string, connections_id: int}>
      */
-    public function activeForTicket(int $tickets_id): array
+    public static function activeForTicket(int $tickets_id): array
     {
         global $DB;
 

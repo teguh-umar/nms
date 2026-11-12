@@ -20,6 +20,10 @@ final class OpManagerDriver implements Driver
     public const CLEAR_ALARM_PATH = '/api/json/alarm/clearAlarm';
     public const ACK_ALARM_PATH   = '/api/json/alarm/acknowledgeAlarm';
 
+    public const DEFAULT_TIMEOUT = 30;
+
+    private int $timeout;
+
     /** @var callable(string, array<string, string>, array<string, string>, ?array<string, string>): array{status: int, body: string} */
     private $transport;
 
@@ -29,6 +33,7 @@ final class OpManagerDriver implements Driver
         private ?Capabilities $capabilities = null,
         ?int $timeout = null,
     ) {
+        $this->timeout = $timeout ?? self::DEFAULT_TIMEOUT;
         $this->transport = $transport ?? $this->curlTransport(...);
         $this->capabilities = $this->capabilities ?? new Capabilities(true, true, true, true, true, true, true, true);
     }

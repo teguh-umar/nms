@@ -18,6 +18,12 @@ final class DbSyncLock implements SyncLock
         return 'nms_sync_' . $connections_id;
     }
 
+    /** Per-connection outbox lock name, shared by the OutboxSend cron and the outbound hooks. */
+    public static function outboxLockName(int $connections_id): string
+    {
+        return self::lockName($connections_id) . '_outbox';
+    }
+
     public function acquire(int $timeout_seconds): bool
     {
         global $DB;

@@ -242,7 +242,7 @@ final class Cron extends \CommonGLPI
                 $cfg    = Config::ticketingConfigFromSettings(Settings::fromJson((string) $conn->settings));
                 $driver = DriverFactory::for($conn);
                 $sender = new Sender(new DbOutboxStore((int) $conn->id), $driver, $cfg['outbound_max_attempts']);
-                $lock   = new DbSyncLock(DbSyncLock::lockName((int) $conn->id) . '_outbox');
+                $lock   = new DbSyncLock(DbSyncLock::outboxLockName((int) $conn->id));
                 if (!$lock->acquire(0)) {
                     $task->log('conn ' . (int) $conn->id . ': a technician save is sending to OpManager; skipped this run');
                     continue;

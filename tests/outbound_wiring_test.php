@@ -14,16 +14,16 @@ foreach (['create', 'createStorm', 'followup', 'reopen', 'solve', 'link'] as $m)
 }
 check('hooks ask the planner who is human', substr_count($hooks, 'Planner::isHuman(') === 2 && substr_count($hooks, 'GlpiTicketGateway::isWriting()') === 2);
 check('hooks never throw into GLPI', substr_count($hooks, 'catch (\Throwable $e)') >= 2);
-check('hooks send with a short timeout', (bool) preg_match('/DriverFactory::for\(/s', $hooks) && (bool) preg_match('/SEND_TIMEOUT/s', $hooks));
+check('hooks send with a short timeout', str_contains($hooks, 'DriverFactory::for($conn, self::SEND_TIMEOUT)'));
 check('solution text read from the newest solution by this user', (bool) preg_match("/ITILSolution.*?'users_id' => \\\$uid.*?'ORDER'\\s+=> 'id DESC'/s", $hooks));
 check('active alarms of a ticket', (bool) preg_match("/function activeForTicket.*?'tickets_id' => \\\$tickets_id, 'state' => 'active'/s", $store));
 
 $cron = (string) file_get_contents(OPM_ROOT . '/src/Cron.php');
 check('followup hook skips copied or plugin-authored followups', str_contains($hooks, 'Planner::isOriginalFollowup('));
-check('hook sends under per-connection outbox lock, skipping when busy', str_contains($hooks, "DbSyncLock::lockName((int) \$conn->id) . '_outbox'"));
-check('cron sends under the same outbox lock', (bool) preg_match('/function cronOutboxSend.*?DbSyncLock::lockName\(\(int\) \$conn->id\)/s', $cron));
+check('hook sends under the outbox lock, skipping when busy', (bool) preg_match('/new DbSyncLock\(DbSyncLock::outboxLockName\(\(int\) \$conn->id\)\).*?->acquire\(0\).*?finally.*?->release\(\)/s', $hooks));
+check('cron sends under the same outbox lock', (bool) preg_match('/function cronOutboxSend.*?new DbSyncLock\(DbSyncLock::outboxLockName\(\(int\) \$conn->id\)\)/s', $cron));
 check('hook stops at the first failure', str_contains($hooks, '->run($now, 20, true)'));
 
-check('followup hook dedupes pending acknowledges', str_contains($hooks, 'hasPendingAck'));
+check('followup hook dedupes pending acknowledges', str_contains($hooks, "[\$outbox, 'hasPendingAck']"));
 
 done();
