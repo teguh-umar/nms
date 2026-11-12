@@ -17,44 +17,25 @@ check('dropdown labels cover exactly MATCH_MODES', array_keys(Config::matchModeL
 check('secured keys all have defaults', array_diff(Config::SECURED, array_keys(Config::DEFAULTS)) === []);
 
 $allowed = ['Computer', 'NetworkEquipment', 'Glpi\\CustomAsset\\SecurityAsset'];
+// Review R2/R4: URL, API key and TLS are per connection now (ConnectionForm::handleSave,
+// tests/connection_form_test.php). The global Setup keeps asset types and the stale limit;
+// match mode and coverage states are connection settings.
 $base = [
-    'opm_url'               => 'https://opm.example.com:8061/',
-    'opm_verify_ssl'        => '1',
     'match_mode'            => 'hybrid_name',
     'asset_itemtypes'       => ['Computer', 'Glpi\\CustomAsset\\SecurityAsset', 'Evil'],
     'stale_warning_minutes' => '30',
 ];
-
-// --- api key handling (Review Focus 2) ---
-$r = Config::sanitize($base + ['opm_api_key' => ''], $allowed);
-check('blank api key keeps stored key', !array_key_exists('opm_api_key', $r['values']));
-$r = Config::sanitize($base + ['opm_api_key' => '  abc123  '], $allowed);
-check('new api key is stored trimmed', ($r['values']['opm_api_key'] ?? null) === 'abc123');
-$r = Config::sanitize($base + ['opm_api_key' => 'abc', 'opm_api_key_clear' => '1'], $allowed);
-check('clear checkbox wipes the key', ($r['values']['opm_api_key'] ?? null) === '');
-
-// --- url ---
-$r = Config::sanitize($base, $allowed);
-check('trailing slash trimmed from url', $r['values']['opm_url'] === 'https://opm.example.com:8061');
-check('valid form has no errors', $r['errors'] === [], implode('; ', $r['errors']));
-$r = Config::sanitize(['opm_url' => 'ftp://x'] + $base, $allowed);
-check('non-http url rejected and not stored', !array_key_exists('opm_url', $r['values']) && count($r['errors']) === 1);
-$r = Config::sanitize(['opm_url' => ''] + $base, $allowed);
-check('empty url allowed (not configured yet)', $r['values']['opm_url'] === '');
-
-// --- mode, itemtypes, ssl, stale ---
-$r = Config::sanitize(['match_mode' => 'hybrid_magic'] + $base, $allowed);
-check('unknown mode rejected and not stored', !array_key_exists('match_mode', $r['values']) && count($r['errors']) === 1);
-$r = Config::sanitize(['match_mode' => 'manual'] + $base, $allowed);
-check('manual mode accepted', $r['values']['match_mode'] === 'manual');
-$r = Config::sanitize($base, $allowed);
-check('only offered itemtypes stored', json_decode($r['values']['asset_itemtypes'], true) === ['Computer', 'Glpi\\CustomAsset\\SecurityAsset']);
-$b2 = $base;
-unset($b2['opm_verify_ssl']);
-$r = Config::sanitize($b2, $allowed);
-check('unchecked ssl box stores 0', $r['values']['opm_verify_ssl'] === '0');
-$r = Config::sanitize(['stale_warning_minutes' => '2'] + $base, $allowed);
+check('global sanitizer: only offered itemtypes stored', json_decode(Config::sanitizeGlobal($base, $allowed)['values']['asset_itemtypes'], true) === ['Computer', 'Glpi\\CustomAsset\\SecurityAsset']);
+check('global sanitizer: valid form has no errors', Config::sanitizeGlobal($base, $allowed)['errors'] === []);
+$r = Config::sanitizeGlobal(['stale_warning_minutes' => '2'] + $base, $allowed);
 check('stale below 5 rejected', !array_key_exists('stale_warning_minutes', $r['values']) && count($r['errors']) === 1);
+check('global sanitizer saves only global keys', array_keys(Config::sanitizeGlobal($base, $allowed)['values']) === ['asset_itemtypes', 'stale_warning_minutes']);
+check('no global sanitize() for moved keys any more', !method_exists(Config::class, 'sanitize'));
+
+$r = Config::sanitizeConnectionSettings(['match_mode' => 'hybrid_magic'] + $base);
+check('unknown mode rejected and not stored', !array_key_exists('match_mode', $r['values']) && in_array('Unknown match mode', $r['errors'], true));
+$r = Config::sanitizeConnectionSettings(['match_mode' => 'manual'] + $base);
+check('manual mode accepted', $r['values']['match_mode'] === 'manual');
 
 // --- itemtype filtering never needs the class to exist (hub §5) ---
 check('bad json gives no itemtypes', Config::filterItemtypes('not json', $allowed) === []);
@@ -141,7 +122,7 @@ check('webhook token is not a global default', !array_key_exists('webhook_token'
 $a = Config::newWebhookToken();
 $b = Config::newWebhookToken();
 check('new token differs and is 48 hex', $a !== $b && preg_match('/^[0-9a-f]{48}$/', $a) === 1);
-check('webhook header and path constants', Config::WEBHOOK_HEADER === 'X-OPM-Token' && Config::WEBHOOK_PATH === '/plugins/opmanager/front/webhook.php');
+check('webhook header and path constants', Config::WEBHOOK_HEADER === 'X-NMS-Token' && Config::WEBHOOK_PATH === '/plugins/nms/front/webhook.php');
 
 // Plan 3: outbound retries (D13)
 check('outbound retries default 10', Settings::DEFAULTS['outbound_max_attempts'] === '10');
@@ -152,9 +133,9 @@ check('outbound retries stored', $r['values']['outbound_max_attempts'] === '7');
 
 // Plan 4: GLPI states counted by the Coverage page (empty = all)
 check('coverage states default to all', Settings::DEFAULTS['coverage_states'] === '[]');
-$r = Config::sanitize(['coverage_states' => ['3', 'x', '-1', '7', '3']] + $base, $allowed);
+$r = Config::sanitizeConnectionSettings(['coverage_states' => ['3', 'x', '-1', '7', '3']] + $base);
 check('coverage states stored as unique positive ids', json_decode($r['values']['coverage_states'], true) === [3, 7]);
-$r = Config::sanitize($base, $allowed);
+$r = Config::sanitizeConnectionSettings($base);
 check('no coverage state posted = all', $r['values']['coverage_states'] === '[]');
 
 // v1.1.0 (D32): ticket source.

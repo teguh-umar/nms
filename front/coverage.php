@@ -40,7 +40,7 @@ $report    = Report::build($source->devices(), $source->assets(Config::assetItem
 if (($_GET['export'] ?? '') === 'csv') {
     $csv = View::csvRows($list, $report['lists'][$list]);
     header('Content-Type: text/csv; charset=UTF-8');
-    header('Content-Disposition: attachment; filename="opmanager-coverage-' . $list . '-' . date('Ymd') . '.csv"');
+    header('Content-Disposition: attachment; filename="nms-coverage-' . $list . '-' . date('Ymd') . '.csv"');
     echo Csv::render($csv['header'], $csv['rows']);
     return;
 }

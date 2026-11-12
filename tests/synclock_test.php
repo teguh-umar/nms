@@ -6,7 +6,7 @@ require OPM_ROOT . '/src/Ticketing/DbSyncLock.php';
 
 $src = (string) @file_get_contents(OPM_ROOT . '/src/Ticketing/DbSyncLock.php');
 check('lock uses MySQL GET_LOCK, named, default the shared alarm-sync name', str_contains($src, 'GET_LOCK') && str_contains($src, 'RELEASE_LOCK') && (bool) preg_match('/__construct\\(private string \\$name = self::NAME\\)/', $src) && substr_count($src, '$this->name') === 2);
-check('shared lock name', \GlpiPlugin\Nms\Ticketing\SyncLock::NAME === 'opmanager_alarm_sync');
+check('shared lock name', \GlpiPlugin\Nms\Ticketing\SyncLock::NAME === 'nms_alarm_sync');
 check('per-connection lock names differ', \GlpiPlugin\Nms\Ticketing\DbSyncLock::lockName(1) !== \GlpiPlugin\Nms\Ticketing\DbSyncLock::lockName(2));
 check('per-connection lock name is nms_sync_<id>', \GlpiPlugin\Nms\Ticketing\DbSyncLock::lockName(7) === 'nms_sync_7');
 $cron = (string) file_get_contents(OPM_ROOT . '/src/Cron.php');

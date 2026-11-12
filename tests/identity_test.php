@@ -81,4 +81,28 @@ if ($searchIds !== []) {
     check('search options in range', false, 'no ids found');
 }
 
+// Review R4: no opmanager identity outside the migration (and tests, docs, CHANGELOG).
+// Allowed: the brand value 'opmanager', Driver\OpManager, the product name "OpManager",
+// and front/webhook.php accepting the old X-OPM-Token header during the cutover.
+$leaks = [];
+$walk = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(OPM_ROOT, \FilesystemIterator::SKIP_DOTS));
+foreach ($walk as $f) {
+    $rel = str_replace('\\', '/', substr($f->getPathname(), strlen(OPM_ROOT) + 1));
+    if (!in_array($f->getExtension(), ['php', 'py', 'js', 'css', 'twig', 'json', 'xml'], true)
+        || preg_match('#^(\.git|tests|docs|vendor|graphify-out|lib/pgnsuite|src/Migration)/#', $rel)
+        || in_array($rel, ['CHANGELOG.md', 'tools/migrate_from_opmanager.php'], true)) {
+        continue;
+    }
+    foreach (explode("\n", (string) file_get_contents($f->getPathname())) as $n => $line) {
+        if (preg_match('#/plugins/opmanager|opmanager[_-]|opmanager:|data-opm-|PLUGIN_OPMANAGER#', $line)
+            && !str_contains($line, 'FromOpmanager')
+            && !str_contains($line, 'glpi_plugin_opmanager_')) {
+            $leaks[] = $rel . ':' . ($n + 1) . ' ' . trim($line);
+        }
+    }
+}
+check('no opmanager identity outside src/Migration, tests, docs, CHANGELOG', $leaks === [], implode("\n  ", array_slice($leaks, 0, 15)));
+$hooks = (string) file_get_contents(OPM_ROOT . '/src/Hygiene/Providers.php');
+check('liveness hook is nms_liveness', str_contains($hooks, "HOOK = 'nms_liveness'"));
+
 done();

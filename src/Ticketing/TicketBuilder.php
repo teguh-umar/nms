@@ -43,15 +43,18 @@ final class TicketBuilder
             $input['items_id'] = [$asset['itemtype'] => [$asset['items_id']]];
         }
         $input['_tickettemplate'] = $template_id;
-        $input['externalid']      = self::externalId((string) ($alarm['alarm_key'] ?? ''));
+        $input['externalid']      = self::externalId((int) ($cfg['connections_id'] ?? 0), (string) ($alarm['alarm_key'] ?? ''));
 
         return $input;
     }
 
-    /** Marks a ticket as belonging to one OpManager alarm, so a retry can find it (D3). */
-    public static function externalId(string $alarm_key): string
+    /**
+     * Marks a ticket as belonging to one alarm of one connection, so a retry can find it (D3).
+     * Alarm ids are unique per NMS server only, hence the connection.
+     */
+    public static function externalId(int $connections_id, string $alarm_key): string
     {
-        return 'opmanager:' . $alarm_key;
+        return 'nms:' . $connections_id . ':' . $alarm_key;
     }
 
     /**

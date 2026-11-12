@@ -86,11 +86,11 @@ namespace {
     check('device name escaped', str_contains($html, '&lt;b&gt;vm-contoh-01') && !str_contains($html, '<b>vm-contoh-01'));
     check('stale warning shown', str_contains($html, 'alert-warning'));
     check('no pager markup (AJAX tab rule)', !preg_match('/pagination|[?&]start=|page-link/', $html));
-    check('dom ids prefixed with plugin key', !preg_match('/\sid="(?!opmanager-)/', $html));
+    check('dom ids prefixed with plugin key', !preg_match('/\sid="(?!nms-)/', $html));
 
     $many = array_fill(0, 25, $row);
     $html = AssetSections::html(AssetSections::viewModel($many, $now, 30, '2026-09-29 09:59:00'));
-    check('capped at MAX_ROWS rows', substr_count($html, '<tr data-opm-device') === AssetSections::MAX_ROWS);
+    check('capped at MAX_ROWS rows', substr_count($html, '<tr data-nms-device') === AssetSections::MAX_ROWS);
     check('truncation is visible', str_contains($html, 'Showing 20 of 25'));
 
     $GLOBALS['DEVICES'] = [];

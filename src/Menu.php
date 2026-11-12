@@ -47,7 +47,7 @@ class Menu
                 // v1.3.0-rc4: the user manual (suite rule 2026-11-09).
                 'manual'   => [
                     'title' => __('Manual', 'nms'),
-                    'page'  => '/plugins/opmanager/front/manual.php',
+                    'page'  => '/plugins/nms/front/manual.php',
                     'icon'  => 'ti ti-book',
                 ],
             ],

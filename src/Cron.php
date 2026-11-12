@@ -99,6 +99,7 @@ final class Cron extends \CommonGLPI
                 $cfg = Config::ticketingConfigFromSettings($settings);
                 $cfg['tickets_enabled'] = (int) $conn->tickets_enabled;
                 $cfg['writeback_enabled'] = (int) $conn->writeback_enabled;
+                $cfg['connections_id'] = (int) $conn->id;
 
                 // A connection without tickets (subsidiary default) still syncs alarms for the
                 // asset tab; only a ticket needs an author.
@@ -167,6 +168,7 @@ final class Cron extends \CommonGLPI
                 $cfg = Config::hygieneConfigFromSettings($settings);
                 $tcf = Config::ticketingConfigFromSettings($settings);
                 $cfg['tickets_enabled'] = (int) $conn->tickets_enabled;
+                $cfg['connections_id'] = (int) $conn->id;
 
                 $last = $settings->get('last_hygiene_ticket_run');
                 $due  = $last === '' || strtotime($now) >= strtotime($last) + $cfg['frequency_days'] * 86400;

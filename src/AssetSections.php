@@ -83,7 +83,7 @@ final class AssetSections
     /** Pure. @param array{stale: bool, last_sync: string, stale_minutes: int, total: int, rows: list<array<string, mixed>>} $model */
     public static function html(array $model): string
     {
-        $out = '<div class="p-3" id="opmanager-monitoring">';
+        $out = '<div class="p-3" id="nms-monitoring">';
 
         if ($model['stale']) {
             $out .= '<div class="alert alert-warning">'
@@ -104,7 +104,7 @@ final class AssetSections
         foreach ($model['rows'] as $row) {
             $name = (string) (($row['display_name'] ?? '') !== '' ? $row['display_name'] : ($row['name'] ?? ''));
             $link = isset($row['url']) ? '<a href="' . htmlescape((string) $row['url']) . '">' . htmlescape($name) . '</a>' : htmlescape($name);
-            $out .= '<tr data-opm-device="' . (int) ($row['id'] ?? 0) . '">'
+            $out .= '<tr data-nms-device="' . (int) ($row['id'] ?? 0) . '">'
                 . '<td>' . $link . '</td>'
                 . '<td>' . htmlescape((string) ($row['ip_address'] ?? '')) . '</td>'
                 . '<td>' . htmlescape((string) ($row['availability'] ?? '')) . '</td>'
@@ -133,7 +133,7 @@ final class AssetSections
                 $ticket = $tid > 0
                     ? '<a href="' . htmlescape(\Ticket::getFormURLWithID($tid)) . '">#' . $tid . '</a>'
                     : (!empty($a['ticket_pending']) ? __s('pending', 'nms') : '-');
-                $out .= '<tr data-opm-alarm="' . htmlescape((string) ($a['alarm_key'] ?? '')) . '">'
+                $out .= '<tr data-nms-alarm="' . htmlescape((string) ($a['alarm_key'] ?? '')) . '">'
                     . '<td>' . htmlescape((string) ($a['severity_label'] ?? '')) . '</td>'
                     . '<td>' . htmlescape((string) ($a['message'] ?? '')) . '</td>'
                     . '<td>' . htmlescape((string) ($a['state'] ?? '')) . '</td>'

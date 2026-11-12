@@ -36,7 +36,7 @@ final class GlpiTicketGateway implements TicketGateway
         return $this->asPlugin(function () use ($alarm, $asset): int {
             // A previous run may have created the ticket and then failed before the
             // alarm row was updated: find it by its externalid instead of adding again.
-            $externalid = TicketBuilder::externalId((string) $alarm['alarm_key']);
+            $externalid = TicketBuilder::externalId((int) ($this->cfg['connections_id'] ?? 0), (string) $alarm['alarm_key']);
             // A Closed ticket is final (D30): the alarm's recurrence gets a new ticket.
             $found      = (new \Ticket())->find(['externalid' => $externalid, 'is_deleted' => 0, 'NOT' => ['status' => 6]], ['id DESC'], 1);
             if ($found !== []) {
@@ -72,7 +72,7 @@ final class GlpiTicketGateway implements TicketGateway
             $cfg   = ['title_pattern' => Messages::stormTitle($now), 'content_pattern' => Messages::stormTitle($now)] + $this->cfg;
             $input = TicketBuilder::build($alarm, ['itemtype' => '', 'items_id' => 0], $entity, $predefined, $template_id, $cfg);
             // The storm ticket is not the alarm's own ticket: do not claim its externalid.
-            $input['externalid'] = 'opmanager:storm:' . $now;
+            $input['externalid'] = 'nms:' . (int) ($this->cfg['connections_id'] ?? 0) . ':storm:' . $now;
 
             $ticket = new \Ticket();
             $id     = $ticket->add($input);

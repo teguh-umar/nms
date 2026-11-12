@@ -20,9 +20,9 @@ final class Config
      * encrypted/decrypted by the plugin via GLPIKey, not by core. */
     public const SECURED = [];
 
-    public const WEBHOOK_HEADER = 'X-OPM-Token';
+    public const WEBHOOK_HEADER = 'X-NMS-Token';
 
-    public const WEBHOOK_PATH = '/plugins/opmanager/front/webhook.php';
+    public const WEBHOOK_PATH = '/plugins/nms/front/webhook.php';
 
     public const BASE_ASSET_ITEMTYPES = ['Computer', 'NetworkEquipment'];
 
@@ -149,53 +149,6 @@ final class Config
         } else {
             $errors[] = __('Stale warning must be between 5 and 1440 minutes', 'nms');
         }
-        return ['values' => $values, 'errors' => $errors];
-    }
-
-    public static function sanitize(array $post, array $allowed_itemtypes): array
-    {
-        $values = [];
-        $errors = [];
-
-        $url = trim((string) ($post['opm_url'] ?? ''));
-        if ($url === '' || preg_match('#^https?://[^\s/]+(/[^\s]*)?$#i', $url) === 1) {
-            $values['opm_url'] = rtrim($url, '/');
-        } else {
-            $errors[] = __('OpManager URL must start with http:// or https://', 'nms');
-        }
-
-        if (!empty($post['opm_api_key_clear'])) {
-            $values['opm_api_key'] = '';
-        } else {
-            $key = trim((string) ($post['opm_api_key'] ?? ''));
-            if ($key !== '') {
-                $values['opm_api_key'] = $key;
-            }
-        }
-
-        $values['opm_verify_ssl'] = empty($post['opm_verify_ssl']) ? '0' : '1';
-
-        $mode = (string) ($post['match_mode'] ?? '');
-        if (in_array($mode, self::MATCH_MODES, true)) {
-            $values['match_mode'] = $mode;
-        } else {
-            $errors[] = __('Unknown match mode', 'nms');
-        }
-
-        $posted = array_filter((array) ($post['asset_itemtypes'] ?? []), 'is_string');
-        $values['asset_itemtypes'] = (string) json_encode(array_values(array_intersect($posted, $allowed_itemtypes)));
-
-        $stale = (int) ($post['stale_warning_minutes'] ?? 0);
-        if ($stale >= 5 && $stale <= 1440) {
-            $values['stale_warning_minutes'] = (string) $stale;
-        } else {
-            $errors[] = __('Stale warning must be between 5 and 1440 minutes', 'nms');
-        }
-
-        // Coverage page (D28): GLPI states counted as "in use"; [] = every state.
-        $states = array_values(array_unique(array_filter(array_map('intval', (array) ($post['coverage_states'] ?? [])), static fn (int $id) => $id > 0)));
-        $values['coverage_states'] = (string) json_encode($states);
-
         return ['values' => $values, 'errors' => $errors];
     }
 

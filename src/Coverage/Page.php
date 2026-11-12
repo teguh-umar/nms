@@ -21,6 +21,6 @@ final class Page extends \CommonGLPI
 
     public static function getSearchURL($full = true)
     {
-        return \Html::getPrefixedUrl('/plugins/opmanager/front/coverage.php');
+        return \Html::getPrefixedUrl('/plugins/nms/front/coverage.php');
     }
 }

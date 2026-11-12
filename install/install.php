@@ -291,22 +291,22 @@ function plugin_nms_install()
     CronTask::register(Cron::class, 'DeviceSync', Config::DEVICE_SYNC_MINUTES * MINUTE_TIMESTAMP, [
         'mode'    => CronTask::MODE_EXTERNAL,
         'state'   => CronTask::STATE_WAITING,
-        'comment' => 'OpManager device sync and asset matching',
+        'comment' => 'NMS device sync and asset matching, per connection',
     ]);
     CronTask::register(Cron::class, 'AlarmSync', Config::ALARM_SYNC_MINUTES * MINUTE_TIMESTAMP, [
         'mode'    => CronTask::MODE_EXTERNAL,
         'state'   => CronTask::STATE_WAITING,
-        'comment' => 'OpManager alarm sync and tickets',
+        'comment' => 'NMS alarm sync and tickets, per connection',
     ]);
     CronTask::register(Cron::class, 'OutboxSend', MINUTE_TIMESTAMP, [
         'mode'    => CronTask::MODE_EXTERNAL,
         'state'   => CronTask::STATE_WAITING,
-        'comment' => 'Send queued notes/clears to OpManager (retries)',
+        'comment' => 'Send queued notes/clears to each NMS (retries)',
     ]);
     CronTask::register(Cron::class, 'HygieneCheck', Config::HYGIENE_CRON_MINUTES * MINUTE_TIMESTAMP, [
         'mode'    => CronTask::MODE_EXTERNAL,
         'state'   => CronTask::STATE_WAITING,
-        'comment' => 'OpManager NMS hygiene: liveness, classification, tickets',
+        'comment' => 'NMS hygiene: liveness, classification, tickets, per connection',
     ]);
 
     // Task 8: migrate from opmanager if present (idempotent, creates a disabled connection).

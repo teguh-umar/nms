@@ -1,7 +1,7 @@
 <?php
 
 /**
- * OpManager - ManageEngine OpManager <-> GLPI 11 integration (PGN GLPI Suite plugin #7)
+ * NMS Integration - OpManager, PRTG, Zabbix, LibreNMS and SolarWinds <-> GLPI 11 (PGN GLPI Suite)
  *
  * @author  ICT
  * @license GPL-3.0-or-later

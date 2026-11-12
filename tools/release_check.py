@@ -1,8 +1,8 @@
-"""Verify an opmanager release zip and optionally install it into the local GLPI copy.
+"""Verify an nms release zip and optionally install it into the local GLPI copy.
 
 Usage:
-  python tools/release_check.py opmanagerv0.1.0.zip
-  python tools/release_check.py opmanagerv0.1.0.zip --install C:/Users/teguh.umar/Downloads/glpi/plugins
+  python tools/release_check.py nmsv1.0.0-rc1.zip
+  python tools/release_check.py nmsv1.0.0-rc1.zip --install C:/Users/teguh.umar/Downloads/glpi/plugins
 
 Reads bytes straight from the archive (never from an extraction, hub §5) and never
 uses a fallback that could print a passing value when a step cannot run.
@@ -15,9 +15,9 @@ import zipfile
 from pathlib import Path
 
 CANON = {
-    "opmanager/lib/pgnsuite/ConfigTab.php": "F94A80C1C813A951919A20D2521DE35B431F9C836BBCCE89BAC70E544D0B80FA",
-    "opmanager/lib/pgnsuite/AssetTab.php": "F8629CCA6D141B1E9271686C8D7F9D65E4FC84E39CF07E85B10FBC849A0B2466",
-    "opmanager/lib/pgnsuite/Menu.php": "FC0B96219DD489639DEECD720197BA6B9810F6303A28CE7DB891139E7913CBFE",
+    "nms/lib/pgnsuite/ConfigTab.php": "F94A80C1C813A951919A20D2521DE35B431F9C836BBCCE89BAC70E544D0B80FA",
+    "nms/lib/pgnsuite/AssetTab.php": "F8629CCA6D141B1E9271686C8D7F9D65E4FC84E39CF07E85B10FBC849A0B2466",
+    "nms/lib/pgnsuite/Menu.php": "FC0B96219DD489639DEECD720197BA6B9810F6303A28CE7DB891139E7913CBFE",
 }
 
 
@@ -35,20 +35,20 @@ def main() -> int:
 
     with zipfile.ZipFile(zpath) as z:
         files = [n for n in z.namelist() if not n.endswith("/")]
-        bad_root = [n for n in files if not n.startswith("opmanager/")]
+        bad_root = [n for n in files if not n.startswith("nms/")]
         print(f"entries: {len(files)}")
         if bad_root:
-            print(f"FAIL entries outside opmanager/: {bad_root[:5]}")
+            print(f"FAIL entries outside nms/: {bad_root[:5]}")
             ok = False
         for name, want in CANON.items():
             got = sha(z.read(name)) if name in files else "missing"
             print(("PASS " if got == want else "FAIL ") + f"{name} {got}")
             ok &= got == want
-        leaked = [n for n in files if (n.startswith(("opmanager/tests/", "opmanager/docs/")) and n not in ("opmanager/docs/", "opmanager/docs/manual.md")) or n.endswith(".zip")]
+        leaked = [n for n in files if (n.startswith(("nms/tests/", "nms/docs/")) and n not in ("nms/docs/", "nms/docs/manual.md")) or n.endswith(".zip")]
         if leaked:
             print(f"FAIL dev files in zip: {leaked[:5]}")
             ok = False
-        m = re.search(rb"PLUGIN_OPMANAGER_VERSION',\s*'([^']+)'", z.read("opmanager/setup.php"))
+        m = re.search(rb"PLUGIN_NMS_VERSION',\s*'([^']+)'", z.read("nms/setup.php"))
         version = m.group(1).decode() if m else "missing"
         print(f"setup.php version: {version}")
         if f"v{version}.zip" not in zpath.name:
@@ -56,7 +56,7 @@ def main() -> int:
             ok = False
 
         if install_dir is not None and ok:
-            target = install_dir / "opmanager"
+            target = install_dir / "nms"
             if target.exists():
                 shutil.rmtree(target)
             z.extractall(install_dir)
@@ -69,7 +69,7 @@ def main() -> int:
                 got = sha((install_dir / name).read_bytes())
                 print(("PASS " if got == want else "FAIL ") + f"installed {name}")
                 ok &= got == want
-            m2 = re.search(r"PLUGIN_OPMANAGER_VERSION',\s*'([^']+)'", (target / "setup.php").read_text(encoding="utf-8"))
+            m2 = re.search(r"PLUGIN_NMS_VERSION',\s*'([^']+)'", (target / "setup.php").read_text(encoding="utf-8"))
             print(("PASS " if m2 and m2.group(1) == version else "FAIL ") + "installed setup.php version")
             ok &= bool(m2 and m2.group(1) == version)
 

@@ -78,8 +78,9 @@ final class SelfCheck
                 }
             },
             'webhook/lock' => static function (): void {
-                $lock = new \GlpiPlugin\Nms\Ticketing\DbSyncLock();
-                self::assert($lock->acquire(1), 'GET_LOCK opmanager_alarm_sync not obtainable');
+                $name = \GlpiPlugin\Nms\Ticketing\DbSyncLock::lockName(0) . '_selfcheck';
+                $lock = new \GlpiPlugin\Nms\Ticketing\DbSyncLock($name);
+                self::assert($lock->acquire(1), "GET_LOCK {$name} not obtainable");
                 $lock->release();
             },
             'outbound/table' => static function (): void {
@@ -159,7 +160,7 @@ final class SelfCheck
             },
             'matching/lookup-smoke' => static function (): void {
                 $lookup = new DbAssetLookup(Config::assetItemtypes());
-                self::assert($lookup->byName('__opmanager_selfcheck_no_such_asset__') === [], 'name lookup returned rows for a nonsense name');
+                self::assert($lookup->byName('__nms_selfcheck_no_such_asset__') === [], 'name lookup returned rows for a nonsense name');
                 self::assert($lookup->byIp('192.0.2.254') === [], 'IP lookup returned rows for TEST-NET-1');
             },
         ];

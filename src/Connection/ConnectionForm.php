@@ -17,8 +17,8 @@ final class ConnectionForm
     public const FORM_PATH = '/plugins/nms/front/connection.form.php';
     public const LIST_PATH = '/plugins/nms/front/connection.php';
 
-    /** Header OpManager sends the token in (X-OPM-Token is still accepted, front/webhook.php). */
-    public const WEBHOOK_HEADER = 'X-NMS-Token';
+    /** Header the NMS sends the token in (X-OPM-Token is still accepted, front/webhook.php). */
+    public const WEBHOOK_HEADER = Config::WEBHOOK_HEADER;
 
     /** Hidden field: the POST carries the whole settings form (absent = settings untouched). */
     public const SETTINGS_MARKER = '_nms_settings';

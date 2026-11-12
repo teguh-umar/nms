@@ -56,7 +56,7 @@ check('page in the shared sector with its sub-nav', str_contains($page, "\\GlpiP
 check('page renders Manual::body with the plugin version', str_contains($page, 'Manual::body(Manual::read(), PLUGIN_NMS_VERSION)'));
 
 $menu = (string) file_get_contents(OPM_ROOT . '/src/Menu.php');
-check('menu option manual with ti ti-book', (bool) preg_match("/'manual'\s*=> \[[^\]]*'icon'\s*=> 'ti ti-book'/s", $menu) && str_contains($menu, "'/plugins/opmanager/front/manual.php'"));
+check('menu option manual with ti ti-book', (bool) preg_match("/'manual'\s*=> \[[^\]]*'icon'\s*=> 'ti ti-book'/s", $menu) && str_contains($menu, "'/plugins/nms/front/manual.php'"));
 
 $setup = (string) file_get_contents(OPM_ROOT . '/src/SuiteConfig.php');
 check('Setup links the manual', str_contains($setup, "/plugins/nms/front/manual.php") && str_contains($setup, 'ti ti-book'));
@@ -65,6 +65,6 @@ $attr = (string) file_get_contents(OPM_ROOT . '/.gitattributes');
 check('docs still kept out of the zip', str_contains($attr, 'docs/** export-ignore'));
 check('docs/manual.md ships in the zip', str_contains($attr, 'docs/manual.md -export-ignore'));
 $rc = (string) file_get_contents(OPM_ROOT . '/tools/release_check.py');
-check('release check allows docs/manual.md', str_contains($rc, 'opmanager/docs/manual.md'));
+check('release check allows docs/manual.md', str_contains($rc, 'nms/docs/manual.md'));
 
 done();

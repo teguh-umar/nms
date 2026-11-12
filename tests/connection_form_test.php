@@ -362,4 +362,15 @@ check('token generated for one connection', is_string($token) && strlen($token) 
 check('other connection token unchanged', $store->get(1)->secret('webhook_token') === 'token-xyz');
 check('generated token not rendered later', !str_contains($form->renderForm(2), $token));
 
+// Formerly Config::sanitize() (global): now per connection.
+$r = $form->handleSave(1, ['url' => 'https://opm.example.test:8061/', 'api_key' => '  abc123  '] + $post);
+check('URL trailing slash trimmed', $store->get(1)->url === 'https://opm.example.test:8061');
+check('new API key stored trimmed and encrypted', $store->get(1)->secret('api_key') === 'abc123' && $store->get(1)->api_key !== 'abc123');
+$r = $form->handleSave(1, ['url' => ''] + $post);
+check('empty URL allowed (not configured yet)', $r['ok'] && $store->get(1)->url === '');
+$noTls = $post;
+unset($noTls['verify_tls']);
+$form->handleSave(1, $noTls);
+check('unchecked TLS box stores 0', $store->get(1)->verify_tls === 0);
+
 done();

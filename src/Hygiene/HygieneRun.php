@@ -14,8 +14,14 @@ final class HygieneRun
 {
     public const FLOWS = ['glpi', 'nms'];
 
-    /** Ticket externalid = prefix + flow; lets the gateway adopt a ticket a crashed run created (final review #5). */
-    public const EXTERNAL_ID_PREFIX = 'opmanager:hygiene:';
+    /**
+     * Ticket externalid = nms:<connection>:hygiene:<flow>; lets the gateway adopt a ticket a
+     * crashed run created (final review #5), and never another connection's ticket.
+     */
+    public static function externalId(int $connections_id, string $flow): string
+    {
+        return 'nms:' . $connections_id . ':hygiene:' . $flow;
+    }
 
     /**
      * @param array<string, callable> $providers name => provider (Providers::all())
@@ -149,12 +155,12 @@ final class HygieneRun
                 (int) $this->cfg['template_id'],
                 $assign,
                 $observer,
-                self::EXTERNAL_ID_PREFIX . $flow,
+                self::externalId((int) ($this->cfg['connections_id'] ?? 0), $flow),
                 // rc4/rc7: the asset technician(s) own the "not in GLPI" ticket.
                 $flow === 'glpi' ? array_map('intval', (array) ($this->cfg['glpi_users'] ?? [])) : []
             );
             if ($tickets_id <= 0) {
-                $this->ticketError($stats, sprintf('%s hygiene ticket could not be created (see files/_log/opmanager.log)', $flow));
+                $this->ticketError($stats, sprintf('%s hygiene ticket could not be created (see files/_log/nms.log)', $flow));
                 return;
             }
             $this->store->recordItems($this->store->recordTicket($flow, $tickets_id, $now), $plan, $now);

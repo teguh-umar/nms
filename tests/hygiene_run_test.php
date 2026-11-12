@@ -97,7 +97,7 @@ $cfg = [
     'enabled' => true, 'frequency_days' => 7, 'unmanaged_values' => ['UnManaged', 'Device Not Monitored.'],
     'agent_stale_days' => 7, 'mist_stale_days' => 7, 'probe_cidrs' => [], 'probe_ports' => [], 'probe_timeout_ms' => 500,
     'template_id' => 0, 'glpi_groups' => [11, 12], 'glpi_users' => [7], 'nms_group' => 20, 'service_user' => 5, 'entity_default' => 0,
-    'list_url' => 'https://glpi/plugins/opmanager/front/device.php', 'device_data_fresh' => true,
+    'list_url' => 'https://glpi/plugins/nms/front/device.php', 'device_data_fresh' => true, 'connections_id' => 3,
 ];
 $calls = 0;
 $dead  = static function (array $d) use (&$calls): ?array { $calls++; return ['verdict' => 'dead', 'detail' => 'agent silent']; };
@@ -226,6 +226,7 @@ $s = new MemStore();
 $s->devices = [$dev(1, 'k1', 'UnManaged', 'matched'), $dev(2, 'k2', 'Clear', 'unmatched')];
 $g = new FakeGateway();
 (new HygieneRun($s, ['agent' => $dead], $g, $cfg))->run($now, true);
-check('#5 per-flow externalid', array_column($g->created, 'externalid') === ['opmanager:hygiene:glpi', 'opmanager:hygiene:nms']);
+check('#5 per-flow externalid, per connection', array_column($g->created, 'externalid') === ['nms:3:hygiene:glpi', 'nms:3:hygiene:nms']);
+check('#5 another connection never shares the externalid', \GlpiPlugin\Nms\Hygiene\HygieneRun::externalId(4, 'glpi') !== \GlpiPlugin\Nms\Hygiene\HygieneRun::externalId(3, 'glpi'));
 
 done();

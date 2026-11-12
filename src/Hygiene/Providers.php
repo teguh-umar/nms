@@ -5,12 +5,12 @@ namespace GlpiPlugin\Nms\Hygiene;
 /**
  * Liveness provider registry (spec §3, user 2026-11-06: not closed to Mist).
  * A provider is callable(array $device, string $now): ?array{verdict, detail}.
- * Other plugins add theirs with $PLUGIN_HOOKS['opmanager_liveness'][<plugin>] =
+ * Other plugins add theirs with $PLUGIN_HOOKS['nms_liveness'][<plugin>] =
  * callable | [name => callable]; plain arrays only, no opmanager class to import.
  */
 final class Providers
 {
-    public const HOOK = 'opmanager_liveness';
+    public const HOOK = 'nms_liveness';
 
     public const NAME_MAX = 32;
 

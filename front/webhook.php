@@ -49,6 +49,7 @@ $settings  = Settings::fromJson((string) $conn->settings);
 $cfg       = Config::ticketingConfigFromSettings($settings);
 $cfg['tickets_enabled']  = (int) $conn->tickets_enabled;
 $cfg['writeback_enabled']= (int) $conn->writeback_enabled;
+$cfg['connections_id']   = (int) $conn->id;
 
 $cid = (int) $conn->id;
 $receiver = new Receiver(
