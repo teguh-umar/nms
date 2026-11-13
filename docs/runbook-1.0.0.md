@@ -14,11 +14,11 @@ Paths below assume GLPI in `/data/www/glpi`, run as `nginx`. `<glpi>` is the GLP
 ## 1. Install next to opmanager (opmanager keeps running)
 
 ```bash
-cd /data/www/glpi/plugins && sudo rm -rf /data/www/glpi/plugins/nms && sudo -u nginx unzip -q /tmp/nmsv1.0.0-rc2.zip && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:install nms --force && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:activate nms && sudo -u nginx php /data/www/glpi/bin/console glpi:cache:clear && sudo systemctl reload php-fpm && sudo -u nginx php /data/www/glpi/plugins/nms/tools/selfcheck.php
+cd /data/www/glpi/plugins && sudo rm -rf /data/www/glpi/plugins/nms && sudo -u nginx unzip -q /tmp/nmsv1.0.0-rc3.zip && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:install nms --force && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:activate nms && sudo -u nginx php /data/www/glpi/bin/console glpi:cache:clear && sudo systemctl reload php-fpm && sudo -u nginx php /data/www/glpi/plugins/nms/tools/selfcheck.php
 ```
 
 - The zip unpacks into `plugins/nms`. Never put a backup folder inside `plugins/`: GLPI would read it as another plugin.
-- `rm -rf plugins/nms` removes only nms's code, never its tables or opmanager. It is there so a retry after a failed install (rc1: MySQL error 1101 on `glpi_plugin_nms_connections`) unpacks cleanly. The install skips the nms tables that already exist and creates the rest.
+- `rm -rf plugins/nms` removes only nms's code, never its tables or opmanager. It is there so a retry after a failed install (rc1: MySQL error 1101, rc2: error 1292) unpacks cleanly. The install skips the nms tables that already exist and creates the rest.
 - `plugin:install --force` leaves the plugin installed but **not activated**. Without `plugin:activate`, selfcheck fails with `Attempted to load class "SelfCheck"`.
 - The installer copies opmanager into nms once, as the connection **OpManager (migrated)**, which starts **disabled**. Its crons and webhook do nothing until step 5d.
 

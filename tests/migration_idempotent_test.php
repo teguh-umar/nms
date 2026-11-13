@@ -55,6 +55,19 @@ function nmsSchema(): array
     return $out;
 }
 
+/** TIMESTAMP columns of every nms table. @return array<string, list<string>> */
+function nmsTimestamps(): array
+{
+    $src = (string) file_get_contents(OPM_ROOT . '/install/install.php');
+    preg_match_all('/\$table\s*=\s*\'(glpi_plugin_nms_\w+)\'.*?CREATE TABLE `\$table` \((.*?)\)\s*ENGINE/s', $src, $m, PREG_SET_ORDER);
+    $out = [];
+    foreach ($m as $t) {
+        preg_match_all('/^\s*`(\w+)`\s+TIMESTAMP\b/m', $t[2], $cols);
+        $out[$t[1]] = $cols[1];
+    }
+    return $out;
+}
+
 final class FakeDB
 {
     public array $tables = [];
@@ -65,8 +78,11 @@ final class FakeDB
     public array $reads = [];
     /** @var list<string> writes to an nms column that does not exist */
     public array $badColumns = [];
+    /** @var list<string> '' written to a TIMESTAMP column: MySQL strict fails with error 1292 (rc2 VM install) */
+    public array $badValues = [];
+    private array $timestamps;
 
-    public function __construct(private array $schema) {}
+    public function __construct(private array $schema) { $this->timestamps = nmsTimestamps(); }
 
     public function request(array $criteria): \ArrayIterator
     {
@@ -92,6 +108,9 @@ final class FakeDB
         foreach (array_keys($fields) as $col) {
             if (!in_array($col, $this->schema[$table], true)) {
                 $this->badColumns[] = "{$table}.{$col}";
+            }
+            if ($fields[$col] === '' && in_array($col, $this->timestamps[$table] ?? [], true)) {
+                $this->badValues[] = "{$table}.{$col} = ''";
             }
         }
     }
@@ -238,6 +257,8 @@ $s    = Settings::fromJson($conn->settings);
 
 check('no glpi_plugin_opmanager_config read (the table does not exist)', !in_array('glpi_plugin_opmanager_config', $db->reads, true));
 check('every nms write uses a real column', $db->badColumns === [], implode(', ', array_unique($db->badColumns)));
+check('the fake DB knows the connection TIMESTAMP columns', in_array('last_device_sync', nmsTimestamps()['glpi_plugin_nms_connections'] ?? [], true));
+check("no '' written to a TIMESTAMP column (MySQL strict: error 1292)", $db->badValues === [], implode(', ', array_unique($db->badValues)));
 check('connection disabled, named, opmanager', $conn->is_active === 0 && $conn->name === 'OpManager (migrated)' && $conn->brand === 'opmanager');
 check('URL arrives without trailing slash', $conn->url === 'https://opm.example.test');
 check('verify_ssl 0 arrives as verify_tls 0', $conn->verify_tls === 0);

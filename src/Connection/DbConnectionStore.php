@@ -11,6 +11,7 @@ use InvalidArgumentException;
 final class DbConnectionStore implements ConnectionStore
 {
     public const TABLE = 'glpi_plugin_nms_connections';
+    private const TIMESTAMP_COLUMNS = ['last_device_sync', 'last_alarm_sync', 'date_creation', 'date_mod'];
 
     public function active(): array
     {
@@ -79,6 +80,12 @@ final class DbConnectionStore implements ConnectionStore
 
         $now = date('Y-m-d H:i:s');
         $fields += ['date_mod' => $now];
+        // Connection reads a NULL TIMESTAMP as ''; MySQL strict rejects '' for a TIMESTAMP (1292).
+        foreach (self::TIMESTAMP_COLUMNS as $col) {
+            if (array_key_exists($col, $fields) && $fields[$col] === '') {
+                $fields[$col] = null;
+            }
+        }
 
         $id = (int) ($fields['id'] ?? 0);
         if ($id > 0) {

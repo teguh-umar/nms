@@ -100,7 +100,9 @@ final class FromOpmanager
 
         // Copy per-connection settings into the connection row.
         $settings = Settings::fromJson((string) $conn->settings)->with(self::movedSettings());
-        $store->save(array_merge((array) $conn, ['settings' => $settings->toJson()]));
+        // Only the settings column: rewriting the whole row sent '' into its NULL TIMESTAMP columns
+        // (MySQL strict, error 1292 on the rc2 VM install).
+        $store->saveSettings($cid, $settings, $now);
 
         // Upsert every opmanager table into the nms tables, scoped by connections_id.
         $counts = [];

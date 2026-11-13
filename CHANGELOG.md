@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.0-rc3 (nms)
+
+- Fix: the install failed on MySQL with error 1292 (`Incorrect datetime value: '' for column 'last_device_sync'`). The copy from opmanager rewrote the whole connection row to store its settings, and sent `''` into the empty sync dates. It now writes only the settings column. `DbConnectionStore::save()` also turns `''` into NULL for the connection's date columns. The migration test's fake database now rejects `''` in any TIMESTAMP column, as MySQL strict does.
+- A retry after the failed rc2 install is safe: the copy finds the connection it already created and fills in the rest.
+
 ## 1.0.0-rc2 (nms)
 
 - Fix: the install failed on MySQL with error 1101 (`BLOB, TEXT, GEOMETRY or JSON column 'password' can't have a default value`). The `password`, `webhook_token`, `settings` and `last_error` columns of `glpi_plugin_nms_connections` are now `TEXT NULL` / `LONGTEXT NULL`. The schema test rejects a DEFAULT on any TEXT, BLOB or JSON column.
