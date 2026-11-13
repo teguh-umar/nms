@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.0-rc2 (nms)
+
+- Fix: the install failed on MySQL with error 1101 (`BLOB, TEXT, GEOMETRY or JSON column 'password' can't have a default value`). The `password`, `webhook_token`, `settings` and `last_error` columns of `glpi_plugin_nms_connections` are now `TEXT NULL` / `LONGTEXT NULL`. The schema test rejects a DEFAULT on any TEXT, BLOB or JSON column.
+- Runbook step 1 removes an old `plugins/nms` folder before unzipping, so a retry after a failed install works.
+
 ## 1.0.0-rc1 (nms)
 
 First release candidate of **NMS Integration** (`nms`), the multi-NMS successor of opmanager. It starts from opmanager 1.3.2 and behaves the same for OpManager. Install and cutover: `docs/runbook-1.0.0.md`.

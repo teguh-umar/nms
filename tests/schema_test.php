@@ -13,6 +13,7 @@ preg_match_all(
     PREG_SET_ORDER
 );
 check('install creates the devices table', in_array('glpi_plugin_nms_devices', array_column($tables, 1), true));
+check('schema rules see the connections table', in_array('glpi_plugin_nms_connections', array_column($tables, 1), true));
 
 foreach ($tables as [, $table, $body]) {
     check("{$table}: no DATETIME column", stripos($body, 'DATETIME') === false);
@@ -23,6 +24,11 @@ foreach ($tables as [, $table, $body]) {
         }
         if (str_ends_with($col, '_key')) {
             check("{$table}.{$col} external id is VARCHAR", stripos($type, 'VARCHAR') === 0);
+        }
+        // MySQL (strict, and every version before 8.0.13) rejects a DEFAULT on these types: error 1101
+        // on the VM install of rc1. GLPI's convention is `TEXT NULL` with no default.
+        if (preg_match('/^(TINY|MEDIUM|LONG)?(TEXT|BLOB)\b|^JSON\b|^GEOMETRY\b/i', trim($type))) {
+            check("{$table}.{$col} {$type}: no DEFAULT on TEXT/BLOB/JSON", stripos($type, 'DEFAULT') === false);
         }
     }
 }
