@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.0-rc4 (nms)
+
+- Fix: opening a connection (Edit or Add connection) failed with `Using $this when not in object context` in `DbOutboxStore::summary()`, a `static fn` that read `$this`. A new test fails on `$this` inside any static closure in the shipped code.
+- The Profiles tab is now named **NMS Integration**. It was still "OpManager", so a profile showed two OpManager tabs while the opmanager plugin is installed. The dashboard card group is renamed the same way.
+
 ## 1.0.0-rc3 (nms)
 
 - Fix: the install failed on MySQL with error 1292 (`Incorrect datetime value: '' for column 'last_device_sync'`). The copy from opmanager rewrote the whole connection row to store its settings, and sent `''` into the empty sync dates. It now writes only the settings column. `DbConnectionStore::save()` also turns `''` into NULL for the connection's date columns. The migration test's fake database now rejects `''` in any TIMESTAMP column, as MySQL strict does.

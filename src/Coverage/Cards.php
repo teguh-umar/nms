@@ -15,7 +15,7 @@ final class Cards
 {
     private const TTL = 300;
 
-    private const GROUP = 'OpManager';
+    private const GROUP = 'NMS Integration';
 
     /**
      * Hook target: $PLUGIN_HOOKS['dashboard_cards']['nms'].

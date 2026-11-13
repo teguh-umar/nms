@@ -6,7 +6,7 @@ use CommonGLPI;
 use Html;
 
 /**
- * "OpManager" rights tab on Administration > Profiles. Posts to core
+ * "NMS Integration" rights tab on Administration > Profiles. Posts to core
  * front/profile.form.php; \Profile::prepareInputForUpdate() already handles every
  * right in ProfileRight::getAllPossibleRights() - no controller of our own (hub §4).
  */
@@ -14,7 +14,7 @@ class Profile extends \Profile
 {
     public static function getTypeName($nb = 0)
     {
-        return 'OpManager';
+        return 'NMS Integration';
     }
 
     // Non-static: core \Profile::getTabNameForItem() is an instance method (hub §4).

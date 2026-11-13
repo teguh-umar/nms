@@ -27,7 +27,7 @@ namespace {
     $ok = true;
     foreach ($mine as $card) {
         [$class, $method] = explode('::', $card['provider']);
-        $ok = $ok && is_string($card['provider']) && method_exists($class, $method) && $card['group'] === 'OpManager' && $card['widgettype'] !== [];
+        $ok = $ok && is_string($card['provider']) && method_exists($class, $method) && $card['group'] === 'NMS Integration' && $card['widgettype'] !== [];
     }
     check('providers are Class::method strings that exist (GLPI explodes them)', $ok);
 

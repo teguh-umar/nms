@@ -101,7 +101,8 @@ final class DbOutboxStore implements OutboxStore
         if (!$DB->tableExists(self::TABLE)) {
             return ['pending' => 0, 'failed' => 0, 'last_error' => ''];
         }
-        $count = static fn (string $state): int => count($DB->request(['FROM' => self::TABLE, 'WHERE' => ['state' => $state, 'connections_id' => $this->connections_id]]));
+        $cid   = $this->connections_id;
+        $count = static fn (string $state): int => count($DB->request(['FROM' => self::TABLE, 'WHERE' => ['state' => $state, 'connections_id' => $cid]]));
         $last  = $DB->request([
             'SELECT' => ['last_error'],
             'FROM'   => self::TABLE,
