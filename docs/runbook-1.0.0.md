@@ -14,7 +14,7 @@ Paths below assume GLPI in `/data/www/glpi`, run as `nginx`. `<glpi>` is the GLP
 ## 1. Install next to opmanager (opmanager keeps running)
 
 ```bash
-cd /data/www/glpi/plugins && sudo rm -rf /data/www/glpi/plugins/nms && sudo -u nginx unzip -q /tmp/nmsv1.0.0-rc4.zip && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:install nms --force && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:activate nms && sudo -u nginx php /data/www/glpi/bin/console glpi:cache:clear && sudo systemctl reload php-fpm && sudo -u nginx php /data/www/glpi/plugins/nms/tools/selfcheck.php
+cd /data/www/glpi/plugins && sudo rm -rf /data/www/glpi/plugins/nms && sudo -u nginx unzip -q /tmp/nmsv1.0.0-rc5.zip && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:install nms --force && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:activate nms && sudo -u nginx php /data/www/glpi/bin/console glpi:cache:clear && sudo systemctl reload php-fpm && sudo -u nginx php /data/www/glpi/plugins/nms/tools/selfcheck.php
 ```
 
 - The zip unpacks into `plugins/nms`. Never put a backup folder inside `plugins/`: GLPI would read it as another plugin.
@@ -34,6 +34,9 @@ sudo -u nginx php /data/www/glpi/plugins/nms/tools/migrate_from_opmanager.php
 ```
 
 - [ ] The run prints `NMS migration: connection id <n>`, then one line per table, `rights_copied`, and `done`. Every number is 0 (nothing new since install). Any other number means opmanager wrote rows since install; run it again: it must drop to 0.
+- [ ] After `rights_copied` come the core references (rc5), carried over the way GLPI 11 moved GenericObject types to Asset definitions:
+  - `displaypreferences`, `savedsearches`, `default_searches`: the column choices, saved searches and default searches of the opmanager Device and Alarm lists, copied to the nms lists with the search option numbers mapped. On the second run they are 0. opmanager's own rows stay.
+  - `dashboard_cards_waiting`: the number of OpManager widgets on dashboards. They stay opmanager's while opmanager is active and switch in step 5b. Note the number.
 - [ ] Row counts match opmanager. Run this in MySQL; each pair must be equal:
 
 ```sql
@@ -79,6 +82,7 @@ sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:deactivate opmanager &&
 Deactivating, not only stopping its crons: opmanager's ticket hooks send notes, acknowledges and clears to OpManager on every followup and solve. While both plugins are active and the nms connection is enabled, each note would be sent twice.
 
 b. **Copy again**, to bring over what opmanager wrote since install: Setup > NMS Integration > **Copy from opmanager again**, or the CLI command of step 2. The message lists only the rows added or changed since install.
+   - `dashboard_cards` is the number noted in step 2 (`dashboard_cards_waiting`), and `dashboard_cards_waiting` is now 0: the widgets are switched in place to the same NMS Integration cards, same position, size and colour.
 
 c. **OpManager**: Settings > Notification Profiles > the GLPI webhook profile > Invoke a Webhook: change the URL from `/plugins/opmanager/front/webhook.php` to `/plugins/nms/front/webhook.php`. Leave the header and the token as they are: nms accepts `X-OPM-Token` as well as `X-NMS-Token`, and the token was copied unchanged.
 
@@ -98,6 +102,8 @@ sudo -u nginx php /data/www/glpi/front/cron.php --force DeviceSync && sudo -u ng
 - [ ] **A new alarm opens a ticket**: trigger a test alarm on a production device (or wait for the next real one). Within one AlarmSync run (or at once by webhook) a ticket appears, and `files/_log/nms.log` shows `Webhook: HTTP 200`.
 - [ ] **Note sent**: add a followup to that ticket as a technician. The OpManager alarm shows the note within a minute. It is sent once (step 5a).
 - [ ] **Clear sent**: solve the ticket. The OpManager alarm is cleared.
+- [ ] **Dashboards**: every dashboard that had OpManager widgets shows them in the same place, filled, now from the **NMS Integration** card group. No "card not found" placeholder.
+- [ ] **Lists**: NMS Integration > **NMS devices** and **NMS alarms** show the columns users had chosen for opmanager's lists; saved searches made on opmanager's lists appear (same name) on the nms lists and open with the same filters.
 - [ ] **Hygiene**: run `front/cron.php --force HygieneCheck`. No new hygiene ticket when the open ones are still open: followups are added to the tickets opmanager created.
 
 ## 7. Request template and observers (lesson 4)
@@ -114,5 +120,6 @@ The default GLPI **Request** template hides the Observer field. Hygiene tickets 
 1. Manage connections > OpManager (migrated): untick **Active** > Save.
 2. In OpManager, set the webhook URL back to `/plugins/opmanager/front/webhook.php`.
 3. `glpi:plugin:activate opmanager`, `glpi:cache:clear`.
+4. Dashboard widgets switched in step 5b stay NMS Integration cards. With the connection inactive their figures stop updating: edit the dashboard, remove them and add the OpManager cards back.
 
 Tickets created by nms meanwhile stay in GLPI; opmanager does not know their alarms and creates its own ticket on the next poll.

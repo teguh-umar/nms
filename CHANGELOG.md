@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.0-rc5 (nms)
+
+- **Core references carried over**, the way GLPI 11 moved GenericObject types to Asset definitions. The copy from opmanager now also carries the GLPI rows that name opmanager's lists and cards, so nothing breaks when opmanager goes:
+  - column choices, saved searches and default searches of the opmanager Device and Alarm lists are copied to the nms lists, with opmanager's search option numbers (1-13) mapped to nms's (8380-8392) field by field. opmanager's own rows stay;
+  - dashboard widgets with an OpManager card are switched in place to the same NMS Integration card (position, size and colour kept), only once opmanager is no longer active. Before that, the copy reports them as `dashboard_cards_waiting`. Runbook steps 2, 5b, 6 and 9 say what to check.
+- The Device and Alarm lists are named **NMS devices** and **NMS alarms**. They were still "OpManager devices/alarms", so the sidebar showed them twice next to the opmanager plugin.
+
 ## 1.0.0-rc4 (nms)
 
 - Fix: opening a connection (Edit or Add connection) failed with `Using $this when not in object context` in `DbOutboxStore::summary()`, a `static fn` that read `$this`. A new test fails on `$this` inside any static closure in the shipped code.

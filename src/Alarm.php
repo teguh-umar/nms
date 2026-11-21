@@ -11,7 +11,7 @@ class Alarm extends CommonDBTM
 
     public static function getTypeName($nb = 0)
     {
-        return _n('OpManager alarm', 'OpManager alarms', $nb, 'nms');
+        return _n('NMS alarm', 'NMS alarms', $nb, 'nms');
     }
 
     public static function getIcon()

@@ -122,6 +122,8 @@ final class FromOpmanager
             'connections_id' => $cid,
             'counts'         => $counts,
             'rights_copied'  => $rightsCopied,
+            // Column choices, saved searches and dashboard widgets (GenericObject-style, see CoreReferences).
+            'core_refs'      => CoreReferences::copy($db),
         ];
     }
 

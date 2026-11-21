@@ -18,6 +18,7 @@ require OPM_ROOT . '/src/Connection/Connection.php';
 require OPM_ROOT . '/src/Connection/ConnectionStore.php';
 require OPM_ROOT . '/src/Connection/DbConnectionStore.php';
 require OPM_ROOT . '/src/Connection/Settings.php';
+require OPM_ROOT . '/src/Migration/CoreReferences.php';
 require OPM_ROOT . '/src/Migration/FromOpmanager.php';
 
 use GlpiPlugin\Nms\Connection\Connection;

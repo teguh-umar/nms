@@ -90,5 +90,10 @@ $profile = (string) file_get_contents(OPM_ROOT . '/src/Profile.php');
 check('Profiles tab is not named OpManager', !preg_match("/function getTypeName.*?return 'OpManager';/s", $profile));
 $cards = (string) file_get_contents(OPM_ROOT . '/src/Coverage/Cards.php');
 check('dashboard card group is not OpManager', !str_contains($cards, "GROUP = 'OpManager'"));
+// rc5: the Device and Alarm lists sat in the sidebar as "OpManager devices/alarms", twice.
+foreach (['Device', 'Alarm'] as $cls) {
+    $src = (string) file_get_contents(OPM_ROOT . "/src/{$cls}.php");
+    check("{$cls} list title is not OpManager", (bool) preg_match('/function getTypeName.*?_n\(\'NMS /s', $src));
+}
 
 done();

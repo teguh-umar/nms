@@ -17,7 +17,7 @@ class Device extends CommonDBTM
 
     public static function getTypeName($nb = 0)
     {
-        return _n('OpManager device', 'OpManager devices', $nb, 'nms');
+        return _n('NMS device', 'NMS devices', $nb, 'nms');
     }
 
     public static function getIcon()

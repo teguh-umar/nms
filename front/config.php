@@ -41,7 +41,7 @@ if (isset($_POST['migrate_from_opmanager'])) {
         Session::addMessageAfterRedirect(htmlescape(__('OpManager not installed', 'nms') . ': ' . $result['skipped']), false, ERROR);
     } else {
         $msg = __('Migration complete: connection id', 'nms') . ' ' . (int) $result['connections_id'];
-        foreach ($result['counts'] as $table => $n) {
+        foreach ($result['counts'] + ['rights_copied' => $result['rights_copied']] + $result['core_refs'] as $table => $n) {
             $msg .= '; ' . $table . ': ' . (int) $n;
         }
         Session::addMessageAfterRedirect(htmlescape($msg));

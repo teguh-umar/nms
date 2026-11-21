@@ -39,4 +39,10 @@ foreach ($result['counts'] as $table => $n) {
     echo "  {$table}: {$n}\n";
 }
 echo "  rights_copied: {$result['rights_copied']}\n";
+foreach ($result['core_refs'] as $what => $n) {
+    echo "  {$what}: {$n}\n";
+}
+if ($result['core_refs']['dashboard_cards_waiting'] > 0) {
+    echo "  (dashboard widgets switch to nms when this runs again after opmanager is deactivated, runbook step 5)\n";
+}
 echo "done\n";
