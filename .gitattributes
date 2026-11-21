@@ -1,6 +1,7 @@
 lib/pgnsuite/ConfigTab.php -text
 lib/pgnsuite/AssetTab.php -text
 lib/pgnsuite/Menu.php -text
+front/pgnsuite.settings.php -text
 tests export-ignore
 docs/** export-ignore
 docs/manual.md -export-ignore
