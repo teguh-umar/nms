@@ -6,7 +6,7 @@ use GlpiPlugin\Nms\Connection\ConnectionForm;
 use GlpiPlugin\Nms\Connection\DbConnectionStore;
 
 /**
- * NMS Integration section in the shared "PGN Suite" tab on Setup > General (hub §5).
+ * NMS Integration section in the shared suite settings page, Setup > ICT Tools (hub §5).
  * The global Setup holds only what is shared by every connection (asset_itemtypes,
  * stale_warning_minutes), the per-connection status strip and the link to the
  * connections; every other setting is per connection (front/connection.form.php).

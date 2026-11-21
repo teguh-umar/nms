@@ -14,13 +14,14 @@ Paths below assume GLPI in `/data/www/glpi`, run as `nginx`. `<glpi>` is the GLP
 ## 1. Install next to opmanager (opmanager keeps running)
 
 ```bash
-cd /data/www/glpi/plugins && sudo rm -rf /data/www/glpi/plugins/nms && sudo -u nginx unzip -q /tmp/nmsv1.0.0-rc5.zip && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:install nms --force && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:activate nms && sudo -u nginx php /data/www/glpi/bin/console glpi:cache:clear && sudo systemctl reload php-fpm && sudo -u nginx php /data/www/glpi/plugins/nms/tools/selfcheck.php
+cd /data/www/glpi/plugins && sudo rm -rf /data/www/glpi/plugins/nms && sudo -u nginx unzip -q /tmp/nmsv1.0.0-rc6.zip && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:install nms --force && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:activate nms && sudo -u nginx php /data/www/glpi/bin/console glpi:cache:clear && sudo systemctl reload php-fpm && sudo -u nginx php /data/www/glpi/plugins/nms/tools/selfcheck.php
 ```
 
 - The zip unpacks into `plugins/nms`. Never put a backup folder inside `plugins/`: GLPI would read it as another plugin.
 - `rm -rf plugins/nms` removes only nms's code, never its tables or opmanager. It is there so a retry after a failed install (rc1: MySQL error 1101, rc2: error 1292) unpacks cleanly. The install skips the nms tables that already exist and creates the rest.
 - `plugin:install --force` leaves the plugin installed but **not activated**. Without `plugin:activate`, selfcheck fails with `Attempted to load class "SelfCheck"`.
 - The installer copies opmanager into nms once, as the connection **OpManager (migrated)**, which starts **disabled**. Its crons and webhook do nothing until step 5d.
+- **Log out and log in again** after the install, and after every plugin activate or deactivate (step 5a, rollback). GLPI keeps the menu in the browser session, and the console commands do not refresh it: until a new login the breadcrumb or sidebar can still show old names, such as "OpManager devices".
 
 - [ ] Selfcheck ends with `ALL PASS`. The per-connection checks (`tickets/service-user`, `tickets/production-ranges`, `hygiene/groups`) only look at **active** connections, so before cutover they have nothing to check; they matter again in step 6.
 - [ ] Setup > Automatic actions lists **DeviceSync**, **AlarmSync**, **OutboxSend** and **HygieneCheck** for nms, mode CLI.
@@ -58,14 +59,14 @@ WHERE a.plugin_nms_devices_id > 0 AND d.id IS NULL;
 
 ## 3. Check the migrated connection
 
-Setup > General > PGN Suite > **NMS Integration** > **Manage connections** > **OpManager (migrated)**.
+Setup > **ICT Tools** > **NMS Integration** > **Manage connections** > **OpManager (migrated)**. From rc6 the suite settings have their own Setup entry, named ICT Tools unless renamed. If an older suite plugin loads first, they are still a tab: Setup > General > ICT Tools (or PGN Suite) > NMS Integration.
 
 - [ ] **Connection** tab: URL is the OpManager URL. API key shows "Stored - leave blank to keep". **Active** is not ticked. Tickets and Write-back are ticked. The entity is the lowest common entity of the assets OpManager is linked to.
 - [ ] **Webhook** tab: the token shows "stored token". The URL shown is `<glpi>/plugins/nms/front/webhook.php`.
 - [ ] **Tickets** tab: service account, production IP ranges, template, title and description patterns, storm settings: same as opmanager's Setup.
 - [ ] **NMS hygiene** tab: same groups, technicians, category, segments and ports as opmanager. "Create hygiene tickets" is as opmanager had it.
 - [ ] Do not press **Test connection** yet if the OpManager API is rate-limited; otherwise press it: "Connection test OK".
-- [ ] The global section (Setup > General > PGN Suite > NMS Integration) shows only the asset types, the stale limit and one row of badges per **active** connection. Before cutover it shows "No active NMS connection": expected.
+- [ ] The global section (Setup > ICT Tools > NMS Integration) shows only the asset types, the stale limit and one row of badges per **active** connection. Before cutover it shows "No active NMS connection": expected.
 
 ## 4. Rights
 
@@ -79,7 +80,7 @@ a. **Deactivate opmanager** (its tables and settings stay; it can be activated a
 sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:deactivate opmanager && sudo -u nginx php /data/www/glpi/bin/console glpi:cache:clear
 ```
 
-Deactivating, not only stopping its crons: opmanager's ticket hooks send notes, acknowledges and clears to OpManager on every followup and solve. While both plugins are active and the nms connection is enabled, each note would be sent twice.
+Then log out and log in again, so the sidebar drops opmanager's entries. Deactivating, not only stopping its crons: opmanager's ticket hooks send notes, acknowledges and clears to OpManager on every followup and solve. While both plugins are active and the nms connection is enabled, each note would be sent twice.
 
 b. **Copy again**, to bring over what opmanager wrote since install: Setup > NMS Integration > **Copy from opmanager again**, or the CLI command of step 2. The message lists only the rows added or changed since install.
    - `dashboard_cards` is the number noted in step 2 (`dashboard_cards_waiting`), and `dashboard_cards_waiting` is now 0: the widgets are switched in place to the same NMS Integration cards, same position, size and colour.

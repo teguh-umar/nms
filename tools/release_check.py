@@ -1,8 +1,8 @@
 """Verify an nms release zip and optionally install it into the local GLPI copy.
 
 Usage:
-  python tools/release_check.py nmsv1.0.0-rc5.zip
-  python tools/release_check.py nmsv1.0.0-rc5.zip --install C:/Users/teguh.umar/Downloads/glpi/plugins
+  python tools/release_check.py nmsv1.0.0-rc6.zip
+  python tools/release_check.py nmsv1.0.0-rc6.zip --install C:/Users/teguh.umar/Downloads/glpi/plugins
 
 Reads bytes straight from the archive (never from an extraction, hub §5) and never
 uses a fallback that could print a passing value when a step cannot run.
@@ -15,9 +15,10 @@ import zipfile
 from pathlib import Path
 
 CANON = {
-    "nms/lib/pgnsuite/ConfigTab.php": "F94A80C1C813A951919A20D2521DE35B431F9C836BBCCE89BAC70E544D0B80FA",
+    "nms/lib/pgnsuite/ConfigTab.php": "46FEAA6C01CB000722A496D0922892ED37FFB9CD0CF892F2851EC9423C2B59C8",
     "nms/lib/pgnsuite/AssetTab.php": "F8629CCA6D141B1E9271686C8D7F9D65E4FC84E39CF07E85B10FBC849A0B2466",
-    "nms/lib/pgnsuite/Menu.php": "FC0B96219DD489639DEECD720197BA6B9810F6303A28CE7DB891139E7913CBFE",
+    "nms/lib/pgnsuite/Menu.php": "34F40CBBFE14842972BB8806F6F0E9C8810D914FD57D2D1DD286033255CCCF88",
+    "nms/front/pgnsuite.settings.php": "4BFF4A4B9866CF7373DE2B45EB096BE4D72999E854E2C2887806F5573F6B49FA",
 }
 
 

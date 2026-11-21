@@ -7,7 +7,7 @@ use Session;
 /**
  * OpManager's entry in the shared suite sidebar menu (hub §5, lib/pgnsuite/Menu.php;
  * v1.2.0). Before, the plugin had its own top-level sector `opmanager`. No Setup entry:
- * settings live in Setup > General > (suite tab).
+ * settings live on the suite settings page (Setup > ICT Tools).
  */
 class Menu
 {

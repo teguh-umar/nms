@@ -49,7 +49,7 @@ if (isset($_POST['migrate_from_opmanager'])) {
     $back();
 }
 
-// Users who can open Setup > General get the PGN Suite tab instead (hub §5).
+// Users with core config READ get the suite settings page instead (Setup > ICT Tools, hub §5).
 if (Session::haveRight('config', READ)) {
     Html::redirect(ConfigTab::getReturnUrl(SuiteConfig::SECTION));
 }

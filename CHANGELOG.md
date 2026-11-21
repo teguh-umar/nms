@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.0-rc6 (nms)
+
+- Fix: the Coverage page and the Coverage dashboard cards always showed 0. They read devices, alarms and tickets of connection 0, which never exists. They now count every **active** connection, and nothing while none is active.
+- Shared suite library updated to the canonical copies: `ConfigTab` r5 (`46feaa6c`) with its entry point `front/pgnsuite.settings.php` (`4bff4a4b`), and `Menu` (`34f40cbb`). The suite settings now have their own Setup entry, **ICT Tools**, instead of a tab on Setup > General. Selfcheck and the release check pin the new hashes.
+- Runbook: log out and in again after installing or (de)activating a plugin. GLPI keeps the menu in the browser session, so the breadcrumb could still read "OpManager devices" until a new login.
+
 ## 1.0.0-rc5 (nms)
 
 - **Core references carried over**, the way GLPI 11 moved GenericObject types to Asset definitions. The copy from opmanager now also carries the GLPI rows that name opmanager's lists and cards, so nothing breaks when opmanager goes:

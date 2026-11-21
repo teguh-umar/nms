@@ -115,9 +115,9 @@ final class SelfCheck
             },
             'suite/lib-shas' => static function (): void {
                 $expected = [
-                    'ConfigTab.php' => 'F94A80C1C813A951919A20D2521DE35B431F9C836BBCCE89BAC70E544D0B80FA',
+                    'ConfigTab.php' => '46FEAA6C01CB000722A496D0922892ED37FFB9CD0CF892F2851EC9423C2B59C8',
                     'AssetTab.php'  => 'F8629CCA6D141B1E9271686C8D7F9D65E4FC84E39CF07E85B10FBC849A0B2466',
-                    'Menu.php'      => 'FC0B96219DD489639DEECD720197BA6B9810F6303A28CE7DB891139E7913CBFE',
+                    'Menu.php'      => '34F40CBBFE14842972BB8806F6F0E9C8810D914FD57D2D1DD286033255CCCF88',
                 ];
                 foreach ($expected as $file => $sha) {
                     $actual = strtoupper((string) hash_file('sha256', dirname(__DIR__) . '/lib/pgnsuite/' . $file));

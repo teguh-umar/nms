@@ -7,7 +7,7 @@
  * @license GPL-3.0-or-later
  */
 
-define('PLUGIN_NMS_VERSION', '1.0.0-rc5');
+define('PLUGIN_NMS_VERSION', '1.0.0-rc6');
 define('PLUGIN_NMS_MIN_GLPI', '11.0.0');
 define('PLUGIN_NMS_MAX_GLPI', '11.99.99');
 
@@ -87,7 +87,7 @@ function plugin_init_nms()
     \GlpiPlugin\Pgnsuite\Menu::register('nms');
     $PLUGIN_HOOKS[\GlpiPlugin\Pgnsuite\Menu::HOOK]['nms'] = \GlpiPlugin\Nms\Menu::class . '::entry';
 
-    // Shared "PGN Suite" tab on Setup > General (hub §5). class_exists(..., false)
+    // Shared suite settings page, Setup > ICT Tools (ConfigTab r5, hub §5). class_exists(..., false)
     // skips the autoloader, which would look for a nonexistent plugins/pgnsuite/.
     if (!class_exists(\GlpiPlugin\Pgnsuite\ConfigTab::class, false)) {
         require_once __DIR__ . '/lib/pgnsuite/ConfigTab.php';

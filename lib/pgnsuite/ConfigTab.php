@@ -1,13 +1,19 @@
 <?php
 
 /**
- * PGN Suite — shared suite tab on Setup > General. Its title is the customisable
- * suite label (default "ICT Tools"), edited in this tab's own "General" section.
+ * PGN Suite — shared settings page, one entry in the Setup sidebar (revision r5).
+ * Its title is the customisable suite label (default "ICT Tools"), the same one the
+ * Tools ICT menu uses, edited in this page's own "General" section.
+ *
+ * r5 (2026-10-27, user decision): the settings moved OUT of Setup > General (they
+ * were a tab there up to r4) into their own Setup entry. The section hook below is
+ * unchanged, so a plugin's own settings code needs no change; it ships this file and
+ * front/pgnsuite.settings.php (byte-identical, see shared/pgnsuite/front/).
  *
  * CANONICAL COPY: …/Documents/PGN GLPI Suite/shared/pgnsuite/ConfigTab.php
  * Every PGN plugin ships this file byte-identical at lib/pgnsuite/ConfigTab.php.
  * Never edit a plugin's copy on its own — change the canonical copy, bump
- * CONTRACT_VERSION, and redistribute to every plugin (see hub file §5).
+ * CONTRACT_VERSION if the API changes, and redistribute to every plugin (hub §5).
  */
 
 namespace GlpiPlugin\Pgnsuite;
@@ -29,16 +35,45 @@ final class ConfigTab extends CommonGLPI
     public const DEFAULT_LABEL  = 'ICT Tools';
     public const LABEL_MAX      = 40;
 
+    /** Every plugin ships this controller; the menu points at the first one found. */
+    public const PAGE_FILE = 'front/pgnsuite.settings.php';
+
+    /** Core's Setup sector key. */
+    private const SECTOR = 'config';
+
     private const SESSION_KEY = 'pgnsuite_active_section';
 
     /** Not a valid plugin key (those match /^[a-z0-9]+$/), so it never collides. */
     private const GENERAL = '_general';
 
+    /**
+     * Call from plugin_init_<plugin>(), as before (no argument: the r4 call sites stay).
+     * Adds this class to the Setup sector for the calling plugin, read from the calling
+     * setup.php's path because every plugin calls this before it sets its section hook,
+     * and for every plugin that has registered a section so far. Repeated calls are
+     * harmless: core keys the entry by class name, so the sidebar shows one entry.
+     */
     public static function register(): void
     {
-        // registerStandardTab() keys tabs by class name, so repeated calls from
-        // several plugins still yield exactly one tab.
-        Plugin::registerClass(self::class, ['addtabon' => Config::class]);
+        global $PLUGIN_HOOKS;
+
+        $plugins = array_keys($PLUGIN_HOOKS[self::HOOK] ?? []);
+        $caller  = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1)[0]['file'] ?? '';
+        if (preg_match('#[\\\\/](?:plugins|marketplace)[\\\\/]([a-z0-9]+)[\\\\/]setup\.php$#', (string) $caller, $m)) {
+            $plugins[] = $m[1];
+        }
+
+        foreach (array_unique($plugins) as $plugin) {
+            if (!is_string($plugin) || !preg_match('/^[a-z0-9]+$/', $plugin)) {
+                continue;
+            }
+            $current = $PLUGIN_HOOKS['menu_toadd'][$plugin][self::SECTOR] ?? [];
+            $current = is_array($current) ? $current : [$current];
+            if (!in_array(self::class, $current, true)) {
+                $current[] = self::class;
+            }
+            $PLUGIN_HOOKS['menu_toadd'][$plugin][self::SECTOR] = $current;
+        }
     }
 
     public static function label(): string
@@ -56,25 +91,142 @@ final class ConfigTab extends CommonGLPI
         return self::label();
     }
 
-    public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
+    public static function getIcon()
     {
-        if (!$item instanceof Config || self::allSections() === []) {
-            return '';
-        }
-        return self::createTabEntry(self::getTypeName(), 0, null, 'ti ti-adjustments-alt');
+        return 'ti ti-adjustments-alt';
     }
 
-    public static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0)
+    /**
+     * One entry under Setup. Hidden for a user who may see no section, and while no
+     * active plugin ships the page controller (e.g. mid-rollout).
+     *
+     * @return array|false
+     */
+    public static function getMenuContent()
     {
-        if (!$item instanceof Config) {
+        $page = self::pagePath();
+        if ($page === null || self::allSections() === []) {
             return false;
         }
+        return [
+            'title' => self::label(),
+            'page'  => $page,
+            'icon'  => self::getIcon(),
+        ];
+    }
+
+    /**
+     * The settings page itself. Called by every plugin's front/pgnsuite.settings.php.
+     */
+    public static function displayPage(): void
+    {
         $sections = self::allSections();
         if ($sections === []) {
-            return false;
+            Html::displayRightError();
+            return;
         }
+        Html::header(self::label(), '', self::SECTOR, strtolower(self::class));
+        self::renderSections($sections);
+        Html::footer();
+    }
 
-        $active = $_SESSION[self::SESSION_KEY] ?? null;
+    /**
+     * URL a plugin's config controller redirects to after saving, landing back
+     * on this page with the plugin's own section selected.
+     */
+    public static function getReturnUrl(string $section): string
+    {
+        $_SESSION[self::SESSION_KEY] = $section;
+        $page = self::pagePath();
+        return $page !== null ? Html::getPrefixedUrl($page) : Config::getFormURL();
+    }
+
+    /**
+     * The suite's own "General" section: the label form. Posts to core
+     * config.form.php with config_context, which saves through configUpdate() below.
+     */
+    public static function renderGeneral(): void
+    {
+        $stored = Config::getConfigurationValues(self::CONFIG_CONTEXT, ['label'])['label'] ?? '';
+
+        echo '<form method="post" action="' . htmlescape(Config::getFormURL()) . '">';
+        echo '<div class="card"><div class="card-body">';
+        echo '<div class="mb-3" style="max-width:32rem">';
+        echo '<label class="form-label" for="pgnsuite-label">' . htmlescape(__('Name')) . '</label>';
+        echo sprintf(
+            '<input type="text" class="form-control" id="pgnsuite-label" name="label" value="%s" maxlength="%d" placeholder="%s">',
+            htmlescape(is_string($stored) ? $stored : ''),
+            self::LABEL_MAX,
+            htmlescape(self::DEFAULT_LABEL)
+        );
+        echo '<div class="form-text">'
+            . htmlescape(sprintf(
+                'Shown as the sidebar menu, this settings page under Setup and the asset tab. '
+                . 'Leave empty for "%s". Other users see a new name after they log in again.',
+                self::DEFAULT_LABEL
+            ))
+            . '</div>';
+        echo '</div>';
+        echo Html::hidden('config_context', ['value' => self::CONFIG_CONTEXT]);
+        echo Html::hidden('config_class', ['value' => self::class]);
+        echo Html::submit(_sx('button', 'Save'), ['name' => 'update', 'class' => 'btn btn-primary']);
+        echo '</div></div>';
+        Html::closeForm();
+    }
+
+    /**
+     * Called by core Config::prepareInputForUpdate() (config_class). Its return value
+     * is exactly what gets stored, so only "label" can be written through this form.
+     * core config.form.php checks only config READ, so UPDATE is enforced here.
+     * Core redirects back to the referer, which is this settings page.
+     */
+    public static function configUpdate(array $input): array
+    {
+        if (!Session::haveRight('config', UPDATE)) {
+            return [];
+        }
+        $label = preg_replace('/[\p{C}]+/u', '', (string) ($input['label'] ?? ''));
+        $label = trim(preg_replace('/\s+/u', ' ', (string) $label) ?? '');
+        $label = mb_substr($label, 0, self::LABEL_MAX);
+
+        // The sidebar is cached per session: rebuild it for this admin now.
+        unset($_SESSION['glpimenu']);
+        $_SESSION[self::SESSION_KEY] = self::GENERAL;
+
+        return ['label' => $label];
+    }
+
+    /**
+     * "/plugins/<key>/front/pgnsuite.settings.php" of the first active plugin that
+     * ships the controller, in the order plugins registered their sections.
+     */
+    private static function pagePath(): ?string
+    {
+        global $PLUGIN_HOOKS;
+
+        static $page = false;
+        if ($page !== false) {
+            return $page;
+        }
+        foreach (array_keys($PLUGIN_HOOKS[self::HOOK] ?? []) as $plugin) {
+            if (!is_string($plugin) || !preg_match('/^[a-z0-9]+$/', $plugin) || !Plugin::isPluginActive($plugin)) {
+                continue;
+            }
+            $dir = Plugin::getPhpDir($plugin);
+            if (is_string($dir) && is_file($dir . '/' . self::PAGE_FILE)) {
+                return $page = '/plugins/' . $plugin . '/' . self::PAGE_FILE;
+            }
+        }
+        return $page = null;
+    }
+
+    /**
+     * @param array<string, array{title: string, icon: string, order: int, render: string}> $sections
+     */
+    private static function renderSections(array $sections): void
+    {
+        $requested = $_GET['section'] ?? null;
+        $active    = is_string($requested) ? $requested : ($_SESSION[self::SESSION_KEY] ?? null);
         unset($_SESSION[self::SESSION_KEY]);
         if (!isset($sections[$active])) {
             $active = array_key_first($sections);
@@ -125,72 +277,6 @@ final class ConfigTab extends CommonGLPI
             echo '</div>';
         }
         echo '</div></div></div>';
-
-        return true;
-    }
-
-    /**
-     * URL a plugin's config controller redirects to after saving, landing back
-     * on this tab with the plugin's own section selected.
-     */
-    public static function getReturnUrl(string $section): string
-    {
-        $_SESSION[self::SESSION_KEY] = $section;
-        return Config::getFormURL() . '?forcetab=' . urlencode(self::class . '$1');
-    }
-
-    /**
-     * The suite's own "General" section: the label form. Posts to core
-     * config.form.php with config_context, which saves through configUpdate() below.
-     */
-    public static function renderGeneral(): void
-    {
-        $stored = Config::getConfigurationValues(self::CONFIG_CONTEXT, ['label'])['label'] ?? '';
-
-        echo '<form method="post" action="' . htmlescape(Config::getFormURL()) . '">';
-        echo '<div class="card"><div class="card-body">';
-        echo '<div class="mb-3" style="max-width:32rem">';
-        echo '<label class="form-label" for="pgnsuite-label">' . htmlescape(__('Name')) . '</label>';
-        echo sprintf(
-            '<input type="text" class="form-control" id="pgnsuite-label" name="label" value="%s" maxlength="%d" placeholder="%s">',
-            htmlescape(is_string($stored) ? $stored : ''),
-            self::LABEL_MAX,
-            htmlescape(self::DEFAULT_LABEL)
-        );
-        echo '<div class="form-text">'
-            . htmlescape(sprintf(
-                'Shown as the sidebar menu, this tab and the asset tab. Leave empty for "%s". '
-                . 'Other users see a new name after they log in again.',
-                self::DEFAULT_LABEL
-            ))
-            . '</div>';
-        echo '</div>';
-        echo Html::hidden('config_context', ['value' => self::CONFIG_CONTEXT]);
-        echo Html::hidden('config_class', ['value' => self::class]);
-        echo Html::submit(_sx('button', 'Save'), ['name' => 'update', 'class' => 'btn btn-primary']);
-        echo '</div></div>';
-        Html::closeForm();
-    }
-
-    /**
-     * Called by core Config::prepareInputForUpdate() (config_class). Its return value
-     * is exactly what gets stored, so only "label" can be written through this form.
-     * core config.form.php checks only config READ, so UPDATE is enforced here.
-     */
-    public static function configUpdate(array $input): array
-    {
-        if (!Session::haveRight('config', UPDATE)) {
-            return [];
-        }
-        $label = preg_replace('/[\p{C}]+/u', '', (string) ($input['label'] ?? ''));
-        $label = trim(preg_replace('/\s+/u', ' ', (string) $label) ?? '');
-        $label = mb_substr($label, 0, self::LABEL_MAX);
-
-        // The sidebar is cached per session: rebuild it for this admin now.
-        unset($_SESSION['glpimenu']);
-        $_SESSION[self::SESSION_KEY] = self::GENERAL;
-
-        return ['label' => $label];
     }
 
     private static function canEditLabel(): bool
