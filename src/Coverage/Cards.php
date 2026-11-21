@@ -152,9 +152,9 @@ final class Cards
         $_SESSION['plugin_nms_cards'] ??= [];
         $key = md5((string) json_encode($_SESSION['glpiactiveentities'] ?? []));
         return self::cached($_SESSION['plugin_nms_cards'], $key, self::TTL, time(), static function (): array {
-            $src     = new DbCoverageSource(0);
-            $devices = $src->devices();
             $conns   = new \GlpiPlugin\Nms\Connection\DbConnectionStore();
+            $src     = new DbCoverageSource(DbCoverageSource::idsOf($conns->active()));
+            $devices = $src->devices();
             $report  = Report::build($devices, $src->assets(Config::assetItemtypes(), Config::coverageStatesOf($conns->active())), [
                 'ranges'           => [],
                 'production_only'  => false,

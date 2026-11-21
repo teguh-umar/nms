@@ -10,8 +10,21 @@ final class DbCoverageSource
     /** @var array<string, string> */
     private array $names = [];
 
-    public function __construct(private int $connections_id = 0)
+    /**
+     * @param list<int> $connections_ids the connections whose devices, alarms and tickets count:
+     *                                   every active one (Coverage spans them all). None: nothing.
+     */
+    public function __construct(private array $connections_ids)
     {
+    }
+
+    /**
+     * @param list<\GlpiPlugin\Nms\Connection\Connection> $connections
+     * @return list<int>
+     */
+    public static function idsOf(array $connections): array
+    {
+        return array_values(array_map(static fn ($c): int => (int) $c->id, $connections));
     }
 
     /** @return list<array<string, mixed>> */
@@ -20,7 +33,10 @@ final class DbCoverageSource
         global $DB;
 
         $out = [];
-        foreach ($DB->request(['FROM' => Device::getTable(), 'WHERE' => ['connections_id' => $this->connections_id], 'ORDER' => 'display_name']) as $r) {
+        if ($this->connections_ids === []) {
+            return $out;
+        }
+        foreach ($DB->request(['FROM' => Device::getTable(), 'WHERE' => ['connections_id' => $this->connections_ids], 'ORDER' => 'display_name']) as $r) {
             $out[] = [
                 'id'           => (int) $r['id'],
                 'device_key'   => (string) $r['device_key'],
@@ -112,10 +128,13 @@ final class DbCoverageSource
         global $DB;
 
         $out = [];
+        if ($this->connections_ids === []) {
+            return $out;
+        }
         foreach ($DB->request([
             'SELECT'  => ['severity_label', 'COUNT' => 'id AS cpt'],
             'FROM'    => \GlpiPlugin\Nms\Alarm::getTable(),
-            'WHERE'   => ['state' => 'active', 'connections_id' => $this->connections_id],
+            'WHERE'   => ['state' => 'active', 'connections_id' => $this->connections_ids],
             'GROUPBY' => 'severity_label',
         ]) as $r) {
             $out[(string) $r['severity_label']] = (int) $r['cpt'];
@@ -128,13 +147,16 @@ final class DbCoverageSource
     {
         global $DB;
 
+        if ($this->connections_ids === []) {
+            return 0;
+        }
         $alarms = \GlpiPlugin\Nms\Alarm::getTable();
         $row    = $DB->request([
             'SELECT'     => ['COUNT DISTINCT' => 'glpi_tickets.id AS cpt'],
             'FROM'       => $alarms,
             'INNER JOIN' => ['glpi_tickets' => ['ON' => [$alarms => 'tickets_id', 'glpi_tickets' => 'id']]],
             // glpi_tickets has no is_recursive column: never ask for recursion here.
-            'WHERE'      => getEntitiesRestrictCriteria('glpi_tickets', '', '', false) + ['glpi_tickets.is_deleted' => 0, 'NOT' => ['glpi_tickets.status' => [5, 6]], 'connections_id' => $this->connections_id],
+            'WHERE'      => getEntitiesRestrictCriteria('glpi_tickets', '', '', false) + ['glpi_tickets.is_deleted' => 0, 'NOT' => ['glpi_tickets.status' => [5, 6]], $alarms . '.connections_id' => $this->connections_ids],
         ])->current();
         return (int) ($row['cpt'] ?? 0);
     }

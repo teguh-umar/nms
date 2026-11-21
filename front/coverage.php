@@ -28,7 +28,7 @@ $state = [
 // and the data is as old as the oldest connection's last successful device sync.
 $connStore = new DbConnectionStore();
 $active    = $connStore->active();
-$source    = new DbCoverageSource();
+$source    = new DbCoverageSource(DbCoverageSource::idsOf($active));
 $report    = Report::build($source->devices(), $source->assets(Config::assetItemtypes(), Config::coverageStatesOf($active)), [
     'ranges'           => AddressingRanges::load(Config::productionAddressingsOf($active)),
     'production_only'  => $state['production_only'],
