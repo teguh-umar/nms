@@ -1,8 +1,8 @@
 """Verify an nms release zip and optionally install it into the local GLPI copy.
 
 Usage:
-  python tools/release_check.py nmsv1.0.0-rc6.zip
-  python tools/release_check.py nmsv1.0.0-rc6.zip --install C:/Users/teguh.umar/Downloads/glpi/plugins
+  python tools/release_check.py nmsv1.0.0.zip
+  python tools/release_check.py nmsv1.0.0.zip --install C:/Users/teguh.umar/Downloads/glpi/plugins
 
 Reads bytes straight from the archive (never from an extraction, hub §5) and never
 uses a fallback that could print a passing value when a step cannot run.

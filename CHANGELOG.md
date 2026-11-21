@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0 (nms)
+
+- First final release. Same code as 1.0.0-rc6, which passed the full synthetic test on staging (install, copy from opmanager, cutover of dashboard widgets, Coverage, restore). Only the version changes.
+
 ## 1.0.0-rc6 (nms)
 
 - Fix: the Coverage page and the Coverage dashboard cards always showed 0. They read devices, alarms and tickets of connection 0, which never exists. They now count every **active** connection, and nothing while none is active.
