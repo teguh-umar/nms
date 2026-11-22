@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0 (nms)
+
+- Final release of the Zabbix driver and per-connection Coverage. Same code as 1.1.0-rc2, which passed the synthetic staging test (install from the zip, a Zabbix connection against the offline mock: Test connection, device and alarm sync, no tickets, cleanup and full restore check). Only the version changes. Not verified against a live Zabbix (user decision 2026-11-22): treat the first sync of a real subsidiary connection as a test, as the runbook says.
+
 ## 1.1.0-rc2 (nms)
 
 - Zabbix login mode sends no empty credentials (a missing username or password is reported instead) and makes at most one login attempt per sync run, so a wrong password cannot lock the Zabbix account.
