@@ -31,7 +31,7 @@ final class JsonRpc
     private ?string $version = null;
     private ?string $session = null;
 
-    public function __construct(string $url, string $token, string $username, string $password, callable $transport)
+    public function __construct(string $url, #[\SensitiveParameter] string $token, string $username, #[\SensitiveParameter] string $password, callable $transport)
     {
         $this->url       = self::endpoint($url);
         $this->token     = $token;
@@ -69,6 +69,8 @@ final class JsonRpc
     /** @return mixed the JSON-RPC "result" */
     public function call(string $method, array $params): mixed
     {
+        // apiinfo.version always goes first on the wire, in token and login mode.
+        $this->version();
         return $this->send($method, $params, $this->credential());
     }
 
@@ -102,7 +104,7 @@ final class JsonRpc
         return $this->session;
     }
 
-    private function send(string $method, array $params, ?string $credential): mixed
+    private function send(string $method, array $params, #[\SensitiveParameter] ?string $credential): mixed
     {
         // Resolve the version first so request ids follow the order on the wire.
         $useHeader = $credential !== null && version_compare($this->version(), self::HEADER_AUTH_FROM, '>=');
@@ -130,7 +132,8 @@ final class JsonRpc
         try {
             $response = ($this->transport)($this->url, $body, $headers);
         } catch (\Throwable $e) {
-            throw new ZabbixException($this->redact('Zabbix request failed: ' . $e->getMessage()), 0, $e);
+            // No previous exception: its message and trace args hold the raw secrets.
+            throw new ZabbixException($this->redact('Zabbix request failed: ' . $e->getMessage()));
         }
 
         $status = (int) ($response['status'] ?? 0);

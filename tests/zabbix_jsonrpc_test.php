@@ -77,6 +77,8 @@ check('authMode login', $c->authMode() === 'login');
 $c->call('host.get', []);
 $c->call('item.get', []);
 $logins = array_values(array_filter($log, fn($l) => $l['req']['method'] === 'user.login'));
+check('login: apiinfo.version first', $log[0]['req']['method'] === 'apiinfo.version');
+check('login: user.login second', $log[1]['req']['method'] === 'user.login');
 check('login once', count($logins) === 1);
 check('login params', $logins[0]['req']['params'] === ['username' => 'api-user', 'password' => 'pw-secret-1']);
 check('login sent without auth', !isset($logins[0]['headers']['Authorization']) && !array_key_exists('auth', $logins[0]['req']));
@@ -93,7 +95,7 @@ check('second logout no-op', count($log) === $n);
 $log = [];
 $c   = new JsonRpc($base, '', 'u', 'pw', zbx_fake($log, '6.0.1'));
 $c->call('host.get', []);
-check('6.0 login session in body', ($log[2]['req']['auth'] ?? null) === 'sess123');
+check('6.0 login session in body', ($log[2]['req']['auth'] ?? null) === 'sess123' && $log[0]['req']['method'] === 'apiinfo.version');
 
 // JSON-RPC error with HTTP 200.
 $err = json_encode(['jsonrpc' => '2.0', 'error' => ['code' => -32602, 'message' => 'Invalid params.', 'data' => 'No permissions to referred object.'], 'id' => 2]);
@@ -114,6 +116,59 @@ try {
     check('login error raises', false);
 } catch (ZabbixException $e) {
     check('password redacted', !str_contains($e->getMessage(), 'pw-secret-1'));
+}
+
+// Secrets never reach the exception text, string form or previous chain.
+function zbx_leaks(\Throwable $e, array $secrets): bool
+{
+    $all = '';
+    for ($x = $e; $x !== null; $x = $x->getPrevious()) {
+        $all .= $x->getMessage() . (string) $x;
+    }
+    foreach ($secrets as $s) {
+        if (str_contains($all, $s)) {
+            return true;
+        }
+    }
+    return false;
+}
+$T = 'tok-SECRET-7731';
+$P = 'pw-SECRET-4482';
+$S = 'sess-SECRET-9915';
+ini_set('zend.exception_ignore_args', '0');
+$leak = json_encode(['jsonrpc' => '2.0', 'error' => ['code' => -32500, 'message' => 'Application error.', 'data' => "echo $T and $S"], 'id' => 3]);
+$log = [];
+$c   = new JsonRpc($base, $T, '', '', zbx_fake($log, '7.0.5', ['host.get' => $leak]));
+try {
+    $c->call('host.get', []);
+    check('leak token raises', false);
+} catch (ZabbixException $e) {
+    check('token in error data redacted everywhere', !zbx_leaks($e, [$T]));
+}
+$log = [];
+$c   = new JsonRpc($base, '', 'u', $P, zbx_fake($log, '7.0.5', ['host.get' => $leak, 'user.login' => json_encode(['jsonrpc' => '2.0', 'result' => $S, 'id' => 2])]));
+try {
+    $c->call('host.get', []);
+    check('leak session raises', false);
+} catch (ZabbixException $e) {
+    check('session in error data redacted everywhere', !zbx_leaks($e, [$S, $P]));
+}
+$throwing = function (string $url, string $body, array $headers) use ($T): array {
+    throw new \RuntimeException('connect failed with Authorization: Bearer ' . $T);
+};
+$c = new JsonRpc($base, $T, '', '', function (string $url, string $body, array $headers) use ($throwing, $T): array {
+    $req = json_decode($body, true);
+    if ($req['method'] === 'apiinfo.version') {
+        return ['status' => 200, 'body' => json_encode(['jsonrpc' => '2.0', 'result' => '7.0.5', 'id' => $req['id']])];
+    }
+    return $throwing($url, $body, $headers);
+});
+try {
+    $c->call('host.get', []);
+    check('transport throw raises', false);
+} catch (ZabbixException $e) {
+    check('transport throw: token not in message/string/previous', !zbx_leaks($e, [$T]));
+    check('transport throw: no previous', $e->getPrevious() === null);
 }
 
 // HTTP 500.
