@@ -88,14 +88,14 @@ final class AssetSections
         if ($model['stale']) {
             $out .= '<div class="alert alert-warning">'
                 . htmlescape($model['last_sync'] === ''
-                    ? __('OpManager data has never been synced.', 'nms')
-                    : sprintf(__('OpManager data is older than %d minutes (last sync: %s).', 'nms'), $model['stale_minutes'], $model['last_sync']))
+                    ? __('NMS data has never been synced.', 'nms')
+                    : sprintf(__('NMS data is older than %d minutes (last sync: %s).', 'nms'), $model['stale_minutes'], $model['last_sync']))
                 . '</div>';
         }
 
         $sources = ['name' => __('by name', 'nms'), 'ip' => __('by IP', 'nms'), 'manual' => __('manual pin', 'nms')];
         $out .= '<table class="table table-sm table-hover mb-2"><thead><tr>'
-            . '<th>' . __s('OpManager device', 'nms') . '</th>'
+            . '<th>' . __s('NMS device', 'nms') . '</th>'
             . '<th>' . __s('IP address') . '</th>'
             . '<th>' . __s('Availability', 'nms') . '</th>'
             . '<th>' . __s('Last seen', 'nms') . '</th>'
@@ -120,7 +120,7 @@ final class AssetSections
 
         $alarms = $model['alarms'] ?? [];
         if ($alarms !== []) {
-            $out .= '<h4 class="mt-3">' . __s('OpManager alarms', 'nms') . '</h4>'
+            $out .= '<h4 class="mt-3">' . __s('NMS alarms', 'nms') . '</h4>'
                 . '<table class="table table-sm table-hover mb-2"><thead><tr>'
                 . '<th>' . __s('Severity', 'nms') . '</th>'
                 . '<th>' . __s('Message', 'nms') . '</th>'

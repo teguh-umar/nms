@@ -30,14 +30,14 @@ final class Cards
             return $cards;
         }
         $defs = [
-            'coverage'         => [['bigNumber'], __('OpManager coverage of GLPI assets (%)', 'nms')],
-            'devices'          => [['bigNumber'], __('OpManager devices', 'nms')],
+            'coverage'         => [['bigNumber'], __('NMS coverage of GLPI assets (%)', 'nms')],
+            'devices'          => [['bigNumber'], __('NMS devices', 'nms')],
             'notMonitored'     => [['bigNumber'], __('GLPI assets not monitored', 'nms')],
-            'notInGlpi'        => [['bigNumber'], __('OpManager devices not in GLPI', 'nms')],
-            'matching'         => [['pie', 'donut', 'halfpie'], __('OpManager device matching', 'nms')],
-            'byCategory'       => [['stackedbars', 'stackedHBars', 'bars'], __('OpManager devices by category', 'nms')],
-            'alarmsBySeverity' => [['pie', 'donut', 'halfpie', 'bar'], __('Active OpManager alarms by severity', 'nms')],
-            'openAlarmTickets' => [['bigNumber'], __('Open tickets from OpManager alarms', 'nms')],
+            'notInGlpi'        => [['bigNumber'], __('NMS devices not in GLPI', 'nms')],
+            'matching'         => [['pie', 'donut', 'halfpie'], __('NMS device matching', 'nms')],
+            'byCategory'       => [['stackedbars', 'stackedHBars', 'bars'], __('NMS devices by category', 'nms')],
+            'alarmsBySeverity' => [['pie', 'donut', 'halfpie', 'bar'], __('Active NMS alarms by severity', 'nms')],
+            'openAlarmTickets' => [['bigNumber'], __('Open tickets from NMS alarms', 'nms')],
         ];
         foreach ($defs as $method => [$types, $label]) {
             $cards['plugin_nms_' . strtolower($method)] = [
@@ -59,7 +59,7 @@ final class Cards
     public static function devices(array $params = []): array
     {
         $kpi = self::allowed() ? self::summary()['kpi'] : ['devices' => 0];
-        return self::big(__('OpManager devices', 'nms'), $kpi['devices'], 'ti ti-activity', 'not_in_glpi');
+        return self::big(__('NMS devices', 'nms'), $kpi['devices'], 'ti ti-activity', 'not_in_glpi');
     }
 
     public static function notMonitored(array $params = []): array
@@ -71,12 +71,12 @@ final class Cards
     public static function notInGlpi(array $params = []): array
     {
         $kpi = self::allowed() ? self::summary()['kpi'] : ['not_in_glpi' => 0];
-        return self::big(__('OpManager devices not in GLPI', 'nms'), $kpi['not_in_glpi'], 'ti ti-database-off', 'not_in_glpi');
+        return self::big(__('NMS devices not in GLPI', 'nms'), $kpi['not_in_glpi'], 'ti ti-database-off', 'not_in_glpi');
     }
 
     public static function matching(array $params = []): array
     {
-        $out = ['data' => [], 'label' => __('OpManager device matching', 'nms'), 'icon' => 'ti ti-link'];
+        $out = ['data' => [], 'label' => __('NMS device matching', 'nms'), 'icon' => 'ti ti-link'];
         if (!self::allowed()) {
             return $out;
         }
@@ -96,14 +96,14 @@ final class Cards
     {
         return [
             'data'  => self::allowed() ? self::categoryBars(self::summary()['by_category']) : ['labels' => [], 'series' => []],
-            'label' => __('OpManager devices by category', 'nms'),
+            'label' => __('NMS devices by category', 'nms'),
             'icon'  => 'ti ti-category',
         ];
     }
 
     public static function alarmsBySeverity(array $params = []): array
     {
-        $out = ['data' => [], 'label' => __('Active OpManager alarms by severity', 'nms'), 'icon' => 'ti ti-bell'];
+        $out = ['data' => [], 'label' => __('Active NMS alarms by severity', 'nms'), 'icon' => 'ti ti-bell'];
         if (!self::allowed()) {
             return $out;
         }
@@ -116,7 +116,7 @@ final class Cards
     public static function openAlarmTickets(array $params = []): array
     {
         $n = self::allowed() ? self::summary()['open_tickets'] : 0;
-        return ['number' => $n, 'label' => __('Open tickets from OpManager alarms', 'nms'), 'icon' => 'ti ti-ticket'];
+        return ['number' => $n, 'label' => __('Open tickets from NMS alarms', 'nms'), 'icon' => 'ti ti-ticket'];
     }
 
     /**

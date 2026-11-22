@@ -25,9 +25,9 @@ final class View
         $cards = [
             [__('Coverage', 'nms'), $k['coverage_pct'] . '%', sprintf(__('%1$d of %2$d GLPI assets monitored', 'nms'), $k['monitored'], $k['assets'])],
             [__('GLPI assets in scope', 'nms'), (string) $k['assets'], __('selected types, status, with an IP', 'nms')],
-            [__('OpManager devices', 'nms'), (string) $k['devices'], sprintf(__('%d matched to a GLPI asset', 'nms'), $k['matched'])],
+            [__('NMS devices', 'nms'), (string) $k['devices'], sprintf(__('%d matched to a GLPI asset', 'nms'), $k['matched'])],
             [__('Not in GLPI', 'nms'), (string) $k['not_in_glpi'], __('monitored but not registered', 'nms')],
-            [__('Not monitored', 'nms'), (string) $k['not_monitored'], __('registered but not in OpManager', 'nms')],
+            [__('Not monitored', 'nms'), (string) $k['not_monitored'], __('registered but not in any NMS', 'nms')],
             [__('Ambiguous', 'nms'), (string) $k['ambiguous'], __('needs a manual pairing', 'nms')],
         ];
         $html .= '<div class="row row-cards mb-3">';

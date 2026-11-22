@@ -90,7 +90,7 @@ class Alarm extends CommonDBTM
         $f    = $this->fields;
         $rows = [
             __('Alarm ID', 'nms')    => htmlescape($f['alarm_key']),
-            __('OpManager entity', 'nms') => htmlescape($f['entity_key']),
+            __('NMS entity', 'nms') => htmlescape($f['entity_key']),
             __('Device', 'nms')      => htmlescape($f['display_name'] ?: $f['device_name']),
             __('IP address')               => htmlescape($f['ip_address']),
             __('Severity', 'nms')    => htmlescape($f['severity_label']),

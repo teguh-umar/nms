@@ -66,7 +66,7 @@ class Device extends CommonDBTM
     public static function validatePin(string $itemtype, int $items_id, array $allowed): ?string
     {
         if (!in_array($itemtype, $allowed, true)) {
-            return __('This asset type is not enabled in OpManager setup', 'nms');
+            return __('This asset type is not enabled in NMS Integration setup', 'nms');
         }
         if ($items_id <= 0) {
             return __('Choose an asset', 'nms');
@@ -202,7 +202,7 @@ class Device extends CommonDBTM
         $labels = self::matchStateLabels();
         $rows   = [
             __('Name')                            => htmlescape($f['display_name'] ?: $f['name']),
-            __('OpManager identity', 'nms') => htmlescape($f['device_key']),
+            __('NMS identity', 'nms') => htmlescape($f['device_key']),
             __('IP address')                      => htmlescape($f['ip_address']),
             __('Type')                            => htmlescape($f['device_type']),
             __('Category')                        => htmlescape($f['device_category']),

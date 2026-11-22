@@ -95,7 +95,7 @@ final class HygieneRun
         if ($tickets_due && $this->cfg['enabled']) {
             if (!($this->cfg['device_data_fresh'] ?? true)) {
                 // Final review #3: stale OpManager data must not read as "no longer applies".
-                $msg = 'OpManager device data is stale (device sync failing); hygiene tickets postponed';
+                $msg = 'NMS device data is stale (device sync failing); hygiene tickets postponed';
                 $stats['errors'][]        = $msg;
                 $stats['ticket_errors'][] = $msg;
                 return $stats;

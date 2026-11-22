@@ -31,9 +31,9 @@ final class Cron extends \CommonGLPI
     public static function cronInfo($name)
     {
         return match ($name) {
-            'DeviceSync' => ['description' => __('Sync OpManager devices and match them to GLPI assets', 'nms')],
-            'AlarmSync'  => ['description' => __('Pull active OpManager alarms and create/update tickets', 'nms')],
-            'OutboxSend' => ['description' => __('Send queued notes and clears to OpManager', 'nms')],
+            'DeviceSync' => ['description' => __('Sync NMS devices and match them to GLPI assets', 'nms')],
+            'AlarmSync'  => ['description' => __('Pull active NMS alarms and create/update tickets', 'nms')],
+            'OutboxSend' => ['description' => __('Send queued notes and clears to the NMS', 'nms')],
             'HygieneCheck' => ['description' => __('NMS hygiene: liveness of unmanaged devices, classification, weekly tickets', 'nms')],
             default      => [],
         };
