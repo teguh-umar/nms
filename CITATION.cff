@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you reuse this software, please cite it as below."
+title: "NMS Integration"
+type: software
+abstract: "Connects network monitoring systems (OpManager, Zabbix and others) to GLPI: devices, alarms, tickets, write-back and monitoring coverage."
+authors:
+  - given-names: Teguh
+    family-names: DHAMAR
+repository-code: "https://github.com/teguh-umar/nms"
+license: GPL-3.0-or-later
+version: "1.1.0"
+date-released: "2026-11-22"
+keywords:
+  - glpi
+  - glpi-plugin
+  - monitoring
+  - nms
+  - zabbix
