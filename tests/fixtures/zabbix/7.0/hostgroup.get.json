@@ -10,5 +10,17 @@
   {
     "groupid": "102",
     "name": "Switches"
+  },
+  {
+    "groupid": "103",
+    "name": "Firewalls"
+  },
+  {
+    "groupid": "104",
+    "name": "Databases"
+  },
+  {
+    "groupid": "105",
+    "name": "Power"
   }
 ]

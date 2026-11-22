@@ -41,14 +41,15 @@
     ],
     "groups": [
       {
-        "groupid": "100",
+        "groupid": "102",
         "name": "Switches"
       },
       {
-        "groupid": "101",
+        "groupid": "100",
         "name": "Datacenter A"
       }
-    ]
+    ],
+    "inventory": []
   },
   {
     "hostid": "10502",
@@ -75,10 +76,11 @@
     ],
     "groups": [
       {
-        "groupid": "100",
+        "groupid": "101",
         "name": "Linux servers"
       }
-    ]
+    ],
+    "inventory": []
   },
   {
     "hostid": "10503",
@@ -105,10 +107,14 @@
     ],
     "groups": [
       {
-        "groupid": "100",
+        "groupid": "103",
         "name": "Firewalls"
       }
-    ]
+    ],
+    "inventory": {
+      "type": "Firewall",
+      "vendor": "ExampleCo"
+    }
   },
   {
     "hostid": "10504",
@@ -135,10 +141,14 @@
     ],
     "groups": [
       {
-        "groupid": "100",
+        "groupid": "104",
         "name": "Databases"
       }
-    ]
+    ],
+    "inventory": {
+      "type": "",
+      "vendor": ""
+    }
   },
   {
     "hostid": "10505",
@@ -165,10 +175,11 @@
     ],
     "groups": [
       {
-        "groupid": "100",
+        "groupid": "105",
         "name": "Power"
       }
-    ]
+    ],
+    "inventory": []
   },
   {
     "hostid": "10506",
@@ -179,6 +190,7 @@
     "maintenance_type": "0",
     "flags": "0",
     "interfaces": [],
-    "groups": []
+    "groups": [],
+    "inventory": []
   }
 ]

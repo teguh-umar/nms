@@ -41,6 +41,18 @@ foreach (['6.0', '7.0', '7.4'] as $ver) {
     check($v . 'snmp ip', $by['10503']['ip_address'] === '198.51.100.5');
     check($v . 'maintenance', $by['10504']['availability'] === 'Maintenance');
     check($v . 'ipmi unknown', $by['10505']['availability'] === 'Unknown' && $by['10505']['ip_address'] === '203.0.113.30');
+    check($v . 'device_type: interface label', $by['10501']['device_type'] === 'Agent' && $by['10505']['device_type'] === 'IPMI' && $by['10502']['device_type'] === 'Agent');
+    check($v . 'device_type: inventory type wins', $by['10503']['device_type'] === 'Firewall', $by['10503']['device_type']);
+    check($v . 'device_type: empty inventory type falls back', $by['10504']['device_type'] === 'Agent');
+    check($v . 'device_type: none', $by['10506']['device_type'] === '');
+    $gids = [];
+    foreach ($raw as $h) {
+        foreach ($h['groups'] ?? $h['hostgroups'] as $g) {
+            $gids[$g['groupid']] = $g['name'];
+        }
+    }
+    $hg = array_column(zfx($ver, 'hostgroup.get'), 'name', 'groupid');
+    check($v . 'hostgroup.get consistent with host.get', $gids == $hg, json_encode([$gids, $hg]));
     $b = $by['10506'];
     check($v . 'bare host', $b['ip_address'] === '' && $b['device_category'] === '' && $b['availability'] === 'Unknown');
 
