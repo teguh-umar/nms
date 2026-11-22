@@ -146,7 +146,7 @@ final class JsonRpc
             throw new ZabbixException('Zabbix returned a non-JSON response');
         }
         if (isset($decoded['error'])) {
-            throw new ZabbixException($this->redact($this->describeError($decoded['error'])));
+            throw new ZabbixApiError($this->redact($this->describeError($decoded['error'])));
         }
         if (!array_key_exists('result', $decoded)) {
             throw new ZabbixException('Zabbix response has no result');

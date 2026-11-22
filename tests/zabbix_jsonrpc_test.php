@@ -2,6 +2,7 @@
 
 require __DIR__ . '/bootstrap.php';
 require OPM_ROOT . '/src/Driver/Zabbix/ZabbixException.php';
+require OPM_ROOT . '/src/Driver/Zabbix/ZabbixApiError.php';
 require OPM_ROOT . '/src/Driver/Zabbix/JsonRpc.php';
 
 use GlpiPlugin\Nms\Driver\Zabbix\JsonRpc;
@@ -107,6 +108,23 @@ try {
 } catch (ZabbixException $e) {
     check('error has data', str_contains($e->getMessage(), 'No permissions to referred object.'));
     check('error has no token', !str_contains($e->getMessage(), 'tok'));
+    check('error-object path is an API error', $e instanceof \GlpiPlugin\Nms\Driver\Zabbix\ZabbixApiError);
+}
+foreach ([[500, '{}'], [200, 'not json'], [200, '{"jsonrpc":"2.0","id":2}']] as $i => $bad) {
+    $log = [];
+    $c   = new JsonRpc($base, 'tok', '', '', zbx_fake($log, '7.0.5', ['host.get' => $bad]));
+    try {
+        $c->call('host.get', []);
+        check("non-error-object failure $i raises", false);
+    } catch (ZabbixException $e) {
+        check("failure $i (HTTP/non-JSON/no result) is not an API error", !($e instanceof \GlpiPlugin\Nms\Driver\Zabbix\ZabbixApiError));
+    }
+}
+$c = new JsonRpc($base, 'tok', '', '', function () { throw new RuntimeException('down'); });
+try {
+    $c->call('host.get', []);
+} catch (ZabbixException $e) {
+    check('transport throw is not an API error', !($e instanceof \GlpiPlugin\Nms\Driver\Zabbix\ZabbixApiError));
 }
 $errLeak = json_encode(['jsonrpc' => '2.0', 'error' => ['code' => -32500, 'message' => 'Application error.', 'data' => 'bad pw pw-secret-1 tok'], 'id' => 2]);
 $log = [];

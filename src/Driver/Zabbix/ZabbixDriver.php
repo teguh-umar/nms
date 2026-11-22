@@ -146,11 +146,10 @@ final class ZabbixDriver implements Driver
     {
         try {
             $this->acknowledgeEvent($alarm_key, self::ACTION_CLOSE);
-        } catch (ZabbixException $e) {
-            if (stripos($e->getMessage(), 'cannot close') !== false) {
-                throw new CloseRefused($e->getMessage());
-            }
-            throw $e;
+        } catch (ZabbixApiError $e) {
+            // Zabbix answered and refused: permanent, whatever language the message is in.
+            // Transport/HTTP failures are plain ZabbixException and stay retryable.
+            throw new CloseRefused($e->getMessage());
         }
     }
 

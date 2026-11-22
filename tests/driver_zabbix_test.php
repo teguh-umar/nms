@@ -3,7 +3,7 @@
 require __DIR__ . '/bootstrap.php';
 foreach (['Connection/Connection', 'Connection/Settings', 'Driver/Driver', 'Driver/Capabilities', 'Driver/DriverFactory',
     'Driver/UnsupportedOperation', 'Driver/OpManager/OpManagerDriver', 'Driver/Zabbix/ZabbixException',
-    'Driver/Zabbix/JsonRpc', 'Driver/Zabbix/HostParser', 'Driver/Zabbix/ProblemParser',
+    'Driver/Zabbix/ZabbixApiError', 'Driver/Zabbix/JsonRpc', 'Driver/Zabbix/HostParser', 'Driver/Zabbix/ProblemParser',
     'Driver/Zabbix/CloseRefused', 'Driver/Zabbix/ZabbixDriver'] as $f) {
     require OPM_ROOT . "/src/$f.php";
 }
@@ -166,6 +166,29 @@ try {
     check('clear refused throws', false);
 } catch (CloseRefused $e) {
     check('clear refused -> CloseRefused (DomainException)', $e instanceof \DomainException && !str_contains($e->getMessage(), SECRET_TOKEN), $e->getMessage());
+}
+$d = new ZabbixDriver(zconn(), zfake('7.0', $calls, ['event.acknowledge' => fn($p) => ['__error' => "N\u{00e3}o \u{00e9} poss\u{00ed}vel fechar o problema"]]));
+try {
+    $d->clear('77');
+    check('non-English refusal throws', false);
+} catch (CloseRefused $e) {
+    check('non-English API error on clear -> CloseRefused', true);
+}
+$verOk = fn(string $b): bool => str_contains($b, 'apiinfo.version');
+$httpFail = fn(string $u, string $b, array $h): array => $verOk($b) ? ['status' => 200, 'body' => '{"jsonrpc":"2.0","result":"7.0.5","id":1}'] : ['status' => 500, 'body' => ''];
+$netFail = function (string $u, string $b, array $h) use ($verOk): array {
+    if ($verOk($b)) { return ['status' => 200, 'body' => '{"jsonrpc":"2.0","result":"7.0.5","id":1}']; }
+    throw new RuntimeException('connection reset');
+};
+foreach (['HTTP 500' => $httpFail, 'transport throw' => $netFail] as $label => $tr) {
+    try {
+        (new ZabbixDriver(zconn(), $tr))->clear('77');
+        check("clear $label throws", false);
+    } catch (CloseRefused $e) {
+        check("clear $label is not CloseRefused (retried)", false);
+    } catch (\GlpiPlugin\Nms\Driver\Zabbix\ZabbixException $e) {
+        check("clear $label stays ZabbixException (retried)", true);
+    }
 }
 try {
     $d->acknowledge('77');
