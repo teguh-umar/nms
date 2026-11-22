@@ -28,6 +28,7 @@ final class SensorParser
     private const OLE_EPOCH_DAYS = 25569;
 
     /**
+     * Alarm rows only: a sensor whose status_raw is not a SEVERITY key (Up, Paused, Unknown) is skipped.
      * @param list<array<string, mixed>> $sensors
      * @param array<string, array<string, mixed>> $devicesById normalised devices keyed by id
      * @return list<array<string, mixed>>
@@ -36,7 +37,7 @@ final class SensorParser
     {
         $out = [];
         foreach ($sensors as $s) {
-            $row = is_array($s) ? self::row($s, $devicesById) : null;
+            $row = is_array($s) && isset(self::SEVERITY[(int) ($s['status_raw'] ?? 0)]) ? self::row($s, $devicesById) : null;
             if ($row !== null) {
                 $out[] = $row;
             }
@@ -66,7 +67,7 @@ final class SensorParser
         $severity = self::SEVERITY[$code] ?? 5;
         $device   = is_array($devicesById[self::str($s, 'device_id')] ?? null) ? $devicesById[self::str($s, 'device_id')] : [];
         $name     = self::str($s, 'name');
-        $dname    = self::str($s, 'device');
+        $dname    = self::str($s, 'device') ?: self::str($device, 'name');
         $text     = self::clean(self::str($s, 'message'));
 
         return [

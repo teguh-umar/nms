@@ -46,7 +46,7 @@ foreach (['26.4', '26.3', '26.2'] as $line) {
     check("{$line}: DNS host kept", $devices[1]['ip_address'] === 'app1.example.test');
     check("{$line}: paused and no tags", $devices[2]['availability'] === 'Paused' && $devices[2]['device_type'] === '');
     $alarms = SensorParser::parse($sens, $byId($devs));
-    check("{$line}: 6 sensor rows", count($alarms) === 6);
+    check("{$line}: 5 alarm rows (Up dropped)", count($alarms) === 5);
 }
 
 [$devs, $sens] = classic_rows('26.4');
@@ -64,6 +64,12 @@ check('OLE 46000.5 (UTC noon 2025-12-09) in Asia/Jakarta', $a[0]['mod_time'] ===
 check('null lastcheck gives now', abs(strtotime($a[3]['mod_time']) - time()) < 5, $a[3]['mod_time']);
 check('missing device gives empty ip', SensorParser::parse($sens, [])[0]['ip_address'] === '');
 check('double-encoded entity decoded once', SensorParser::parse([['id' => '1', 'name' => 'n', 'device_id' => '1', 'device' => 'd', 'group' => 'g', 'status_raw' => 5, 'status' => 'Down', 'message' => '&amp;lt;b&amp;gt;', 'type' => 't', 'lastcheck' => 46000.5]], [])[0]['message'] === 'n: &lt;b&gt;');
+
+check('Up sensor yields no row in parse()', SensorParser::parse([$sens[5]], $map) === []);
+check('Paused and Unknown yield no row', SensorParser::parse([['id' => '9', 'status_raw' => 7], ['id' => '8', 'status_raw' => 1]], $map) === []);
+$nodev = $sens[0];
+$nodev['device'] = '';
+check('device name falls back to devicesById', SensorParser::parse([$nodev], $map)[0]['device_name'] === 'sw-core-1' && SensorParser::parse([$nodev], $map)[0]['display_name'] === 'sw-core-1');
 
 $cur = SensorParser::current($sens[5], $map);
 check('current() of Up is severity 5 Clear', $cur['severity'] === 5 && $cur['severity_label'] === 'Clear' && $cur['alarm_key'] === '2006', json_encode($cur));
@@ -83,7 +89,7 @@ $vs = $c->sensors([]);
 $vdev = DeviceParser::parse($vd);
 check('v2: 4 devices, tags list -> first tag', count($vdev) === 4 && $vdev[3]['device_type'] === 'firewall' && $vdev[2]['availability'] === 'Paused', json_encode($vdev[2] ?? null));
 $va = SensorParser::parse($vs, $byId($vd));
-check('v2: sensors map', count($va) === 6 && $va[0]['ip_address'] === '192.0.2.10' && $va[0]['severity'] === 1 && $va[2]['message'] === 'HTTP Load: Value & trend: value < 5 and > 3', json_encode($va[2] ?? null));
+check('v2: sensors map', count($va) === 5 && $va[0]['ip_address'] === '192.0.2.10' && $va[0]['severity'] === 1 && $va[2]['message'] === 'HTTP Load: Value & trend: value < 5 and > 3', json_encode($va[2] ?? null));
 check('v2: ISO date round-trips to the same wall clock', $va[0]['mod_time'] === '2025-12-09 19:00:00', $va[0]['mod_time']);
 check('v2 version fixture', $c->version() === '26.4.126.1824');
 
