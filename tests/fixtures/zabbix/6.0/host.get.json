@@ -1,0 +1,184 @@
+[
+  {
+    "hostid": "10501",
+    "host": "core-sw-01.example.test",
+    "name": "Core Switch 01",
+    "status": "0",
+    "maintenance_status": "0",
+    "maintenance_type": "0",
+    "flags": "0",
+    "interfaces": [
+      {
+        "interfaceid": "1",
+        "hostid": "10501",
+        "main": "1",
+        "type": "2",
+        "useip": "1",
+        "ip": "192.0.2.11",
+        "dns": "",
+        "port": "161",
+        "available": "1",
+        "error": "",
+        "details": {
+          "version": "2",
+          "bulk": "1",
+          "community": "{$SNMP_COMMUNITY}"
+        }
+      },
+      {
+        "interfaceid": "2",
+        "hostid": "10501",
+        "main": "1",
+        "type": "1",
+        "useip": "1",
+        "ip": "192.0.2.10",
+        "dns": "",
+        "port": "10050",
+        "available": "2",
+        "error": "",
+        "details": []
+      }
+    ],
+    "groups": [
+      {
+        "groupid": "100",
+        "name": "Switches"
+      },
+      {
+        "groupid": "101",
+        "name": "Datacenter A"
+      }
+    ]
+  },
+  {
+    "hostid": "10502",
+    "host": "app-01.example.test",
+    "name": "App Server 01",
+    "status": "0",
+    "maintenance_status": "0",
+    "maintenance_type": "0",
+    "flags": "0",
+    "interfaces": [
+      {
+        "interfaceid": "3",
+        "hostid": "10502",
+        "main": "1",
+        "type": "1",
+        "useip": "0",
+        "ip": "",
+        "dns": "app-01.example.test",
+        "port": "10050",
+        "available": "1",
+        "error": "",
+        "details": []
+      }
+    ],
+    "groups": [
+      {
+        "groupid": "100",
+        "name": "Linux servers"
+      }
+    ]
+  },
+  {
+    "hostid": "10503",
+    "host": "old-fw-01",
+    "name": "Old Firewall",
+    "status": "1",
+    "maintenance_status": "0",
+    "maintenance_type": "0",
+    "flags": "0",
+    "interfaces": [
+      {
+        "interfaceid": "4",
+        "hostid": "10503",
+        "main": "1",
+        "type": "2",
+        "useip": "1",
+        "ip": "198.51.100.5",
+        "dns": "",
+        "port": "161",
+        "available": "1",
+        "error": "",
+        "details": []
+      }
+    ],
+    "groups": [
+      {
+        "groupid": "100",
+        "name": "Firewalls"
+      }
+    ]
+  },
+  {
+    "hostid": "10504",
+    "host": "db-01.example.test",
+    "name": "DB Server 01",
+    "status": "0",
+    "maintenance_status": "1",
+    "maintenance_type": "0",
+    "flags": "0",
+    "interfaces": [
+      {
+        "interfaceid": "5",
+        "hostid": "10504",
+        "main": "1",
+        "type": "1",
+        "useip": "1",
+        "ip": "203.0.113.20",
+        "dns": "",
+        "port": "10050",
+        "available": "1",
+        "error": "",
+        "details": []
+      }
+    ],
+    "groups": [
+      {
+        "groupid": "100",
+        "name": "Databases"
+      }
+    ]
+  },
+  {
+    "hostid": "10505",
+    "host": "pdu-01",
+    "name": "PDU 01",
+    "status": "0",
+    "maintenance_status": "0",
+    "maintenance_type": "0",
+    "flags": "0",
+    "interfaces": [
+      {
+        "interfaceid": "6",
+        "hostid": "10505",
+        "main": "1",
+        "type": "3",
+        "useip": "1",
+        "ip": "203.0.113.30",
+        "dns": "",
+        "port": "623",
+        "available": "0",
+        "error": "",
+        "details": []
+      }
+    ],
+    "groups": [
+      {
+        "groupid": "100",
+        "name": "Power"
+      }
+    ]
+  },
+  {
+    "hostid": "10506",
+    "host": "bare-host",
+    "name": "Bare Host",
+    "status": "0",
+    "maintenance_status": "0",
+    "maintenance_type": "0",
+    "flags": "0",
+    "interfaces": [],
+    "groups": []
+  }
+]

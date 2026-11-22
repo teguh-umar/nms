@@ -1,0 +1,14 @@
+[
+  {
+    "groupid": "100",
+    "name": "Datacenter A"
+  },
+  {
+    "groupid": "101",
+    "name": "Linux servers"
+  },
+  {
+    "groupid": "102",
+    "name": "Switches"
+  }
+]

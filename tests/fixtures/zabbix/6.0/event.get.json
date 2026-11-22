@@ -1,0 +1,65 @@
+[
+  {
+    "eventid": "9001",
+    "objectid": "20001",
+    "name": "Interface Gi0/1: Link down",
+    "severity": "4",
+    "clock": "1763800000",
+    "r_eventid": "0",
+    "opdata": "",
+    "hosts": [
+      {
+        "hostid": "10501",
+        "host": "core-sw-01.example.test",
+        "name": "Core Switch 01"
+      }
+    ],
+    "relatedObject": {
+      "triggerid": "20001",
+      "description": "Interface {#IFNAME}: Link down",
+      "priority": "4"
+    }
+  },
+  {
+    "eventid": "9002",
+    "objectid": "20002",
+    "name": "High CPU utilization",
+    "severity": "2",
+    "clock": "1763803600",
+    "r_eventid": "0",
+    "opdata": "",
+    "hosts": [
+      {
+        "hostid": "10502",
+        "host": "app-01.example.test",
+        "name": "App Server 01"
+      }
+    ],
+    "relatedObject": {
+      "triggerid": "20002",
+      "description": "High CPU utilization (over {$CPU.UTIL.CRIT}% for 5m)",
+      "priority": "2"
+    }
+  },
+  {
+    "eventid": "9003",
+    "objectid": "20003",
+    "name": "Disk almost full",
+    "severity": "5",
+    "clock": "1763807200",
+    "r_eventid": "0",
+    "opdata": "",
+    "hosts": [
+      {
+        "hostid": "10504",
+        "host": "db-01.example.test",
+        "name": "DB Server 01"
+      }
+    ],
+    "relatedObject": {
+      "triggerid": "20003",
+      "description": "{#FSNAME}: Disk almost full",
+      "priority": "5"
+    }
+  }
+]
