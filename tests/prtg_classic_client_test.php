@@ -202,6 +202,19 @@ check('transport throw: PrtgException', $e instanceof PrtgException && !($e inst
 check('transport throw: no SECRETHASH / passhash=', $e !== null && !str_contains($e->getMessage(), 'SECRETHASH') && !str_contains($e->getMessage(), 'passhash='), $e ? $e->getMessage() : 'none');
 check('transport throw: no previous', $e !== null && $e->getPrevious() === null);
 
+// --- message passes through raw (sanitising is the parser's job)
+$rawMsg = '<div>a &amp;lt;b&amp;gt; value < 5 and > 3</div>';
+$log = [];
+$c = new ClassicClient(PRTG_URL, 'k', '', '', prtg_fake($log, ['content=sensors' => [200, json_encode(['sensors' => [['objid' => 1, 'message' => $rawMsg]]])]]));
+check('sensor message passes through unchanged', $c->sensor('1')['message'] === $rawMsg, (string) $c->sensor('1')['message']);
+
+// --- key header injection
+$log = [];
+$c = new ClassicClient(PRTG_URL, "k-1
+X-Evil: 1", '', '', prtg_fake($log));
+$e = prtg_throws(fn () => $c->devices());
+check('key with CR/LF rejected, no request', $e instanceof PrtgException && $log === [] && !str_contains($e->getMessage(), 'X-Evil'));
+
 // --- positive redaction over a variety of failures
 $secrets = ['k-123', 'S3cretPw', '1234567890'];
 $cases = [

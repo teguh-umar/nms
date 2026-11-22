@@ -9,6 +9,9 @@ namespace GlpiPlugin\Nms\Driver\Prtg;
  * priority over query credentials), so it never appears in a URL. Without a key, username + password are traded
  * once per instance for a passhash (getpasshash.htm), then sent as username=/passhash= query parameters.
  *
+ * Login mode must send the password in the getpasshash.htm query string (PRTG requires it); that URL is redacted
+ * in every message. The sensor message is returned raw: the parser sanitises it.
+ *
  * Every API name the manual might change lives in the constants below.
  *
  * The transport is injected: callable(string $url, array<string,string> $headers): array{status: int, body: string}.
@@ -116,7 +119,6 @@ final class ClassicClient implements PrtgClient
     private static function sensorRow(array $r): array
     {
         $raw  = $r['lastcheck_raw'] ?? null;
-        $text = html_entity_decode(strip_tags((string) ($r['message'] ?? '')), ENT_QUOTES);
         return [
             'id'         => (string) ($r['objid'] ?? ''),
             'name'       => (string) ($r['sensor'] ?? ''),
@@ -125,7 +127,7 @@ final class ClassicClient implements PrtgClient
             'group'      => (string) ($r['group'] ?? ''),
             'status_raw' => (int) ($r['status_raw'] ?? 0),
             'status'     => (string) ($r['status'] ?? ''),
-            'message'    => trim($text),
+            'message'    => trim((string) ($r['message'] ?? '')),
             'type'       => (string) ($r['type'] ?? ''),
             'lastcheck'  => is_numeric($raw) ? (float) $raw : null,
         ];
@@ -165,6 +167,10 @@ final class ClassicClient implements PrtgClient
     {
         $headers = [];
         if ($this->authMode() === 'key') {
+            if (preg_match('/[
+]/', $this->apiKey)) {
+                throw new PrtgException('PRTG API key contains invalid characters');
+            }
             $headers['Authorization'] = 'Bearer ' . $this->apiKey;
         } else {
             $params[] = ['username', $this->username];
