@@ -78,7 +78,8 @@ final class DbCoverageSource
             // query would read every custom asset definition's rows.
             $where = $itemtype::getSystemSQLCriteria() + getEntitiesRestrictCriteria($table, '', '', $item->maybeRecursive());
             if ($entities !== null) {
-                $where[$table . '.entities_id'] = $entities === [] ? [-1] : $entities;
+                // Its own AND group: the user's entity rights may use the same key and must stay.
+                $where[] = [$table . '.entities_id' => $entities === [] ? [-1] : $entities];
             }
             if ($item->maybeDeleted()) {
                 $where[$table . '.is_deleted'] = 0;

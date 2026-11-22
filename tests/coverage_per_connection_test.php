@@ -39,8 +39,12 @@ $strip = static fn (array $lists): array => array_map(static fn (array $rows): a
 check('equivalence: kpi', $kpi === $old_kpi);
 check('equivalence: lists', $strip($new['lists']) === $strip($old['lists']));
 
-// Overlap: one asset in entity 82 under OpManager root + Zabbix [81, 82]: listed once.
-check('overlap: asset counted once in All connections', count(array_filter($r['lists']['not_monitored'], static fn ($a) => $a['items_id'] === 20)) === 1 && $r['kpi']['assets'] === 2);
+// Overlap: an asset linked by devices of two connections is counted once.
+$ov = Report::build([$dev(11, 1, 'a', '192.0.2.1', 'matched', 'Computer', 20, 'name'), $dev(12, 2, 'a', '192.0.2.1', 'matched', 'Computer', 20, 'name')], [$asset('Computer', 20, 'a', ['192.0.2.1'], 82)], $opt);
+check('overlap: asset linked from two connections counted once', $ov['kpi']['assets'] === 1 && $ov['kpi']['monitored'] === 1 && $ov['kpi']['not_monitored'] === 0);
+$page = (string) file_get_contents(OPM_ROOT . '/front/coverage.php');
+$all  = substr($page, strpos($page, '} else {'), strpos($page, '$report = Report::build') - strpos($page, '} else {'));
+check('overlap: All connections runs one asset query, no scope, no union', substr_count($all, '->assets(') === 1 && !str_contains($all, 'EntityScope') && !str_contains($all, 'forConnection') && (bool) preg_match('/->assets\(Config::assetItemtypes\(\), Config::coverageStatesOf\(\$active\)\);/', $all));
 
 $conns = [
     1 => ['name' => 'OpManager PGN', 'brand' => 'opmanager', 'scope' => null],
