@@ -239,7 +239,7 @@ final class Cron extends \CommonGLPI
                 $sender = new Sender(new DbOutboxStore((int) $conn->id), $driver, $cfg['outbound_max_attempts']);
                 $lock   = new DbSyncLock(DbSyncLock::outboxLockName((int) $conn->id));
                 if (!$lock->acquire(0)) {
-                    $task->log('conn ' . (int) $conn->id . ': a technician save is sending to OpManager; skipped this run');
+                    $task->log('conn ' . (int) $conn->id . ': a technician save is sending to the NMS; skipped this run');
                     continue;
                 }
                 try {

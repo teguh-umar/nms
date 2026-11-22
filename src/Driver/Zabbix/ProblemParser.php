@@ -84,7 +84,7 @@ final class ProblemParser
 
         return [
             'alarm_key'      => $eventId,
-            'entity_key'     => $hostId,
+            'entity_key'     => $eventId,
             'device_name'    => $hostName,
             'display_name'   => $display,
             'ip_address'     => HostParser::ipAddress($detail),

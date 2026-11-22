@@ -29,7 +29,7 @@ final class View
             foreach ($per as $id => $n) {
                 $parts[] = ($connections[$id]['name'] ?? '#' . $id) . ' ' . $n;
             }
-            $dev_hint = implode(' · ', $parts);
+            $dev_hint .= ' — ' . implode(' · ', $parts);
         }
         $html = '<div class="container-fluid">';
 

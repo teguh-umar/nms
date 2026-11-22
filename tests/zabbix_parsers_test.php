@@ -65,7 +65,7 @@ foreach (['6.0', '7.0', '7.4'] as $ver) {
     check($v . 'alarm count', count($alarms) === 3);
     check($v . 'alarm row keys', array_keys($alarms[0]) === $alarmKeys);
     $p = $ab['9001'];
-    check($v . 'entity/code', $p['entity_key'] === '10501' && $p['alarm_code'] === '20001');
+    check($v . 'entity/code', $p['entity_key'] === '9001' && $p['alarm_code'] === '20001');
     check($v . 'device fields', $p['device_name'] === 'core-sw-01.example.test' && $p['display_name'] === 'Core Switch 01'
         && $p['ip_address'] === '192.0.2.10' && $p['category'] === 'Datacenter A');
     check($v . 'High -> 1 / High', $p['severity'] === 1 && $p['severity_label'] === 'High');
@@ -77,7 +77,7 @@ foreach (['6.0', '7.0', '7.4'] as $ver) {
     check($v . 'Disaster -> 1', $ab['9003']['severity'] === 1 && $ab['9003']['severity_label'] === 'Disaster');
 
     $e = ProblemParser::fromEvent($events['9001'], $details);
-    check($v . 'fromEvent open', $e !== null && $e['severity'] === 1 && $e['alarm_key'] === '9001' && $e['ip_address'] === '192.0.2.10');
+    check($v . 'fromEvent open', $e !== null && $e['severity'] === 1 && $e['alarm_key'] === '9001' && $e['entity_key'] === '9001' && $e['ip_address'] === '192.0.2.10');
     $rec = $events['9001'];
     $rec['r_eventid'] = '9100';
     $e = ProblemParser::fromEvent($rec, $details);

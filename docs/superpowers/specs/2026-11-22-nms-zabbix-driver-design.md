@@ -160,7 +160,7 @@ fewest calls). Row mapping, same shape as `AlarmParser::parse()`:
 | row field | Zabbix source |
 |---|---|
 | `alarm_key` | `eventid` |
-| `entity_key` | `hostid` |
+| `entity_key` | `eventid` (erratum 2026-11-22: the outbox writes to entity_key, so it must be the event id) |
 | `device_name` / `display_name` | host `host` / `name` |
 | `ip_address` | host main interface ip, when fetched cheaply; else '' |
 | `category` | first host group name |

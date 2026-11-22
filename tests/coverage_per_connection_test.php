@@ -68,6 +68,7 @@ $report = $r;
 $report['lists']['not_in_glpi'] = [$devices[1]];
 $html = View::render($report, $state, '/x/coverage.php', $conns);
 check('html cell escaped', str_contains($html, '&lt;b&gt;OpM&lt;/b&gt; &middot; opmanager') || str_contains($html, '&lt;b&gt;OpM&lt;/b&gt; · opmanager'));
+check('hint keeps the matched line first, per-connection counts after', (bool) preg_match('/\d+ matched to a GLPI asset — .*OpM&lt;\/b&gt; 3 · Zabbix X 1/u', $html));
 check('hint lists count per connection', str_contains($html, '&lt;b&gt;OpM&lt;/b&gt; 3 · Zabbix X 1'));
 check('select with All connections and picked option', str_contains($html, 'name="connection"') && str_contains($html, 'All connections') && (bool) preg_match('/<option value="2" selected>Zabbix X/', $html));
 check('links keep connection', substr_count($html, 'connection=2') >= 6);
