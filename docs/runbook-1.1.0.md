@@ -12,7 +12,7 @@ Paths assume GLPI in `/data/www/glpi`, run as `nginx`. `<glpi>` is the GLPI base
 
 ## 1. Upgrade from 1.0.0
 
-Before running the upgrade command, do the pre-check at the start of §2 (OpManager connection on Root entity with Child entities included).
+Before running the upgrade command, do the pre-check at the start of section 2 (OpManager connection on Root entity with Child entities included).
 
 ```bash
 cd /data/www/glpi/plugins && sudo rm -rf /data/www/glpi/plugins/nms && sudo -u nginx unzip -q /tmp/nmsv1.1.0-rc2.zip && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:install nms --force && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:activate nms && sudo -u nginx php /data/www/glpi/bin/console glpi:cache:clear && sudo systemctl reload php-fpm && sudo -u nginx php /data/www/glpi/plugins/nms/tools/selfcheck.php
