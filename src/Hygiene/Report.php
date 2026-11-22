@@ -49,26 +49,37 @@ final class Report
         };
     }
 
-    public static function title(string $flow, string $now): string
+    public static function title(string $flow, string $now, string $brand = 'opmanager'): string
     {
         $date = substr($now, 0, 10);
+        if ($brand === 'zabbix') {
+            return $flow === 'glpi'
+                ? '[ZBX-HYGIENE] Monitored in Zabbix, not in GLPI - ' . $date
+                : '[ZBX-HYGIENE] Unmanaged in Zabbix: remove or check - ' . $date;
+        }
         return $flow === 'glpi'
             ? '[OPM-HYGIENE] Monitored in OpManager, not in GLPI - ' . $date
             : '[OPM-HYGIENE] Unmanaged in OpManager: remove or check - ' . $date;
     }
 
     /** @param list<array<string, string>> $devices */
-    public static function body(string $flow, array $devices, string $list_url): string
+    public static function body(string $flow, array $devices, string $list_url, string $brand = 'opmanager'): string
     {
-        $intro = $flow === 'glpi'
+        $zbx = $brand === 'zabbix';
+        $intro = $zbx
+            ? ($flow === 'glpi'
+                ? 'These hosts are monitored by Zabbix but are not registered as assets in GLPI. GLPI is the asset source of truth: register them, or pair them manually on their device page.'
+                : 'These hosts are disabled or not monitored in Zabbix. Agreed rule: a host that no longer exists must be deleted from Zabbix. Hosts proven alive are not listed.')
+            : ($flow === 'glpi'
             ? 'These devices are monitored by OpManager but are not registered as assets in GLPI. GLPI is the asset source of truth: register them, or pair them manually on their OpManager device page.'
-            : 'These devices are unmanaged or not monitored in OpManager. Agreed rule: a device that no longer exists must be deleted from OpManager. Devices proven alive are not listed.';
+            : 'These devices are unmanaged or not monitored in OpManager. Agreed rule: a device that no longer exists must be deleted from OpManager. Devices proven alive are not listed.');
         $html = '<p>' . self::e($intro) . '</p>';
         foreach (self::SECTIONS[$flow] ?? [] as $state => $heading) {
             $rows = array_values(array_filter($devices, static fn (array $d): bool => $d['state'] === $state));
             if ($rows === []) {
                 continue;
             }
+            $heading = $zbx ? str_replace('OpManager', 'Zabbix', $heading) : $heading;
             $html .= '<h3>' . self::e($heading) . ' (' . count($rows) . ')</h3>';
             // One ticket per flow for the server and the network teams: each sees its own part.
             foreach (self::DOMAINS as $domain => $label) {
@@ -78,8 +89,8 @@ final class Report
                 }
             }
         }
-        $html .= '<p><a href="' . self::e($list_url) . '">' . self::e('Open the OpManager device list') . '</a></p>';
-        $html .= '<p>' . self::e('Exclude a device from these tickets on its OpManager device page (reason required).') . '</p>';
+        $html .= '<p><a href="' . self::e($list_url) . '">' . self::e($zbx ? 'Open the Zabbix device list' : 'Open the OpManager device list') . '</a></p>';
+        $html .= '<p>' . self::e($zbx ? 'Exclude a device from these tickets on its device page in GLPI (reason required).' : 'Exclude a device from these tickets on its OpManager device page (reason required).') . '</p>';
         return $html;
     }
 

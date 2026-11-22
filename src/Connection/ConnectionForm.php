@@ -195,11 +195,30 @@ final class ConnectionForm
         ];
 
         $errors = [];
-        if (!empty($post[self::SETTINGS_MARKER])) {
-            $checked  = Config::sanitizeConnectionSettings($post);
-            $errors   = $checked['errors'];
-            $settings = Settings::fromJson($conn->settings)->with($checked['values']);
+        if ($id === 0) {
+            // A new connection starts from its brand's defaults (Settings::forNewConnection).
+            $settings = Settings::forNewConnection($brand, (int) $fields['entities_id']);
             $fields['settings'] = $settings->toJson();
+        } else {
+            $settings = Settings::fromJson($conn->settings);
+        }
+        if (!empty($post[self::SETTINGS_MARKER])) {
+            $checked = Config::sanitizeConnectionSettings($post);
+            $errors  = $checked['errors'];
+            $values  = $checked['values'];
+            if ($id === 0) {
+                // The new form shows OpManager defaults: a value left at them yields to the brand default.
+                foreach ($values as $k => $v) {
+                    if ($v === Settings::DEFAULTS[$k] && $settings->get($k) !== $v) {
+                        unset($values[$k]);
+                    }
+                }
+            }
+            // The Zabbix block is posted only for a Zabbix connection.
+            if ($brand === 'zabbix' && isset($post['zabbix_min_severity'])) {
+                $values += Config::sanitizeZabbix($post);
+            }
+            $fields['settings'] = $settings->with($values)->toJson();
         }
 
         $newId = $this->store->save($fields);
@@ -283,6 +302,10 @@ final class ConnectionForm
         self::secretRow('password', __('Password', 'nms'), $conn->password !== '', $disabled);
         self::checkRow('verify_tls', __('Verify the TLS certificate', 'nms'), $conn->verify_tls === 1, $disabled);
 
+        if ($conn->brand === 'zabbix') {
+            self::zabbixBlock(Settings::fromJson($conn->settings), $disabled);
+        }
+
         echo '<div class="mb-2"><label class="form-label">' . __s('Entity that owns this connection', 'nms') . '</label>';
         \Entity::dropdown(['name' => 'entities_id', 'value' => $conn->entities_id, 'readonly' => !$canedit]);
         echo '</div>';
@@ -301,6 +324,25 @@ final class ConnectionForm
                 echo '<div class="alert alert-warning mt-1">' . __s('Last error', 'nms') . ': ' . htmlescape($conn->last_error) . '</div>';
             }
         }
+    }
+
+    /** Zabbix filters (brand zabbix only). The API token goes in the API key field above. */
+    private static function zabbixBlock(Settings $s, string $disabled): void
+    {
+        echo '<fieldset class="border rounded p-2 mb-2"><legend class="fs-6">' . __s('Zabbix filters', 'nms') . '</legend>';
+        echo '<div class="mb-2"><label class="form-label" for="nms-zabbix-host-groups">' . __s('Host groups (one per line)', 'nms') . '</label>'
+            . '<textarea class="form-control" rows="4" id="nms-zabbix-host-groups" name="zabbix_host_groups"' . $disabled . '>'
+            . htmlescape($s->get('zabbix_host_groups')) . '</textarea>'
+            . '<div class="form-hint">' . __s('Names are matched exactly: nested subgroups are not included, list them too. Empty = every host the API token can read. Names that match no group give an empty sync.', 'nms') . '</div></div>';
+        echo '<div class="mb-2"><label class="form-label" for="nms-zabbix-min-severity">' . __s('Minimum problem severity', 'nms') . '</label>'
+            . '<select class="form-select" id="nms-zabbix-min-severity" name="zabbix_min_severity"' . $disabled . '>';
+        $labels = [0 => 'Not classified', 1 => 'Information', 2 => 'Warning', 3 => 'Average', 4 => 'High', 5 => 'Disaster'];
+        foreach ($labels as $n => $label) {
+            echo '<option value="' . $n . '"' . ($s->get('zabbix_min_severity') === (string) $n ? ' selected' : '') . '>' . $n . ' - ' . htmlescape($label) . '</option>';
+        }
+        echo '</select></div>';
+        self::checkRow('zabbix_include_suppressed', __('Include suppressed problems (maintenance)', 'nms'), $s->get('zabbix_include_suppressed') === '1', $disabled);
+        echo '</fieldset>';
     }
 
     private static function tabMatching(Settings $s, bool $canedit): void

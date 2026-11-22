@@ -150,8 +150,8 @@ final class HygieneRun
                 ? [[], array_values(array_unique(array_merge(array_map('intval', $this->cfg['glpi_groups']), [(int) $this->cfg['nms_group']])))]
                 : [[$this->cfg['nms_group']], []];
             $tickets_id = $this->gateway->create(
-                Report::title($flow, $now),
-                Report::body($flow, $devices, (string) $this->cfg['list_url']),
+                Report::title($flow, $now, (string) ($this->cfg['brand'] ?? 'opmanager')),
+                Report::body($flow, $devices, (string) $this->cfg['list_url'], (string) ($this->cfg['brand'] ?? 'opmanager')),
                 (int) $this->cfg['template_id'],
                 $assign,
                 $observer,

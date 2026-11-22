@@ -61,6 +61,24 @@ final class Settings
     /** @var array<string, string> */
     private array $values;
 
+    /**
+     * Settings of a connection being created. OpManager keeps DEFAULTS unchanged; Zabbix
+     * overrides the ticket patterns and source, the entity and the "not monitored" values.
+     */
+    public static function forNewConnection(string $brand, int $entities_id): self
+    {
+        if ($brand !== 'zabbix') {
+            return new self(self::DEFAULTS);
+        }
+        return new self([
+            'ticket_title_pattern'             => '[ZBX-{alarm_key}] {severity}: {message} - {device}',
+            'ticket_content_pattern'           => str_replace('OpManager alarm', 'Zabbix problem', self::DEFAULTS['ticket_content_pattern']),
+            'ticket_source'                    => 'rules',
+            'ticket_entity_default'            => (string) $entities_id,
+            'hygiene_unmanaged_availabilities' => '["Disabled"]',
+        ] + self::DEFAULTS);
+    }
+
     private function __construct(array $values)
     {
         $this->values = $values;

@@ -292,6 +292,26 @@ final class Config
     }
 
     /**
+     * Zabbix filters from the connection form. Host groups: one name per line, trimmed,
+     * empty lines dropped, stored newline-joined; min severity an integer clamped to 0..5;
+     * include-suppressed only '0' or '1'.
+     *
+     * @return array<string, string>
+     */
+    public static function sanitizeZabbix(array $post): array
+    {
+        $groups = array_values(array_filter(
+            array_map('trim', preg_split('/\R/', (string) ($post['zabbix_host_groups'] ?? '')) ?: []),
+            static fn (string $g): bool => $g !== ''
+        ));
+        return [
+            'zabbix_host_groups'        => implode("\n", $groups),
+            'zabbix_min_severity'       => (string) max(0, min(5, (int) ($post['zabbix_min_severity'] ?? 2))),
+            'zabbix_include_suppressed' => !empty($post['zabbix_include_suppressed']) ? '1' : '0',
+        ];
+    }
+
+    /**
      * Validate the per-connection settings posted by the connection form, with the 1.3.2
      * rules. Values are keyed by Settings::DEFAULTS keys.
      *

@@ -193,6 +193,7 @@ final class Cron extends \CommonGLPI
                         'service_user'   => $tcf['service_user'],
                         'entity_default' => $tcf['entity_default'],
                         'list_url'       => Device::getSearchURL(true),
+                        'brand'          => $conn->brand,
                         // Final review #3: no ticket run on stale NMS data. last_device_sync
                         // moves only on a successful device sync of this connection.
                         'device_data_fresh' => self::deviceDataFresh($conn->last_device_sync, $now, (int) Config::get('stale_warning_minutes')),

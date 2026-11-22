@@ -293,7 +293,9 @@ check('supported brands includes opmanager', in_array('opmanager', $brands, true
 // ---- Review R2: every per-connection setting is edited on the connection form ----
 $html = $form->renderForm(1);
 $names = [];
-preg_match_all('/name="([^"]+)"/', $html, $m);
+// The Zabbix block renders for a Zabbix connection only: take its fields from there.
+check('opmanager form has no Zabbix block', !str_contains($html, 'zabbix_host_groups'));
+preg_match_all('/name="([^"]+)"/', $html . $form->renderForm(2), $m);
 foreach ($m[1] as $n) {
     $names[rtrim($n, '[]')] = true;
 }
@@ -302,9 +304,7 @@ $dropdowns = ['match_mode', 'coverage_states', 'ticket_template', 'service_user'
     'hygiene_glpi_groups', 'hygiene_glpi_users', 'hygiene_itil_category', 'hygiene_nms_group', 'hygiene_ticket_template'];
 $src = (string) file_get_contents(OPM_ROOT . '/src/Connection/ConnectionForm.php');
 // Run state written by the cron, not by a person.
-$runState = ['last_hygiene_run', 'last_hygiene_ticket_run', 'last_hygiene_error',
-    // TODO(Task 5): remove these three once the connection form renders the Zabbix settings.
-    'zabbix_host_groups', 'zabbix_min_severity', 'zabbix_include_suppressed'];
+$runState = ['last_hygiene_run', 'last_hygiene_ticket_run', 'last_hygiene_error'];
 $missing = [];
 foreach (array_keys(Settings::DEFAULTS) as $key) {
     if (in_array($key, $runState, true)) {
@@ -375,5 +375,26 @@ $noTls = $post;
 unset($noTls['verify_tls']);
 $form->handleSave(1, $noTls);
 check('unchecked TLS box stores 0', $store->get(1)->verify_tls === 0);
+
+// ---- Zabbix connection: new-connection defaults and filter save ----
+$r = $form->handleSave(0, ['_nms_settings' => 1, 'name' => 'zbx.example.test', 'brand' => 'zabbix', 'url' => 'https://192.0.2.50/zabbix', 'entities_id' => 3,
+    'match_mode' => 'hybrid_name', 'ticket_source' => 'webhook', 'ticket_entity_default' => '0',
+    'ticket_title_pattern' => Settings::DEFAULTS['ticket_title_pattern'], 'ticket_content_pattern' => Settings::DEFAULTS['ticket_content_pattern'],
+    'ticket_severities' => ['1'], 'service_user' => '0', 'hygiene_frequency_days' => '7', 'hygiene_agent_stale_days' => '7', 'hygiene_mist_stale_days' => '7',
+    'hygiene_probe_timeout_ms' => '1000', 'hygiene_unmanaged_availabilities' => "UnManaged\nDevice Not Monitored.", 'hygiene_probe_tcp_ports' => '22',
+    'zabbix_host_groups' => " Linux \n\n Net ", 'zabbix_min_severity' => '4', 'zabbix_include_suppressed' => '1']);
+$zs = Settings::fromJson($store->get($r['id'])->settings);
+check('new zabbix connection gets Zabbix title pattern', $zs->get('ticket_title_pattern') === '[ZBX-{alarm_key}] {severity}: {message} - {device}');
+check('new zabbix connection gets entity and unmanaged default', $zs->get('ticket_entity_default') === '3' && $zs->get('hygiene_unmanaged_availabilities') === '["Disabled"]');
+check('zabbix filters saved validated', $zs->get('zabbix_host_groups') === "Linux\nNet" && $zs->get('zabbix_min_severity') === '4' && $zs->get('zabbix_include_suppressed') === '1');
+$form->handleSave($r['id'], ['_nms_settings' => 1, 'brand' => 'zabbix', 'name' => 'zbx.example.test', 'match_mode' => 'hybrid_name', 'zabbix_min_severity' => '99', 'zabbix_host_groups' => "Linux
+Net",
+    'hygiene_frequency_days' => '7', 'hygiene_agent_stale_days' => '7', 'hygiene_mist_stale_days' => '7', 'hygiene_probe_timeout_ms' => '1000',
+    'hygiene_unmanaged_availabilities' => 'Disabled', 'hygiene_probe_tcp_ports' => '22']);
+$zs = Settings::fromJson($store->get($r['id'])->settings);
+check('edit clamps severity, unticked suppressed is 0', $zs->get('zabbix_min_severity') === '5' && $zs->get('zabbix_include_suppressed') === '0');
+$o2 = $form->handleSave(0, ['name' => 'o2', 'brand' => 'opmanager']);
+check('new opmanager connection keeps DEFAULTS', Settings::fromJson($store->get($o2['id'])->settings)->toJson() === Settings::fromJson('{}')->toJson());
+check('zabbix form shows saved groups', str_contains($form->renderForm($r['id']), "Linux\nNet</textarea>"));
 
 done();
