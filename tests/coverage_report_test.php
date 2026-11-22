@@ -30,7 +30,7 @@ $opt = ['ranges' => [['begin' => ip2long('10.20.14.1'), 'end' => ip2long('10.20.
         'last_device_sync' => '2026-10-02 11:30:00', 'stale_minutes' => 90];
 
 $r = Report::build($devices, $assets, $opt);
-check('kpis', $r['kpi'] === ['devices' => 5, 'matched' => 2, 'not_in_glpi' => 2, 'ambiguous' => 1, 'assets' => 4, 'monitored' => 2, 'not_monitored' => 2, 'coverage_pct' => 50]);
+check('kpis', array_diff_key($r['kpi'], ['by_connection' => 1]) === ['devices' => 5, 'matched' => 2, 'not_in_glpi' => 2, 'ambiguous' => 1, 'assets' => 4, 'monitored' => 2, 'not_monitored' => 2, 'coverage_pct' => 50]);
 check('not in GLPI = unmatched devices', array_column($r['lists']['not_in_glpi'], 'id') === [3, 5]);
 check('not monitored = assets without a matched device', array_column($r['lists']['not_monitored'], 'items_id') === [30, 40]);
 check('ambiguous = review devices', array_column($r['lists']['ambiguous'], 'id') === [4]);

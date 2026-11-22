@@ -39,6 +39,7 @@ final class DbCoverageSource
         foreach ($DB->request(['FROM' => Device::getTable(), 'WHERE' => ['connections_id' => $this->connections_ids], 'ORDER' => 'display_name']) as $r) {
             $out[] = [
                 'id'           => (int) $r['id'],
+                'connections_id' => (int) $r['connections_id'],
                 'device_key'   => (string) $r['device_key'],
                 'name'         => (string) $r['name'],
                 'display_name' => (string) $r['display_name'],
@@ -58,9 +59,10 @@ final class DbCoverageSource
     /**
      * @param list<string> $itemtypes
      * @param list<int>    $states    [] = every state
+     * @param list<int>|null $entities only assets of these entities (a connection's scope); null = no extra filter
      * @return list<array<string, mixed>>
      */
-    public function assets(array $itemtypes, array $states): array
+    public function assets(array $itemtypes, array $states, ?array $entities = null): array
     {
         global $DB;
 
@@ -75,6 +77,9 @@ final class DbCoverageSource
             // find()/request() do not add getSystemSQLCriteria(): without it a custom asset
             // query would read every custom asset definition's rows.
             $where = $itemtype::getSystemSQLCriteria() + getEntitiesRestrictCriteria($table, '', '', $item->maybeRecursive());
+            if ($entities !== null) {
+                $where[$table . '.entities_id'] = $entities === [] ? [-1] : $entities;
+            }
             if ($item->maybeDeleted()) {
                 $where[$table . '.is_deleted'] = 0;
             }
@@ -114,6 +119,7 @@ final class DbCoverageSource
                     'items_id' => $id,
                     'name'     => (string) $r['name'],
                     'entity'   => $this->name('glpi_entities', (int) $r['entities_id']),
+                    'entities_id' => (int) $r['entities_id'],
                     'state'    => isset($r['states_id']) ? $this->name('glpi_states', (int) $r['states_id']) : '',
                     'ips'      => array_values(array_unique($ips[$id])),
                 ];

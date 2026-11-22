@@ -9,7 +9,7 @@ final class Report
      * @param list<array<string, mixed>> $devices
      * @param list<array<string, mixed>> $assets
      * @param array{ranges: list<array{begin: int, end: int}>, production_only: bool, category: string, last_device_sync: string, stale_minutes: int} $opt
-     * @return array{kpi: array<string, int>, lists: array<string, list<array<string, mixed>>>, categories: list<string>}
+     * @return array{kpi: array<string, mixed>, lists: array<string, list<array<string, mixed>>>, categories: list<string>}
      */
     public static function build(array $devices, array $assets, array $opt): array
     {
@@ -60,6 +60,12 @@ final class Report
         $limit = $opt['last_device_sync'] === '' ? null : strtotime($opt['last_device_sync']) - 60 * $opt['stale_minutes'];
         $stale = $limit === null ? [] : array_values(array_filter($devices, static fn ($d) => $d['last_seen'] !== '' && strtotime((string) $d['last_seen']) < $limit));
 
+        $by_connection = [];
+        foreach ($devices as $d) {
+            $c = (int) ($d['connections_id'] ?? 0);
+            $by_connection[$c] = ($by_connection[$c] ?? 0) + 1;
+        }
+        ksort($by_connection);
         $in_scope  = count($assets);
         $monitored = $in_scope - count($not_monitored);
         return [
@@ -72,6 +78,7 @@ final class Report
                 'monitored'     => $monitored,
                 'not_monitored' => count($not_monitored),
                 'coverage_pct'  => $in_scope === 0 ? 0 : (int) round(100 * $monitored / $in_scope),
+                'by_connection' => $by_connection,
             ],
             'lists' => [
                 'not_in_glpi'   => $by_state('unmatched'),

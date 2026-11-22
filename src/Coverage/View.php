@@ -15,17 +15,28 @@ final class View
 
     /**
      * @param array{kpi: array<string, int>, lists: array<string, list<array<string, mixed>>>, categories: list<string>} $report
-     * @param array{list: string, page: int, production_only: bool, category: string} $state
+     * @param array{list: string, page: int, production_only: bool, category: string, connection?: int} $state
+     * @param array<int, array{name: string, brand: string, scope: ?list<int>}> $connections active connections
      */
-    public static function render(array $report, array $state, string $base_url): string
+    public static function render(array $report, array $state, string $base_url, array $connections = []): string
     {
-        $k    = $report['kpi'];
+        $k        = $report['kpi'];
+        $dev_hint = sprintf(__('%d matched to a GLPI asset', 'nms'), $k['matched']);
+        $per      = array_filter((array) ($k['by_connection'] ?? []), static fn ($n) => $n > 0);
+        if (count($per) > 1) {
+            ksort($per);
+            $parts = [];
+            foreach ($per as $id => $n) {
+                $parts[] = ($connections[$id]['name'] ?? '#' . $id) . ' ' . $n;
+            }
+            $dev_hint = implode(' · ', $parts);
+        }
         $html = '<div class="container-fluid">';
 
         $cards = [
             [__('Coverage', 'nms'), $k['coverage_pct'] . '%', sprintf(__('%1$d of %2$d GLPI assets monitored', 'nms'), $k['monitored'], $k['assets'])],
             [__('GLPI assets in scope', 'nms'), (string) $k['assets'], __('selected types, status, with an IP', 'nms')],
-            [__('NMS devices', 'nms'), (string) $k['devices'], sprintf(__('%d matched to a GLPI asset', 'nms'), $k['matched'])],
+            [__('NMS devices', 'nms'), (string) $k['devices'], $dev_hint],
             [__('Not in GLPI', 'nms'), (string) $k['not_in_glpi'], __('monitored but not registered', 'nms')],
             [__('Not monitored', 'nms'), (string) $k['not_monitored'], __('registered but not in any NMS', 'nms')],
             [__('Ambiguous', 'nms'), (string) $k['ambiguous'], __('needs a manual pairing', 'nms')],
@@ -43,6 +54,9 @@ final class View
         // Filters (GET, keeps the current list)
         $html .= '<form method="get" action="' . htmlescape($base_url) . '" class="d-flex flex-wrap align-items-center gap-3 mb-3">'
             . '<input type="hidden" name="list" value="' . htmlescape($state['list']) . '">'
+            . '<select class="form-select w-auto" name="connection"><option value="0">' . htmlescape(__('All connections', 'nms')) . '</option>'
+            . self::connectionOptions($connections, (int) ($state['connection'] ?? 0))
+            . '</select>'
             . '<label class="form-check mb-0"><input class="form-check-input" type="checkbox" name="production_only" value="1"' . ($state['production_only'] ? ' checked' : '') . '>'
             . '<span class="form-check-label">' . htmlescape(__('Production IP ranges only', 'nms')) . '</span></label>'
             . '<select class="form-select w-auto" name="category"><option value="">' . htmlescape(__('All categories', 'nms')) . '</option>';
@@ -73,7 +87,7 @@ final class View
         $html .= '</tr></thead><tbody>';
         foreach (array_slice($rows, ($page - 1) * self::PER_PAGE, self::PER_PAGE) as $row) {
             $html .= '<tr>';
-            foreach (self::cells($state['list'], $row, true) as $cell) {
+            foreach (self::cells($state['list'], $row, true, $connections) as $cell) {
                 $html .= '<td>' . $cell . '</td>';
             }
             $html .= '</tr>';
@@ -102,12 +116,38 @@ final class View
      * @param list<array<string, mixed>> $rows
      * @return array{header: list<string>, rows: list<list<string>>}
      */
-    public static function csvRows(string $list, array $rows): array
+    public static function csvRows(string $list, array $rows, array $connections = []): array
     {
         return [
             'header' => self::columns($list),
-            'rows'   => array_map(static fn (array $r) => self::cells($list, $r, false), $rows),
+            'rows'   => array_map(static fn (array $r) => self::cells($list, $r, false, $connections), $rows),
         ];
+    }
+
+    /**
+     * Pure: the connections that may have monitored an asset of this entity.
+     *
+     * @param array<int, array{name: string, brand: string, scope: ?list<int>}> $connections
+     */
+    public static function expectedFrom(int $entities_id, array $connections): string
+    {
+        $names = [];
+        foreach ($connections as $c) {
+            if ($c['scope'] === null || in_array($entities_id, $c['scope'], true)) {
+                $names[] = $c['name'];
+            }
+        }
+        return $names === [] ? __('none', 'nms') : implode(', ', $names);
+    }
+
+    /** @param array<int, array{name: string, brand: string, scope: ?list<int>}> $connections */
+    private static function connectionOptions(array $connections, int $picked): string
+    {
+        $out = '';
+        foreach ($connections as $id => $c) {
+            $out .= '<option value="' . (int) $id . '"' . ($id === $picked ? ' selected' : '') . '>' . htmlescape($c['name']) . '</option>';
+        }
+        return $out;
     }
 
     /** @return array<string, string> */
@@ -126,20 +166,23 @@ final class View
     private static function columns(string $list): array
     {
         return match ($list) {
-            'not_monitored' => [__('GLPI asset', 'nms'), __('Type', 'nms'), __('Entity', 'nms'), __('IP addresses', 'nms'), __('Status', 'nms')],
-            'ambiguous'     => [__('Device', 'nms'), __('IP address', 'nms'), __('Category', 'nms')],
-            'name_differs'  => [__('Device name', 'nms'), __('GLPI asset name', 'nms'), __('IP address', 'nms')],
-            'stale'         => [__('Device', 'nms'), __('IP address', 'nms'), __('Last seen', 'nms')],
-            default         => [__('Device', 'nms'), __('IP address', 'nms'), __('Category', 'nms'), __('Type', 'nms'), __('Last seen', 'nms')],
+            'not_monitored' => [__('GLPI asset', 'nms'), __('Type', 'nms'), __('Entity', 'nms'), __('IP addresses', 'nms'), __('Status', 'nms'), __('Expected from', 'nms')],
+            'ambiguous'     => [__('Device', 'nms'), __('IP address', 'nms'), __('Category', 'nms'), __('Connection', 'nms')],
+            'name_differs'  => [__('Device name', 'nms'), __('GLPI asset name', 'nms'), __('IP address', 'nms'), __('Connection', 'nms')],
+            'stale'         => [__('Device', 'nms'), __('IP address', 'nms'), __('Last seen', 'nms'), __('Connection', 'nms')],
+            default         => [__('Device', 'nms'), __('IP address', 'nms'), __('Category', 'nms'), __('Type', 'nms'), __('Last seen', 'nms'), __('Connection', 'nms')],
         };
     }
 
     /**
      * @param array<string, mixed> $r
+     * @param array<int, array{name: string, brand: string, scope: ?list<int>}> $connections
      * @return list<string> HTML-escaped cells when $html, plain text otherwise
      */
-    private static function cells(string $list, array $r, bool $html): array
+    private static function cells(string $list, array $r, bool $html, array $connections = []): array
     {
+        $c      = $connections[(int) ($r['connections_id'] ?? 0)] ?? null;
+        $conn   = $c === null ? '' : $c['name'] . " \u{00B7} " . $c['brand'];
         $esc    = static fn ($v) => $html ? htmlescape((string) $v) : (string) $v;
         $device = (string) (($r['display_name'] ?? '') !== '' ? $r['display_name'] : ($r['name'] ?? ''));
         $dev    = $html ? self::link('GlpiPlugin\\Nms\\Device', (int) ($r['id'] ?? 0), $device) : $device;
@@ -150,11 +193,12 @@ final class View
                 $esc($r['entity']),
                 $esc(implode(', ', (array) $r['ips'])),
                 $esc($r['state']),
+                $esc(self::expectedFrom((int) ($r['entities_id'] ?? 0), $connections)),
             ],
-            'ambiguous'    => [$dev, $esc($r['ip']), $esc($r['category'])],
-            'name_differs' => [$dev, $esc($r['asset_name'] ?? ''), $esc($r['ip'])],
-            'stale'        => [$dev, $esc($r['ip']), $esc($r['last_seen'])],
-            default        => [$dev, $esc($r['ip']), $esc($r['category']), $esc($r['type']), $esc($r['last_seen'])],
+            'ambiguous'    => [$dev, $esc($r['ip']), $esc($r['category']), $esc($conn)],
+            'name_differs' => [$dev, $esc($r['asset_name'] ?? ''), $esc($r['ip']), $esc($conn)],
+            'stale'        => [$dev, $esc($r['ip']), $esc($r['last_seen']), $esc($conn)],
+            default        => [$dev, $esc($r['ip']), $esc($r['category']), $esc($r['type']), $esc($r['last_seen']), $esc($conn)],
         };
     }
 
@@ -179,6 +223,7 @@ final class View
             'page'            => (int) ($state['page'] ?? 1),
             'production_only' => !empty($state['production_only']) ? 1 : 0,
             'category'        => (string) ($state['category'] ?? ''),
+            'connection'      => (int) ($state['connection'] ?? 0),
         ];
         if (isset($state['export'])) {
             $q['export'] = $state['export'];
