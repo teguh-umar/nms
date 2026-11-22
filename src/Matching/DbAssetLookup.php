@@ -123,7 +123,11 @@ final class DbAssetLookup implements AssetLookup
         return self::ipHits($owners, $this->itemtypes);
     }
 
-    /** Pure. null = every entity. */
+    /**
+     * Pure. null = every entity.
+     *
+     * @param list<int>|null $entities
+     */
     public static function inScope(?array $entities, int $entities_id): bool
     {
         return $entities === null || in_array($entities_id, $entities, true);

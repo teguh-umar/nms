@@ -28,6 +28,31 @@ check('entity outside the scope', DbAssetLookup::inScope([81], 0) === false);
 // Source pins: every connection-driven lookup is scoped; SelfCheck stays unscoped.
 $pin = '/new DbAssetLookup\(Config::assetItemtypes\(\), EntityScope::forConnection\(/';
 check('Cron scopes both lookups', preg_match_all($pin, (string) file_get_contents(OPM_ROOT . '/src/Cron.php')) === 2);
-check('webhook scopes its lookup', preg_match_all($pin, (string) file_get_contents(OPM_ROOT . '/front/webhook.php')) === 1);
+$webhookSrc = (string) file_get_contents(OPM_ROOT . '/front/webhook.php');
+check('webhook scopes its lookup once, from the connection',
+    preg_match_all('/new DbAssetLookup\(Config::assetItemtypes\(\), \$scope\)/', $webhookSrc) === 1
+    && preg_match_all('/\$scope = EntityScope::forConnection\(\$conn\);/', $webhookSrc) === 1);
+
+// The text pin alone passed while the webhook closure used $conn without importing it.
+// Scope check: the variable handed to forConnection() must be defined where the lookup is built.
+$webhook = (string) file_get_contents(OPM_ROOT . '/front/webhook.php');
+$at      = strpos($webhook, 'new DbAssetLookup(');
+$before  = substr($webhook, 0, (int) $at);
+preg_match_all('/function\s*\([^)]*\)\s*use\s*\(([^)]*)\)\s*(?::\s*\??\w+\s*)?\{/', $before, $uses, PREG_OFFSET_CAPTURE);
+$last    = $uses[1] ? end($uses[1]) : null;
+$closureStart = $uses[0] ? end($uses[0])[1] : -1;
+preg_match('/new DbAssetLookup\(Config::assetItemtypes\(\), (\$\w+)\)/', substr($webhook, (int) $at), $m);
+$var = $m[1] ?? '';
+$imported = $last !== null ? array_map('trim', explode(',', $last[0])) : [];
+// Inside a closure the variable must be imported; outside one it must be assigned earlier.
+$inClosure = $last !== null && substr_count(substr($webhook, $closureStart, (int) $at - $closureStart), '}') < substr_count(substr($webhook, $closureStart, (int) $at - $closureStart), '{');
+check('webhook: scope variable is defined where the lookup is built',
+    $var !== '' && ($inClosure ? in_array($var, $imported, true) : strpos($before, $var . ' =') !== false),
+    'var=' . $var . ' imported=' . implode(',', $imported));
+
+// Cron: both lookups sit inside foreach (... as $conn).
+$cron = (string) file_get_contents(OPM_ROOT . '/src/Cron.php');
+check('Cron: both scoped lookups are inside foreach as $conn',
+    preg_match_all('/foreach \(\$store->active\(\) as \$conn\) \{(?:(?!foreach).)*?forConnection\(\$conn\)/s', $cron) === 2);
 
 done();

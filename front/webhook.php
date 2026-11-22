@@ -54,11 +54,12 @@ $cfg['writeback_enabled']= (int) $conn->writeback_enabled;
 $cfg['connections_id']   = (int) $conn->id;
 
 $cid = (int) $conn->id;
+$scope = EntityScope::forConnection($conn);
 $receiver = new Receiver(
     $conn,
     $driver,
     new DbSyncLock(DbSyncLock::lockName($cid)),
-    static function (array $alarm) use ($driver, $cfg, $cid, $settings): array {
+    static function (array $alarm) use ($driver, $cfg, $cid, $settings, $scope): array {
         if ($cfg['tickets_enabled'] === 1 && $cfg['service_user'] <= 0) {
             // Same guard as the AlarmSync cron: a ticket without an author is never created.
             \Toolbox::logInFile('nms', "Webhook: no service user configured in Setup; alarm left to AlarmSync\n");
@@ -68,7 +69,7 @@ $receiver = new Receiver(
             $driver,
             new DbAlarmStore($cid),
             new GlpiTicketGateway($cfg),
-            new AlarmAssetResolver(new DbDeviceIndex($cid), new Matcher(new DbAssetLookup(Config::assetItemtypes(), EntityScope::forConnection($conn))), $settings->get('match_mode')),
+            new AlarmAssetResolver(new DbDeviceIndex($cid), new Matcher(new DbAssetLookup(Config::assetItemtypes(), $scope)), $settings->get('match_mode')),
             new RangeProductionCheck(AddressingRanges::load($cfg['production_addressings']), [AddressingRanges::class, 'assetIps']),
             $cfg,
             new DbTicketRequestStore($cid)
