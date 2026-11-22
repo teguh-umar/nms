@@ -286,7 +286,8 @@ check('webhook token unchanged', $c->secret('webhook_token') === 'token-xyz');
 
 // --- Brand select lists only brands that DriverFactory supports ---
 $brands = ConnectionForm::supportedBrands();
-check('supported brands excludes brands without driver', !in_array('prtg', $brands, true));
+check('supported brands excludes brands without driver', !in_array('librenms', $brands, true));
+check('supported brands includes prtg', in_array('prtg', $brands, true));
 check('supported brands includes zabbix', in_array('zabbix', $brands, true));
 check('supported brands includes opmanager', in_array('opmanager', $brands, true));
 
@@ -304,7 +305,9 @@ $dropdowns = ['match_mode', 'coverage_states', 'ticket_template', 'service_user'
     'hygiene_glpi_groups', 'hygiene_glpi_users', 'hygiene_itil_category', 'hygiene_nms_group', 'hygiene_ticket_template'];
 $src = (string) file_get_contents(OPM_ROOT . '/src/Connection/ConnectionForm.php');
 // Run state written by the cron, not by a person.
-$runState = ['last_hygiene_run', 'last_hygiene_ticket_run', 'last_hygiene_error'];
+$runState = ['last_hygiene_run', 'last_hygiene_ticket_run', 'last_hygiene_error',
+    // TODO(Task 5): the PRTG form block lands in Task 5; remove these three then.
+    'prtg_api', 'prtg_groups', 'prtg_alarm_states'];
 $missing = [];
 foreach (array_keys(Settings::DEFAULTS) as $key) {
     if (in_array($key, $runState, true)) {

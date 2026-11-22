@@ -45,6 +45,9 @@ $MOVED_KEYS = [
     'zabbix_host_groups'               => '',
     'zabbix_min_severity'              => '2',
     'zabbix_include_suppressed'        => '0',
+    'prtg_api'                         => 'classic',
+    'prtg_groups'                      => '',
+    'prtg_alarm_states'                => 'down+warning',
 ];
 
 check('Settings::DEFAULTS holds every moved key', $MOVED_KEYS === Settings::DEFAULTS);

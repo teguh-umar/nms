@@ -24,7 +24,7 @@ $conn = new Connection([
 $d = DriverFactory::for($conn);
 check('for() opmanager returns OpManagerDriver', $d instanceof OpManagerDriver);
 
-$bad = new Connection(array_merge((array) $conn, ['brand' => 'prtg']));
+$bad = new Connection(array_merge((array) $conn, ['brand' => 'librenms']));
 try {
     DriverFactory::for($bad);
     check('for() unsupported brand throws InvalidArgumentException', false);

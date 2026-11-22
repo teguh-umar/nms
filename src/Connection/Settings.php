@@ -56,6 +56,10 @@ final class Settings
         'zabbix_host_groups'               => '',
         'zabbix_min_severity'              => '2',
         'zabbix_include_suppressed'        => '0',
+        // PRTG (brand-specific)
+        'prtg_api'                         => 'classic',
+        'prtg_groups'                      => '',
+        'prtg_alarm_states'                => 'down+warning',
     ];
 
     /** @var array<string, string> */
