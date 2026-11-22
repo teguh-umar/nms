@@ -210,4 +210,56 @@ try {
     check('non-json raises', true);
 }
 
+// Login mode: empty credentials send no user.login.
+foreach ([['', 'pw'], ['u', ''], ['', '']] as [$u, $pw]) {
+    $log = [];
+    $c   = new JsonRpc($base, '', $u, $pw, zbx_fake($log, '7.0.5'));
+    try {
+        $c->call('host.get', []);
+        check('empty credentials raise', false);
+    } catch (ZabbixException $e) {
+        check('empty credentials message', $e->getMessage() === 'Zabbix username or password is not configured');
+    }
+    $methods = array_map(fn($l) => $l['req']['method'], $log);
+    check('empty credentials: only apiinfo.version on the wire', $methods === ['apiinfo.version']);
+}
+
+// Login mode: a failed login is remembered, one attempt per instance.
+$failLogin = json_encode(['jsonrpc' => '2.0', 'error' => ['code' => -32500, 'message' => 'Incorrect user name or password pw-secret-9', 'data' => 'tok-x'], 'id' => 2]);
+$log = [];
+$c   = new JsonRpc($base, '', 'u', 'pw-secret-9', zbx_fake($log, '7.0.5', ['user.login' => $failLogin]));
+$msgs = [];
+for ($i = 0; $i < 3; $i++) {
+    try {
+        $c->call('host.get', []);
+        check("failed login call $i raises", false);
+    } catch (ZabbixException $e) {
+        $msgs[] = $e->getMessage();
+        check("failed login call $i is an API error", $e instanceof \GlpiPlugin\Nms\Driver\Zabbix\ZabbixApiError);
+    }
+}
+$logins = array_filter($log, fn($l) => $l['req']['method'] === 'user.login');
+check('failed login: exactly one user.login on the wire', count($logins) === 1);
+check('failed login: same message each time', count($msgs) === 3 && $msgs[0] === $msgs[1] && $msgs[1] === $msgs[2]);
+check('failed login: password not in messages', !str_contains(implode('|', $msgs), 'pw-secret-9'));
+
+// A transport failure on login is remembered too.
+$n = 0;
+$c = new JsonRpc($base, '', 'u', 'pw-secret-9', function (string $url, string $body, array $h) use (&$n): array {
+    $req = json_decode($body, true);
+    if ($req['method'] === 'apiinfo.version') {
+        return ['status' => 200, 'body' => json_encode(['jsonrpc' => '2.0', 'result' => '7.0.5', 'id' => $req['id']])];
+    }
+    $n++;
+    throw new RuntimeException('down pw-secret-9');
+});
+for ($i = 0; $i < 2; $i++) {
+    try {
+        $c->call('host.get', []);
+    } catch (ZabbixException $e) {
+        check("transport login failure $i redacted", !str_contains($e->getMessage(), 'pw-secret-9'));
+    }
+}
+check('transport login failure: one attempt', $n === 1);
+
 done();

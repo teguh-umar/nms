@@ -57,7 +57,8 @@ $raw     = seamFix($ver, 'host.get');
 $events  = array_column(seamFix($ver, 'event.get'), null, 'eventid');
 $alarms  = array_column(ProblemParser::parse(seamFix($ver, 'problem.get'), $events, array_column($raw, null, 'hostid')), null, 'alarm_key');
 $alarm   = $alarms['9001'];
-check('fixture: host id differs from event id', $alarm['entity_key'] !== '' && $alarm['alarm_key'] === '9001');
+$fixHostId = (string) (seamFix($ver, 'event.get')[0]['hosts'][0]['hostid'] ?? '');
+check('fixture: host id differs from event id', $fixHostId !== '' && $alarm['entity_key'] === $alarm['alarm_key'] && $alarm['entity_key'] !== $fixHostId);
 
 $active = [['alarm_key' => $alarm['alarm_key'], 'entity_key' => $alarm['entity_key']]];
 $rows   = array_merge(

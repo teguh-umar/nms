@@ -1,9 +1,15 @@
 # Changelog
 
+## 1.1.0-rc2 (nms)
+
+- Zabbix login mode sends no empty credentials (a missing username or password is reported instead) and makes at most one login attempt per sync run, so a wrong password cannot lock the Zabbix account.
+- Runbook section 1 points to the section 2 pre-check.
+- Plugin author shown in GLPI: Teguh DHAMAR.
+
 ## 1.1.0-rc1 (nms)
 
 - **Not yet verified against a live Zabbix.** The Zabbix driver was built against the documented API shapes of Zabbix 6.0 LTS to 7.4 (the newest line checked at build time; a newer line, e.g. 8.0, is verified before it is supported), and tested only with synthetic fixtures (6.0.40, 7.0.20, 7.4.5) and an offline mock endpoint (`tests/mock_zabbix/`).
-- **Zabbix driver**: covers Zabbix 6.0 LTS to 7.4, the newest line checked at build time; a newer line (e.g. 8.0) is verified before it is supported. Polls hosts (devices) and problems (alarms); filters by host groups, minimum severity and suppressed problems; detects the API version and the auth style (API token, or user and password); optional write-back of note, acknowledge and close.
+- **Zabbix driver**: covers Zabbix 6.0 LTS to 7.4. Polls hosts (devices) and problems (alarms); filters by host groups, minimum severity and suppressed problems; detects the API version and the auth style (API token, or user and password); optional write-back of note, acknowledge and close.
 - **Entity-scoped matching**: a connection with an entity matches only inside that entity (root entity with recursion is unchanged, so OpManager behaves as before).
 - **Coverage per connection**: a connection column and filter, a per-connection Coverage %, the "Expected from" source and per-connection counts; `front/coverage.php?connection=<id>` (CSV export too).
 - **Neutral labels**: the asset tab, lists, crons and Coverage no longer carry one brand's name.

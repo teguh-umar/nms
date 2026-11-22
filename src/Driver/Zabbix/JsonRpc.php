@@ -30,6 +30,8 @@ final class JsonRpc
     private int $nextId = 1;
     private ?string $version = null;
     private ?string $session = null;
+    /** @var array{class: class-string<ZabbixException>, message: string}|null the one failed login of this instance */
+    private ?array $loginFailure = null;
 
     public function __construct(string $url, #[\SensitiveParameter] string $token, string $username, #[\SensitiveParameter] string $password, callable $transport)
     {
@@ -95,9 +97,22 @@ final class JsonRpc
             return $this->token;
         }
         if ($this->session === null) {
-            $result = $this->send('user.login', ['username' => $this->username, 'password' => $this->password], null);
-            if (!is_string($result) || $result === '') {
-                throw new ZabbixException('Zabbix login returned no session');
+            // One login attempt per instance (one sync run): a wrong password must not lock the account.
+            if ($this->loginFailure !== null) {
+                $class = $this->loginFailure['class'];
+                throw new $class($this->loginFailure['message']);
+            }
+            if ($this->username === '' || $this->password === '') {
+                throw new ZabbixException('Zabbix username or password is not configured');
+            }
+            try {
+                $result = $this->send('user.login', ['username' => $this->username, 'password' => $this->password], null);
+                if (!is_string($result) || $result === '') {
+                    throw new ZabbixException('Zabbix login returned no session');
+                }
+            } catch (ZabbixException $e) {
+                $this->loginFailure = ['class' => $e::class, 'message' => $this->redact($e->getMessage())];
+                throw new $e($this->loginFailure['message']);
             }
             $this->session = $result;
         }

@@ -37,7 +37,7 @@ function zconn(array $settings = [], string $token = SECRET_TOKEN): Connection
 {
     return new Connection([
         'id' => 1, 'name' => 'zbx', 'brand' => 'zabbix', 'url' => 'https://zbx.example.test',
-        'api_key' => $token === '' ? '' : (new GLPIKey())->encrypt($token), 'username' => 'api', 'password' => '',
+        'api_key' => $token === '' ? '' : (new GLPIKey())->encrypt($token), 'username' => 'api', 'password' => $token === '' ? (new GLPIKey())->encrypt('pw-login-test') : '',
         'verify_tls' => 1, 'is_active' => 1, 'settings' => json_encode($settings),
     ]);
 }
