@@ -30,6 +30,7 @@ final class DriverFactory
         }
         return match ($c->brand) {
             'opmanager' => new \GlpiPlugin\Nms\Driver\OpManager\OpManagerDriver($c, null, null, $timeout),
+            'zabbix'    => new \GlpiPlugin\Nms\Driver\Zabbix\ZabbixDriver($c, null, $timeout),
             default     => throw new InvalidArgumentException('No NMS driver for brand: ' . $c->brand),
         };
     }
@@ -37,6 +38,6 @@ final class DriverFactory
     /** @return list<string> brands that have a Driver implementation. */
     public static function supportedBrands(): array
     {
-        return ['opmanager'];
+        return ['opmanager', 'zabbix'];
     }
 }

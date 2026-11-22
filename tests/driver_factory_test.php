@@ -24,14 +24,14 @@ $conn = new Connection([
 $d = DriverFactory::for($conn);
 check('for() opmanager returns OpManagerDriver', $d instanceof OpManagerDriver);
 
-$bad = new Connection(array_merge((array) $conn, ['brand' => 'zabbix']));
+$bad = new Connection(array_merge((array) $conn, ['brand' => 'prtg']));
 try {
     DriverFactory::for($bad);
-    check('for() zabbix throws InvalidArgumentException', false);
+    check('for() unsupported brand throws InvalidArgumentException', false);
 } catch (\InvalidArgumentException $e) {
-    check('for() zabbix throws InvalidArgumentException', true);
+    check('for() unsupported brand throws InvalidArgumentException', true);
 } catch (\Throwable $e) {
-    check('for() zabbix throws InvalidArgumentException', false, 'wrong exception: ' . get_class($e));
+    check('for() unsupported brand throws InvalidArgumentException', false, 'wrong exception: ' . get_class($e));
 }
 
 done();

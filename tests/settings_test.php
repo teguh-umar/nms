@@ -42,6 +42,9 @@ $MOVED_KEYS = [
     'last_hygiene_run'                 => '',
     'last_hygiene_ticket_run'          => '',
     'last_hygiene_error'               => '',
+    'zabbix_host_groups'               => '',
+    'zabbix_min_severity'              => '2',
+    'zabbix_include_suppressed'        => '0',
 ];
 
 check('Settings::DEFAULTS holds every moved key', $MOVED_KEYS === Settings::DEFAULTS);

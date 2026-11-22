@@ -52,6 +52,10 @@ final class Settings
         'last_hygiene_run'                 => '',
         'last_hygiene_ticket_run'          => '',
         'last_hygiene_error'               => '',
+        // Zabbix (brand-specific)
+        'zabbix_host_groups'               => '',
+        'zabbix_min_severity'              => '2',
+        'zabbix_include_suppressed'        => '0',
     ];
 
     /** @var array<string, string> */
