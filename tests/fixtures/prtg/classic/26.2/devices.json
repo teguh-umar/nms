@@ -1,0 +1,46 @@
+{
+  "prtg-version": "26.2.124.1286",
+  "treesize": 4,
+  "devices": [
+    {
+      "objid": 1001,
+      "device": "sw-core-1",
+      "host": "192.0.2.10",
+      "group": "Core",
+      "probe": "Local probe",
+      "status": "Up",
+      "status_raw": 3,
+      "tags": "net core"
+    },
+    {
+      "objid": 1002,
+      "device": "srv-app-1",
+      "host": "app1.example.test",
+      "group": "Servers",
+      "probe": "Local probe",
+      "status": "Warning",
+      "status_raw": 4,
+      "tags": "server"
+    },
+    {
+      "objid": 1003,
+      "device": "srv-old-1",
+      "host": "192.0.2.30",
+      "group": "Servers",
+      "probe": "Local probe",
+      "status": "Paused by user",
+      "status_raw": 7,
+      "tags": ""
+    },
+    {
+      "objid": 1004,
+      "device": "fw-edge-1",
+      "host": "192.0.2.40",
+      "group": "Edge",
+      "probe": "Local probe",
+      "status": "Down",
+      "status_raw": 5,
+      "tags": "firewall edge"
+    }
+  ]
+}

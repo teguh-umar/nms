@@ -1,0 +1,70 @@
+{
+  "items": [
+    {
+      "id": "2001",
+      "name": "Ping",
+      "deviceId": "1001",
+      "deviceName": "sw-core-1",
+      "group": "Core",
+      "status": "Down",
+      "message": "No response (code: PE018)",
+      "type": "ping",
+      "lastCheck": "2025-12-09T12:00:00Z"
+    },
+    {
+      "id": "2002",
+      "name": "Disk Free C:",
+      "deviceId": "1002",
+      "deviceName": "srv-app-1",
+      "group": "Servers",
+      "status": "Warning",
+      "message": "<div class=\"status\">Free space &lt; 10%</div>",
+      "type": "sensorfactory",
+      "lastCheck": "2025-12-09T06:00:00Z"
+    },
+    {
+      "id": "2003",
+      "name": "HTTP Load",
+      "deviceId": "1002",
+      "deviceName": "srv-app-1",
+      "group": "Servers",
+      "status": "Unusual",
+      "message": "Value &amp; trend: value < 5 and > 3",
+      "type": "http",
+      "lastCheck": "2025-12-09T18:00:00Z"
+    },
+    {
+      "id": "2004",
+      "name": "Uplink",
+      "deviceId": "1004",
+      "deviceName": "fw-edge-1",
+      "group": "Edge",
+      "status": "Down (Acknowledged)",
+      "message": "Port down",
+      "type": "snmptraffic",
+      "lastCheck": null
+    },
+    {
+      "id": "2005",
+      "name": "Ping",
+      "deviceId": "1004",
+      "deviceName": "fw-edge-1",
+      "group": "Edge",
+      "status": "Down (Partial)",
+      "message": "1 of 2 channels down",
+      "type": "ping",
+      "lastCheck": "2025-12-10T00:00:00Z"
+    },
+    {
+      "id": "2006",
+      "name": "Ping",
+      "deviceId": "1001",
+      "deviceName": "sw-core-1",
+      "group": "Core",
+      "status": "Up",
+      "message": "OK",
+      "type": "ping",
+      "lastCheck": "2025-12-10T00:00:00Z"
+    }
+  ]
+}

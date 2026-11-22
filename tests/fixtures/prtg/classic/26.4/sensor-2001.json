@@ -1,0 +1,20 @@
+{
+  "prtg-version": "26.4.126.1824",
+  "treesize": 1,
+  "sensors": [
+    {
+      "objid": 2001,
+      "sensor": "Ping",
+      "device": "sw-core-1",
+      "parentid": 1001,
+      "group": "Core",
+      "probe": "Local probe",
+      "status": "Down",
+      "status_raw": 5,
+      "message": "No response (code: PE018)",
+      "lastcheck": "1 s ago",
+      "lastcheck_raw": 46000.5,
+      "type": "ping"
+    }
+  ]
+}

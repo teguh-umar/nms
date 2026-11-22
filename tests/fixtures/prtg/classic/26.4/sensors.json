@@ -1,0 +1,90 @@
+{
+  "prtg-version": "26.4.126.1824",
+  "treesize": 6,
+  "sensors": [
+    {
+      "objid": 2001,
+      "sensor": "Ping",
+      "device": "sw-core-1",
+      "parentid": 1001,
+      "group": "Core",
+      "probe": "Local probe",
+      "status": "Down",
+      "status_raw": 5,
+      "message": "No response (code: PE018)",
+      "lastcheck": "1 s ago",
+      "lastcheck_raw": 46000.5,
+      "type": "ping"
+    },
+    {
+      "objid": 2002,
+      "sensor": "Disk Free C:",
+      "device": "srv-app-1",
+      "parentid": 1002,
+      "group": "Servers",
+      "probe": "Local probe",
+      "status": "Warning",
+      "status_raw": 4,
+      "message": "<div class=\"status\">Free space &lt; 10%</div>",
+      "lastcheck": "1 s ago",
+      "lastcheck_raw": 46000.25,
+      "type": "sensorfactory"
+    },
+    {
+      "objid": 2003,
+      "sensor": "HTTP Load",
+      "device": "srv-app-1",
+      "parentid": 1002,
+      "group": "Servers",
+      "probe": "Local probe",
+      "status": "Unusual",
+      "status_raw": 10,
+      "message": "Value &amp; trend: value < 5 and > 3",
+      "lastcheck": "1 s ago",
+      "lastcheck_raw": 46000.75,
+      "type": "http"
+    },
+    {
+      "objid": 2004,
+      "sensor": "Uplink",
+      "device": "fw-edge-1",
+      "parentid": 1004,
+      "group": "Edge",
+      "probe": "Local probe",
+      "status": "Down (Acknowledged)",
+      "status_raw": 13,
+      "message": "Port down",
+      "lastcheck": "",
+      "lastcheck_raw": "",
+      "type": "snmptraffic"
+    },
+    {
+      "objid": 2005,
+      "sensor": "Ping",
+      "device": "fw-edge-1",
+      "parentid": 1004,
+      "group": "Edge",
+      "probe": "Local probe",
+      "status": "Down (Partial)",
+      "status_raw": 14,
+      "message": "1 of 2 channels down",
+      "lastcheck": "1 s ago",
+      "lastcheck_raw": 46001.0,
+      "type": "ping"
+    },
+    {
+      "objid": 2006,
+      "sensor": "Ping",
+      "device": "sw-core-1",
+      "parentid": 1001,
+      "group": "Core",
+      "probe": "Local probe",
+      "status": "Up",
+      "status_raw": 3,
+      "message": "OK",
+      "lastcheck": "1 s ago",
+      "lastcheck_raw": 46001.0,
+      "type": "ping"
+    }
+  ]
+}

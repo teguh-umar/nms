@@ -1,0 +1,44 @@
+{
+  "items": [
+    {
+      "id": "1001",
+      "name": "sw-core-1",
+      "host": "192.0.2.10",
+      "group": "Core",
+      "status": "Up",
+      "tags": [
+        "net",
+        "core"
+      ]
+    },
+    {
+      "id": "1002",
+      "name": "srv-app-1",
+      "host": "app1.example.test",
+      "group": "Servers",
+      "status": "Warning",
+      "tags": [
+        "server"
+      ]
+    },
+    {
+      "id": "1003",
+      "name": "srv-old-1",
+      "host": "192.0.2.30",
+      "group": "Servers",
+      "status": "Paused by user",
+      "tags": []
+    },
+    {
+      "id": "1004",
+      "name": "fw-edge-1",
+      "host": "192.0.2.40",
+      "group": "Edge",
+      "status": "Down",
+      "tags": [
+        "firewall",
+        "edge"
+      ]
+    }
+  ]
+}
