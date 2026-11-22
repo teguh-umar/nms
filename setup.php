@@ -19,7 +19,7 @@ function plugin_version_nms()
     return [
         'name'         => 'NMS Integration',
         'version'      => PLUGIN_NMS_VERSION,
-        'author'       => 'ICT',
+        'author'       => 'Teguh DHAMAR',
         'license'      => 'GPL-3.0-or-later',
         'homepage'     => '',
         'requirements' => [

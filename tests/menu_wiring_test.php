@@ -8,7 +8,7 @@ check('shared Menu loaded only when no other plugin did', (bool) preg_match("/if
 check('shared Menu registered for opmanager', str_contains($setup, "\\GlpiPlugin\\Pgnsuite\\Menu::register('nms');"));
 check('opmanager entry provider hooked', str_contains($setup, "\$PLUGIN_HOOKS[\\GlpiPlugin\\Pgnsuite\\Menu::HOOK]['nms'] = \\GlpiPlugin\\Nms\\Menu::class . '::entry';"));
 check('old own sector removed', !str_contains($setup, "['menu_toadd']['nms'] = ['nms'"));
-check('author is ICT', (bool) preg_match("/'author'\\s*=> 'ICT',/", $setup) && !str_contains($setup, 'PGN ICT'));
+check('author is Teguh DHAMAR', (bool) preg_match("/'author'\\s*=> 'Teguh DHAMAR',/", $setup) && !str_contains($setup, 'PGN ICT'));
 
 $menu = (string) file_get_contents(OPM_ROOT . '/src/Menu.php');
 check('Menu provides entry()', str_contains($menu, 'public static function entry(): ?array'));
