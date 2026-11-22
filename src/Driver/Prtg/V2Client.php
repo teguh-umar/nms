@@ -44,7 +44,8 @@ final class V2Client implements PrtgClient
     public const F_TYPE          = 'type';
     public const F_LASTCHECK     = 'lastCheck';    // ISO 8601 string or unix seconds
 
-    // v2 status text (lower case, letters only) to the classic status_raw integers. UNVERIFIED spelling.
+    // v2 status text (lower case, letters only) to the classic status_raw integers. UNVERIFIED spelling: the
+    // aliases (paused, pauseduntil, acknowledged, partialdown) are guesses. Unmapped text becomes 1 (Unknown).
     public const STATUS_MAP = [
         'unknown' => 1, 'up' => 3, 'warning' => 4, 'down' => 5,
         'paused' => 7, 'pausedbyuser' => 7, 'pausedbydependency' => 8, 'pausedbyschedule' => 9,
@@ -82,12 +83,12 @@ final class V2Client implements PrtgClient
     public function version(): string
     {
         if ($this->version === null) {
-            $data    = $this->decode($this->call('GET', self::PATH_VERSION, [], null, true));
-            $version = $data[self::KEY_VERSION] ?? null;
-            if (!is_string($version) || $version === '') {
-                throw new PrtgException('PRTG returned no version');
-            }
-            $this->version = $version;
+            // The version path is a guess: availability is decided by the list endpoints, so any miss here is
+            // a cached, non-fatal "unknown" (auth and transport errors still propagate).
+            $body          = $this->call('GET', self::PATH_VERSION, [], null, false, true);
+            $data          = $body === null ? null : json_decode($body, true);
+            $version       = is_array($data) ? ($data[self::KEY_VERSION] ?? null) : null;
+            $this->version = is_string($version) && $version !== '' ? $version : 'unknown';
         }
         return $this->version;
     }
@@ -125,10 +126,15 @@ final class V2Client implements PrtgClient
         $path = self::PATH_SENSORS . '/' . rawurlencode($id);
         $body = $this->call('GET', $path, [], null, false, true);
         if ($body === null) {
+            // 404: either v2 is missing (this probe throws) or just this sensor is gone.
+            $this->call('GET', self::PATH_SENSORS, [self::PARAM_LIMIT => '1'], null, true);
             return null;
         }
-        $data = $this->decode($body);
-        return self::sensorRow($data);
+        $row = self::sensorRow($this->decode($body));
+        if ($row['id'] === '') {
+            throw new PrtgException('PRTG v2 sensor response has no id');
+        }
+        return $row;
     }
 
     public function acknowledge(string $id, string $message): void
@@ -165,9 +171,9 @@ final class V2Client implements PrtgClient
         }
         if (is_string($status)) {
             $key = strtolower((string) preg_replace('/[^A-Za-z]/', '', $status));
-            return self::STATUS_MAP[$key] ?? 0;
+            return self::STATUS_MAP[$key] ?? 1;
         }
-        return 0;
+        return 1;
     }
 
     /** ISO 8601 string or unix seconds to PRTG's OLE automation days; null when absent or unparsable. */
@@ -188,8 +194,9 @@ final class V2Client implements PrtgClient
     {
         $all  = [];
         $seen = [];
+        $offset = 0;
         for ($page = 0; $page < self::MAX_PAGES; $page++) {
-            $data = json_decode($this->call('GET', $path, [self::PARAM_LIMIT => (string) self::PAGE_SIZE, self::PARAM_OFFSET => (string) ($page * self::PAGE_SIZE)], null, $page === 0), true);
+            $data = json_decode($this->call('GET', $path, [self::PARAM_LIMIT => (string) self::PAGE_SIZE, self::PARAM_OFFSET => (string) $offset], null, $page === 0), true);
             if (!is_array($data)) {
                 throw new PrtgException('PRTG returned a non-JSON response');
             }
@@ -198,6 +205,7 @@ final class V2Client implements PrtgClient
                 throw new PrtgException('PRTG v2 list response has no items');
             }
             $items = array_values(array_filter($items, 'is_array'));
+            $offset += count($items); // advance by what the server returned: it may cap `limit`
             $fresh = 0;
             foreach ($items as $row) {
                 $key = (string) ($row[self::F_ID] ?? '');
@@ -207,12 +215,13 @@ final class V2Client implements PrtgClient
                     $fresh++;
                 }
             }
-            // A short page ends the list; a page of only repeats means the server ignores the offset.
-            if (count($items) < self::PAGE_SIZE || $fresh === 0) {
-                break;
+            // Only an empty page, or one with nothing new (the server ignores the offset), ends the list: a
+            // server may cap `limit` below PAGE_SIZE, so a short page proves nothing.
+            if ($items === [] || $fresh === 0) {
+                return $all;
             }
         }
-        return $all;
+        throw new PrtgException('PRTG v2 list is longer than ' . (self::MAX_PAGES * self::PAGE_SIZE) . ' rows');
     }
 
     /** @return array<string, mixed> */
@@ -233,7 +242,7 @@ final class V2Client implements PrtgClient
      * @param bool $nullOn404 a 404 returns null (a missing object)
      * @return ($nullOn404 is true ? ?string : string)
      */
-    private function call(string $method, string $path, array $query, ?string $body, bool $probe = false, bool $nullOn404 = false): ?string
+    private function call(string $method, string $path, array $query, #[\SensitiveParameter] ?string $body, bool $probe = false, bool $nullOn404 = false): ?string
     {
         $headers = ['Authorization' => 'Bearer ' . $this->bearer(), 'Accept' => 'application/json'];
         $result  = $this->raw($method, $path, $query, $headers, $body, $probe, $nullOn404);
@@ -244,7 +253,7 @@ final class V2Client implements PrtgClient
      * @param array<string, string> $query
      * @param array<string, string> $headers
      */
-    private function raw(string $method, string $path, array $query, array $headers, ?string $body, bool $probe, bool $nullOn404): ?string
+    private function raw(string $method, string $path, array $query, #[\SensitiveParameter] array $headers, #[\SensitiveParameter] ?string $body, bool $probe, bool $nullOn404): ?string
     {
         $url = $this->url . $path . ($query === [] ? '' : '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986));
         if ($body !== null) {

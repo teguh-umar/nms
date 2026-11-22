@@ -135,17 +135,104 @@ try {
 }
 check('ack sends nothing', $log === []);
 
-// 404 -> not available
-foreach (['version' => fn ($c) => $c->version(), 'devices' => fn ($c) => $c->devices()] as $label => $fn) {
-    $log = [];
-    $n = new V2Client(V2_URL, 'KEY-SECRET-9', '', '', v2_fake($log, ['/api/v2/' => [404, 'nope']]));
-    try {
-        $fn($n);
-        check("404 $label", false);
-    } catch (PrtgException $e) {
-        check("404 $label", $e->getMessage() === 'API v2 is not available on this PRTG (needs 24.3 or later)', $e->getMessage());
-    }
+// 404 on the list endpoint -> not available; version() is non-fatal
+$log = [];
+$n = new V2Client(V2_URL, 'KEY-SECRET-9', '', '', v2_fake($log, ['/api/v2/' => [404, 'nope']]));
+try {
+    $n->devices();
+    check('404 devices', false);
+} catch (PrtgException $e) {
+    check('404 devices', $e->getMessage() === 'API v2 is not available on this PRTG (needs 24.3 or later)', $e->getMessage());
 }
+check('version 404 unknown', $n->version() === 'unknown');
+$cnt = count($log);
+$n->version();
+check('version cached', count($log) === $cnt);
+$log = [];
+$nj = new V2Client(V2_URL, 'KEY-SECRET-9', '', '', v2_fake($log, ['/system/version' => [200, '<html>']]));
+check('version non-json unknown', $nj->version() === 'unknown');
+$nm = new V2Client(V2_URL, 'KEY-SECRET-9', '', '', v2_fake($log, ['/system/version' => [200, '{"x":1}']]));
+check('version missing field unknown', $nm->version() === 'unknown');
+$nv = new V2Client(V2_URL, 'KEY-SECRET-9', '', '', v2_fake($log, ['/system/version' => [200, '{"version":"24.4.1"}']]));
+check('version ok', $nv->version() === '24.4.1');
+
+// sensor(): 404 with v2 missing is an error, 404 on one sensor is null
+$log = [];
+$nv2 = new V2Client(V2_URL, 'KEY-SECRET-9', '', '', v2_fake($log, ['/api/v2/' => [404, 'nope']]));
+try {
+    $nv2->sensor('3001');
+    check('sensor v2 missing throws', false);
+} catch (PrtgException $e) {
+    check('sensor v2 missing throws', str_contains($e->getMessage(), 'API v2 is not available'));
+}
+$ne = new V2Client(V2_URL, 'KEY-SECRET-9', '', '', v2_fake($log, ['/experimental/sensors/5' => [200, '{"data":{"id":5}}']]));
+try {
+    $ne->sensor('5');
+    check('sensor empty id throws', false);
+} catch (PrtgException $e) {
+    check('sensor empty id throws', true);
+}
+
+// unmapped status -> 1
+$nu = new V2Client(V2_URL, 'KEY-SECRET-9', '', '', v2_fake($log, ['/experimental/sensors' => [200, '{"items":[{"id":1,"status":"Weird"},{"id":2}]}']]));
+$u = $nu->sensors([]);
+check('unmapped status 1', $u[0]['status_raw'] === 1 && $u[1]['status_raw'] === 1);
+
+// paging
+$pager = function (int $cap, int $total, bool $ignoreOffset) {
+    return function (string $m, string $url, array $h, ?string $b) use ($cap, $total, $ignoreOffset): array {
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $q);
+        $off = $ignoreOffset ? 0 : (int) ($q['offset'] ?? 0);
+        $items = [];
+        for ($i = $off; $i < min($off + $cap, $total); $i++) {
+            $items[] = ['id' => $i + 1, 'name' => 'd' . $i];
+        }
+        return ['status' => 200, 'body' => json_encode(['items' => $items])];
+    };
+};
+$pc = new V2Client(V2_URL, 'K', '', '', $pager(V2Client::PAGE_SIZE, 1200, false));
+check('multi-page', count($pc->devices()) === 1200);
+$pc = new V2Client(V2_URL, 'K', '', '', $pager(100, 350, false));
+check('short capped page keeps paging', count($pc->devices()) === 350);
+$pc = new V2Client(V2_URL, 'K', '', '', $pager(V2Client::PAGE_SIZE, 30, true));
+check('offset ignored stops', count($pc->devices()) === 30);
+$pc = new V2Client(V2_URL, 'K', '', '', $pager(V2Client::PAGE_SIZE, 30, false));
+check('single short page', count($pc->devices()) === 30);
+$endless = function (string $m, string $url): array {
+    parse_str((string) parse_url($url, PHP_URL_QUERY), $q);
+    return ['status' => 200, 'body' => json_encode(['items' => [['id' => (int) ($q['offset'] ?? 0) + 1]]])];
+};
+$pc = new V2Client(V2_URL, 'K', '', '', $endless);
+try {
+    $pc->devices();
+    check('max pages throws', false);
+} catch (PrtgException $e) {
+    check('max pages throws', str_contains($e->getMessage(), 'longer than'));
+}
+
+// secrets absent from traces with exception args on
+ini_set('zend.exception_ignore_args', '0');
+$log = [];
+$tk = new V2Client(V2_URL, 'KEY-SECRET-9', '', '', v2_fake($log, ['/experimental/devices' => [401, 'denied']]));
+try {
+    $tk->devices();
+} catch (PrtgApiError $e) {
+    check('trace has no key', !str_contains($e->getTraceAsString(), 'KEY-SECRET-9'));
+}
+$tl = new V2Client(V2_URL, '', 'admin', 'PW-SECRET', v2_fake($log, ['/experimental/devices' => [401, 'denied']]));
+try {
+    $tl->devices();
+} catch (PrtgApiError $e) {
+    $tr = $e->getTraceAsString();
+    check('trace has no token/password', !str_contains($tr, 'TOKEN-SECRET-1') && !str_contains($tr, 'PW-SECRET'));
+}
+$tf = new V2Client(V2_URL, '', 'admin', 'PW-SECRET', v2_fake($log, ['/api/v2/session' => [401, 'denied']]));
+try {
+    $tf->devices();
+} catch (PrtgApiError $e) {
+    check('login failure trace clean', !str_contains($e->getTraceAsString(), 'PW-SECRET'));
+}
+ini_set('zend.exception_ignore_args', '1');
 
 // transport failure leaks nothing
 $log = [];
