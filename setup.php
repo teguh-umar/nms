@@ -7,7 +7,7 @@
  * @license GPL-3.0-or-later
  */
 
-define('PLUGIN_NMS_VERSION', '1.0.0');
+define('PLUGIN_NMS_VERSION', '1.1.0-rc1');
 define('PLUGIN_NMS_MIN_GLPI', '11.0.0');
 define('PLUGIN_NMS_MAX_GLPI', '11.99.99');
 
