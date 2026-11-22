@@ -79,31 +79,45 @@ $alarm   = $alarms['2001'];
 check('fixture: sensor id differs from device id', $alarm['entity_key'] === $alarm['alarm_key'] && $alarm['entity_key'] === '2001' && isset($devices['1001']));
 
 $active = [['alarm_key' => $alarm['alarm_key'], 'entity_key' => $alarm['entity_key']]];
-$rows   = Planner::forFollowup(7, false, 'checked the link', 'tech', $active, 5);
-$actions = array_column($rows, 'action');
-check('planner emits note then ack', $actions === ['note', 'ack'], implode(',', $actions));
+$followup = Planner::forFollowup(7, false, 'checked the link', 'tech', $active, 5);
+$solve    = Planner::forStatus(7, 2, 5, 'replaced SFP', 'tech', $active, fn ($k) => false, 5);
+check('planner emits note+ack and note+clear', array_column($followup, 'action') === ['note', 'ack'] && array_column($solve, 'action') === ['note', 'clear']);
 
 $conn = new Connection([
     'id' => 1, 'name' => 'prtg', 'brand' => 'prtg', 'url' => 'https://prtg.example.test',
     'api_key' => (new GLPIKey())->encrypt('tok-seam'), 'username' => '', 'password' => '',
     'verify_tls' => 1, 'is_active' => 1, 'settings' => '{}',
 ]);
-// PRTG has no notes (capability false) and Planner::forFollowup always plans a note first, so the
-// note row is not driven here (see the Task 4 report: Hooks/Planner are not capability-aware yet).
-// The ack row goes through the real Sender and the real PrtgDriver.
+$mkDriver = fn () => new PrtgDriver($conn, new ClassicClient('https://prtg.example.test', 'tok-seam', '', '', $transport));
+
+// Pure filter.
+$caps = $mkDriver()->capabilities();
+check('filter: classic keeps only ack', array_column(Planner::allowed(array_merge($followup, $solve), $caps), 'action') === ['ack']);
+$v2caps = (new PrtgDriver(new Connection(array_merge((array) $conn, ['settings' => '{"prtg_api":"v2"}'])), new ClassicClient('https://x.test', 'k', '', '', $transport)))->capabilities();
+check('filter: v2 keeps nothing', Planner::allowed(array_merge($followup, $solve), $v2caps) === []);
+check('filter: all-true keeps everything', count(Planner::allowed(array_merge($followup, $solve), new \GlpiPlugin\Nms\Driver\Capabilities(true, true, true, true, true, true, true))) === 4);
+
+// Full Planner output -> filter -> outbox -> real Sender -> real PrtgDriver.
 $box = new SeamBox();
-foreach ($rows as $r) {
-    if ($r['action'] === 'ack') {
-        $box->enqueue($r, '2026-11-22 10:00:00');
-    }
+foreach (Planner::allowed(array_merge($followup, $solve), $caps) as $r) {
+    $box->enqueue($r, '2026-11-22 10:00:00');
 }
 $urls   = [];
-$driver = new PrtgDriver($conn, new ClassicClient('https://prtg.example.test', 'tok-seam', '', '', $transport));
-$stats  = (new Sender($box, $driver, 10))->run('2026-11-22 10:00:00');
+$stats  = (new Sender($box, $mkDriver(), 10))->run('2026-11-22 10:00:00');
 $acks   = array_values(array_filter($urls, fn ($u) => $u['path'] === ClassicClient::PATH_ACK));
-check('ack row sent', $stats['sent'] === 1 && $stats['failed'] === 0 && $stats['retried'] === 0, json_encode($stats));
+check('only the ack row is sent, nothing blocks it', $stats['sent'] === 1 && $stats['failed'] === 0 && $stats['retried'] === 0, json_encode($stats));
 check('sensor read before the write', $urls[0]['path'] === ClassicClient::PATH_TABLE && ($urls[0]['query']['filter_objid'] ?? '') === '2001');
 check('acknowledgealarm.htm got id=<sensor id>', count($acks) === 1 && ($acks[0]['query']['id'] ?? '') === '2001', json_encode($acks));
-check('outbox entity_key === alarm_key', $rows[1]['entity_key'] === $rows[1]['alarm_key'] && $rows[1]['entity_key'] === '2001');
+check('no other write reached PRTG', count(array_filter($urls, fn ($u) => str_ends_with($u['path'], '.htm'))) === 1);
+check('outbox entity_key === alarm_key', $followup[1]['entity_key'] === $followup[1]['alarm_key'] && $followup[1]['entity_key'] === '2001');
+
+// A row queued before (e.g. connection switched to v2) fails once, no retry.
+$box = new SeamBox();
+foreach ($followup as $r) {
+    $box->enqueue($r, '2026-11-22 10:00:00');
+}
+$v2driver = new PrtgDriver(new Connection(array_merge((array) $conn, ['settings' => '{"prtg_api":"v2"}'])), new ClassicClient('https://x.test', 'k', '', '', $transport));
+$stats = (new Sender($box, $v2driver, 10))->run('2026-11-22 10:00:00');
+check('unsupported rows fail once without retry', $stats['failed'] === 1 && $stats['retried'] === 0 && array_column($box->rows, 'state') === ['failed', 'pending'], json_encode([$stats, array_column($box->rows, 'state')]));
 
 done();

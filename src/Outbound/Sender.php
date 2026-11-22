@@ -53,7 +53,8 @@ final class Sender
                 };
                 $this->store->markSent($row['id'], $now);
                 $stats['sent']++;
-            } catch (\DomainException $e) {
+            } catch (\DomainException | \GlpiPlugin\Nms\Driver\UnsupportedOperation $e) {
+                // Permanent: the NMS refused, or this brand cannot do the action (no retry).
                 $blocked[$key] = true;
                 $this->store->markFailed($row['id'], $attempts, $e->getMessage(), $now);
                 $stats['failed']++;

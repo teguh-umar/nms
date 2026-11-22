@@ -88,6 +88,18 @@ final class Planner
     }
 
     /**
+     * Drops rows whose action the brand's driver cannot do (note, ack, clear capabilities).
+     *
+     * @param list<array<string, mixed>> $rows
+     * @return list<array<string, mixed>>
+     */
+    public static function allowed(array $rows, \GlpiPlugin\Nms\Driver\Capabilities $caps): array
+    {
+        $ok = ['note' => $caps->note, 'ack' => $caps->ack, 'clear' => $caps->clear];
+        return array_values(array_filter($rows, static fn (array $r): bool => ($ok[$r['action'] ?? ''] ?? false) === true));
+    }
+
+    /**
      * @param array{alarm_key: string, entity_key: string} $alarm
      * @return array{alarm_key: string, entity_key: string, tickets_id: int, users_id: int, action: string, payload: string}
      */

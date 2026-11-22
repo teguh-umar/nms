@@ -133,6 +133,15 @@ final class Hooks
         if ($rows === []) {
             return;
         }
+        try {
+            // Building a driver makes no request. Rows the brand cannot do are never queued.
+            $rows = Planner::allowed($rows, DriverFactory::for($conn, self::SEND_TIMEOUT)->capabilities());
+        } catch (\Throwable $e) {
+            \Toolbox::logInFile('nms', 'Outbound conn ' . (int) $conn->id . ': ' . $e->getMessage() . "\n");
+        }
+        if ($rows === []) {
+            return;
+        }
         $now = (string) \Session::getCurrentTime();
         foreach ($rows as $row) {
             $store->enqueue($row, $now);
