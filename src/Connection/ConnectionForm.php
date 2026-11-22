@@ -218,6 +218,14 @@ final class ConnectionForm
             if ($brand === 'zabbix' && isset($post['zabbix_min_severity'])) {
                 $values += Config::sanitizeZabbix($post);
             }
+            // The PRTG block is posted only for a PRTG connection.
+            if ($brand === 'prtg' && isset($post['prtg_api'])) {
+                $values += Config::sanitizePrtg($post);
+                // API v2 is read-only: a saved write-back switch cannot stay on.
+                if ($values['prtg_api'] === 'v2') {
+                    $fields['writeback_enabled'] = 0;
+                }
+            }
             $fields['settings'] = $settings->with($values)->toJson();
         }
 
@@ -306,6 +314,10 @@ final class ConnectionForm
             self::zabbixBlock(Settings::fromJson($conn->settings), $disabled);
         }
 
+        if ($conn->brand === 'prtg') {
+            self::prtgBlock(Settings::fromJson($conn->settings), $disabled);
+        }
+
         echo '<div class="mb-2"><label class="form-label">' . __s('Entity that owns this connection', 'nms') . '</label>';
         \Entity::dropdown(['name' => 'entities_id', 'value' => $conn->entities_id, 'readonly' => !$canedit]);
         echo '</div>';
@@ -342,6 +354,29 @@ final class ConnectionForm
         }
         echo '</select></div>';
         self::checkRow('zabbix_include_suppressed', __('Include suppressed problems (maintenance)', 'nms'), $s->get('zabbix_include_suppressed') === '1', $disabled);
+        echo '</fieldset>';
+    }
+
+    /** PRTG settings (brand prtg only). Credentials go in the API key / username / password fields above. */
+    private static function prtgBlock(Settings $s, string $disabled): void
+    {
+        echo '<fieldset class="border rounded p-2 mb-2"><legend class="fs-6">' . __s('PRTG', 'nms') . '</legend>';
+        echo '<div class="mb-2"><label class="form-label" for="nms-prtg-api">' . __s('PRTG API', 'nms') . '</label>'
+            . '<select class="form-select" id="nms-prtg-api" name="prtg_api"' . $disabled . '>';
+        foreach (['classic' => 'Classic API', 'v2' => 'API v2 (experimental, read-only)'] as $value => $label) {
+            echo '<option value="' . $value . '"' . ($s->get('prtg_api') === $value ? ' selected' : '') . '>' . htmlescape($label) . '</option>';
+        }
+        echo '</select><div class="form-hint">' . __s('Credentials: the API key is preferred and is sent as a header; otherwise fill in the username and password.', 'nms') . '</div></div>';
+        echo '<div class="mb-2"><label class="form-label" for="nms-prtg-alarm-states">' . __s('Alarm states', 'nms') . '</label>'
+            . '<select class="form-select" id="nms-prtg-alarm-states" name="prtg_alarm_states"' . $disabled . '>';
+        foreach (['down' => 'Down', 'down+warning' => 'Down and warning', 'down+warning+unusual' => 'Down, warning and unusual'] as $value => $label) {
+            echo '<option value="' . $value . '"' . ($s->get('prtg_alarm_states') === $value ? ' selected' : '') . '>' . htmlescape($label) . '</option>';
+        }
+        echo '</select></div>';
+        echo '<div class="mb-2"><label class="form-label" for="nms-prtg-groups">' . __s('Groups (one per line)', 'nms') . '</label>'
+            . '<textarea class="form-control" rows="4" id="nms-prtg-groups" name="prtg_groups"' . $disabled . '>'
+            . htmlescape($s->get('prtg_groups')) . '</textarea>'
+            . '<div class="form-hint">' . __s('Names are matched exactly against the immediate group of each device, and are case-sensitive: parent and child groups are not included, list them too. Empty = every group.', 'nms') . '</div></div>';
         echo '</fieldset>';
     }
 

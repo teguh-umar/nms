@@ -67,10 +67,19 @@ final class Settings
 
     /**
      * Settings of a connection being created. OpManager keeps DEFAULTS unchanged; Zabbix
-     * overrides the ticket patterns and source, the entity and the "not monitored" values.
+     * and PRTG override the ticket patterns and source, the entity and the "not monitored" values.
      */
     public static function forNewConnection(string $brand, int $entities_id): self
     {
+        if ($brand === 'prtg') {
+            return new self([
+                'ticket_title_pattern'             => '[PRTG-{alarm_key}] {severity}: {message} - {device}',
+                'ticket_content_pattern'           => str_replace('OpManager alarm', 'PRTG alarm', self::DEFAULTS['ticket_content_pattern']),
+                'ticket_source'                    => 'rules',
+                'ticket_entity_default'            => (string) $entities_id,
+                'hygiene_unmanaged_availabilities' => '["Paused"]',
+            ] + self::DEFAULTS);
+        }
         if ($brand !== 'zabbix') {
             return new self(self::DEFAULTS);
         }

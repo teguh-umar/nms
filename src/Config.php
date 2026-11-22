@@ -312,6 +312,28 @@ final class Config
     }
 
     /**
+     * PRTG settings from the connection form. API: classic or v2, else classic; alarm
+     * states one of the three known keys, else down+warning; groups one per line, trimmed,
+     * empty lines dropped, newline-joined.
+     *
+     * @return array<string, string>
+     */
+    public static function sanitizePrtg(array $post): array
+    {
+        $groups = array_values(array_filter(
+            array_map('trim', preg_split('/\R/', (string) ($post['prtg_groups'] ?? '')) ?: []),
+            static fn (string $g): bool => $g !== ''
+        ));
+        $api    = (string) ($post['prtg_api'] ?? '');
+        $states = (string) ($post['prtg_alarm_states'] ?? '');
+        return [
+            'prtg_api'          => in_array($api, ['classic', 'v2'], true) ? $api : 'classic',
+            'prtg_alarm_states' => in_array($states, ['down', 'down+warning', 'down+warning+unusual'], true) ? $states : 'down+warning',
+            'prtg_groups'       => implode("\n", $groups),
+        ];
+    }
+
+    /**
      * Validate the per-connection settings posted by the connection form, with the 1.3.2
      * rules. Values are keyed by Settings::DEFAULTS keys.
      *

@@ -107,7 +107,8 @@ final class FakeDriver implements Driver
             $this->conn->brand === 'opmanager',
             false,
             false,
-            false,
+            // PRTG: classic can acknowledge, v2 is read-only.
+            $this->conn->brand === 'prtg' && Settings::fromJson($this->conn->settings)->get('prtg_api') === 'classic',
             false,
             $this->conn->brand === 'opmanager',
             false
@@ -234,6 +235,11 @@ $id2 = $store->save(array_merge($connFields, [
     'brand' => 'zabbix',
     'is_active' => 0,
 ]));
+$id3 = $store->save(array_merge($connFields, [
+    'name' => 'prtg.example.test',
+    'brand' => 'prtg',
+    'is_active' => 0,
+]));
 
 // --- Static render tests ---
 $form = new ConnectionForm($store);
@@ -296,7 +302,8 @@ $html = $form->renderForm(1);
 $names = [];
 // The Zabbix block renders for a Zabbix connection only: take its fields from there.
 check('opmanager form has no Zabbix block', !str_contains($html, 'zabbix_host_groups'));
-preg_match_all('/name="([^"]+)"/', $html . $form->renderForm(2), $m);
+check('opmanager form has no PRTG block', !str_contains($html, 'prtg_api'));
+preg_match_all('/name="([^"]+)"/', $html . $form->renderForm(2) . $form->renderForm($id3), $m);
 foreach ($m[1] as $n) {
     $names[rtrim($n, '[]')] = true;
 }
@@ -305,9 +312,7 @@ $dropdowns = ['match_mode', 'coverage_states', 'ticket_template', 'service_user'
     'hygiene_glpi_groups', 'hygiene_glpi_users', 'hygiene_itil_category', 'hygiene_nms_group', 'hygiene_ticket_template'];
 $src = (string) file_get_contents(OPM_ROOT . '/src/Connection/ConnectionForm.php');
 // Run state written by the cron, not by a person.
-$runState = ['last_hygiene_run', 'last_hygiene_ticket_run', 'last_hygiene_error',
-    // TODO(Task 5): the PRTG form block lands in Task 5; remove these three then.
-    'prtg_api', 'prtg_groups', 'prtg_alarm_states'];
+$runState = ['last_hygiene_run', 'last_hygiene_ticket_run', 'last_hygiene_error'];
 $missing = [];
 foreach (array_keys(Settings::DEFAULTS) as $key) {
     if (in_array($key, $runState, true)) {
@@ -399,5 +404,35 @@ check('edit clamps severity, unticked suppressed is 0', $zs->get('zabbix_min_sev
 $o2 = $form->handleSave(0, ['name' => 'o2', 'brand' => 'opmanager']);
 check('new opmanager connection keeps DEFAULTS', Settings::fromJson($store->get($o2['id'])->settings)->toJson() === Settings::fromJson('{}')->toJson());
 check('zabbix form shows saved groups', str_contains($form->renderForm($r['id']), "Linux\nNet</textarea>"));
+
+// ---- PRTG connection: new-connection defaults, block save, v2 read-only ----
+$prtgPost = ['_nms_settings' => 1, 'name' => 'prtg2.example.test', 'brand' => 'prtg', 'url' => 'https://192.0.2.60', 'entities_id' => 4,
+    'match_mode' => 'hybrid_name', 'ticket_source' => 'webhook', 'ticket_entity_default' => '0',
+    'ticket_title_pattern' => Settings::DEFAULTS['ticket_title_pattern'], 'ticket_content_pattern' => Settings::DEFAULTS['ticket_content_pattern'],
+    'ticket_severities' => ['1'], 'service_user' => '0', 'hygiene_frequency_days' => '7', 'hygiene_agent_stale_days' => '7', 'hygiene_mist_stale_days' => '7',
+    'hygiene_probe_timeout_ms' => '1000', 'hygiene_unmanaged_availabilities' => "UnManaged
+Device Not Monitored.", 'hygiene_probe_tcp_ports' => '22',
+    'writeback_enabled' => '1',
+    'prtg_api' => 'classic', 'prtg_alarm_states' => 'down+warning+unusual', 'prtg_groups' => " Core 
+
+ Branch "];
+$r = $form->handleSave(0, $prtgPost);
+$ps = Settings::fromJson($store->get($r['id'])->settings);
+check('new prtg connection gets PRTG patterns, entity, unmanaged default', $ps->get('ticket_title_pattern') === '[PRTG-{alarm_key}] {severity}: {message} - {device}' && $ps->get('ticket_entity_default') === '4' && $ps->get('hygiene_unmanaged_availabilities') === '["Paused"]');
+check('prtg settings saved validated', $ps->get('prtg_api') === 'classic' && $ps->get('prtg_alarm_states') === 'down+warning+unusual' && $ps->get('prtg_groups') === "Core
+Branch");
+check('classic keeps write-back', $store->get($r['id'])->writeback_enabled === 1);
+$h = $form->renderForm($r['id']);
+check('prtg form shows block and saved groups', str_contains($h, 'name="prtg_api"') && str_contains($h, "Core
+Branch</textarea>") && str_contains($h, '<option value="v2">API v2 (experimental, read-only)'));
+check('classic: write-back switch enabled', !preg_match('/name="writeback_enabled"[^>]*disabled/', $h));
+$form->handleSave($r['id'], ['prtg_api' => 'v2'] + $prtgPost);
+$h = $form->renderForm($r['id']);
+check('v2 saved', Settings::fromJson($store->get($r['id'])->settings)->get('prtg_api') === 'v2');
+check('v2: write-back cleared and switch disabled', $store->get($r['id'])->writeback_enabled === 0 && (bool) preg_match('/name="writeback_enabled"[^>]*disabled/', $h));
+$form->handleSave($r['id'], ['name' => 'prtg2.example.test', 'brand' => 'prtg', '_nms_settings' => 1, 'match_mode' => 'hybrid_name'] + array_diff_key($prtgPost, ['prtg_api' => 1, 'prtg_groups' => 1, 'prtg_alarm_states' => 1]));
+check('prtg keys untouched when the block is not posted', Settings::fromJson($store->get($r['id'])->settings)->get('prtg_api') === 'v2');
+$o3 = $form->handleSave(0, ['_nms_settings' => 1, 'name' => 'o3', 'brand' => 'opmanager', 'prtg_api' => 'v2'] + $prtgPost);
+check('prtg keys ignored for another brand', Settings::fromJson($store->get($o3['id'])->settings)->get('prtg_api') === 'classic');
 
 done();
