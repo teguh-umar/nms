@@ -58,6 +58,7 @@ require OPM_ROOT . '/src/DeviceSync.php';
 require OPM_ROOT . '/src/DbDeviceStore.php';
 require OPM_ROOT . '/src/Matching/AssetLookup.php';
 require OPM_ROOT . '/src/Matching/DbAssetLookup.php';
+require OPM_ROOT . '/src/Matching/EntityScope.php';
 require OPM_ROOT . '/src/Matching/Matcher.php';
 
 use GlpiPlugin\Nms\Connection\Connection;
@@ -113,6 +114,14 @@ if (!function_exists('getItemForItemtype')) {
     function getItemForItemtype(string $itemtype)
     {
         return null;
+    }
+}
+
+/** GLPI helper: stub for EntityScope::forConnection (every connection here is root + recursive: unused). */
+if (!function_exists('getSonsOf')) {
+    function getSonsOf(string $table, int $id): array
+    {
+        return [$id => $id];
     }
 }
 

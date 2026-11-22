@@ -4,8 +4,9 @@ namespace GlpiPlugin\Nms\Matching;
 
 /**
  * AssetLookup against the GLPI database, across every configured asset itemtype.
- * Deliberately NOT entity-scoped: it runs from cron, where core would fall back to
- * the root entity (hub §4).
+ * Does not rely on the session's active entities (cron has none: core would fall back
+ * to the root entity, hub §4); it is limited only by the explicit $entities scope,
+ * which a connection derives from its own entity (EntityScope).
  */
 final class DbAssetLookup implements AssetLookup
 {
@@ -15,9 +16,16 @@ final class DbAssetLookup implements AssetLookup
     /** @var list<string> */
     private array $missing;
 
-    /** @param string[] $itemtypes */
-    public function __construct(array $itemtypes)
+    /** @var list<int>|null entities matching is limited to; null = every entity */
+    private ?array $entities;
+
+    /**
+     * @param string[]       $itemtypes
+     * @param list<int>|null $entities  see EntityScope; null = no entity filter
+     */
+    public function __construct(array $itemtypes, ?array $entities = null)
     {
+        $this->entities  = $entities;
         $resolved        = self::resolvable($itemtypes, static fn (string $t) => getItemForItemtype($t) ?: null);
         $this->itemtypes = $resolved['ok'];
         $this->missing   = $resolved['missing'];
@@ -63,6 +71,9 @@ final class DbAssetLookup implements AssetLookup
             // find() does not add getSystemSQLCriteria(): without it a custom asset
             // query would search every custom asset definition's rows.
             $where = [$table . '.name' => $name] + self::liveCriteria($item, $table) + $itemtype::getSystemSQLCriteria();
+            if ($this->entities !== null) {
+                $where[$table . '.entities_id'] = $this->entities;
+            }
             foreach ($DB->request(['SELECT' => [$table . '.id'], 'FROM' => $table, 'WHERE' => $where]) as $row) {
                 $hits[] = ['itemtype' => $itemtype, 'items_id' => (int) $row['id']];
             }
@@ -103,10 +114,19 @@ final class DbAssetLookup implements AssetLookup
                 if (!empty($item->fields['is_deleted']) || !empty($item->fields['is_template'])) {
                     continue;
                 }
+                if (!self::inScope($this->entities, (int) ($item->fields['entities_id'] ?? 0))) {
+                    continue;
+                }
             }
             $owners[] = ['itemtype' => $itemtype, 'items_id' => (int) $row['mainitems_id']];
         }
         return self::ipHits($owners, $this->itemtypes);
+    }
+
+    /** Pure. null = every entity. */
+    public static function inScope(?array $entities, int $entities_id): bool
+    {
+        return $entities === null || in_array($entities_id, $entities, true);
     }
 
     /**

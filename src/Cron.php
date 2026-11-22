@@ -6,6 +6,7 @@ use GlpiPlugin\Nms\Connection\DbConnectionStore;
 use GlpiPlugin\Nms\Connection\Settings;
 use GlpiPlugin\Nms\Driver\DriverFactory;
 use GlpiPlugin\Nms\Matching\DbAssetLookup;
+use GlpiPlugin\Nms\Matching\EntityScope;
 use GlpiPlugin\Nms\Matching\Matcher;
 use GlpiPlugin\Nms\Outbound\DbOutboxStore;
 use GlpiPlugin\Nms\Outbound\Hooks;
@@ -55,7 +56,7 @@ final class Cron extends \CommonGLPI
         $total  = 0;
         foreach ($store->active() as $conn) {
             try {
-                $lookup = new DbAssetLookup(Config::assetItemtypes());
+                $lookup = new DbAssetLookup(Config::assetItemtypes(), EntityScope::forConnection($conn));
                 $missing = $lookup->missingItemtypes();
 
                 $status = DeviceSync::statusMessage($missing);
@@ -117,7 +118,7 @@ final class Cron extends \CommonGLPI
                     $driver,
                     new DbAlarmStore((int) $conn->id),
                     new GlpiTicketGateway($cfg),
-                    new AlarmAssetResolver(new DbDeviceIndex((int) $conn->id), new Matcher(new DbAssetLookup(Config::assetItemtypes())), $settings->get('match_mode')),
+                    new AlarmAssetResolver(new DbDeviceIndex((int) $conn->id), new Matcher(new DbAssetLookup(Config::assetItemtypes(), EntityScope::forConnection($conn))), $settings->get('match_mode')),
                     new RangeProductionCheck($ranges, [AddressingRanges::class, 'assetIps']),
                     $cfg,
                     new DbTicketRequestStore((int) $conn->id)

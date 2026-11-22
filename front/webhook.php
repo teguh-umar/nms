@@ -13,6 +13,7 @@ use GlpiPlugin\Nms\Connection\DbConnectionStore;
 use GlpiPlugin\Nms\Connection\Settings;
 use GlpiPlugin\Nms\Driver\DriverFactory;
 use GlpiPlugin\Nms\Matching\DbAssetLookup;
+use GlpiPlugin\Nms\Matching\EntityScope;
 use GlpiPlugin\Nms\Matching\Matcher;
 use GlpiPlugin\Nms\Ticketing\AddressingRanges;
 use GlpiPlugin\Nms\Ticketing\AlarmAssetResolver;
@@ -67,7 +68,7 @@ $receiver = new Receiver(
             $driver,
             new DbAlarmStore($cid),
             new GlpiTicketGateway($cfg),
-            new AlarmAssetResolver(new DbDeviceIndex($cid), new Matcher(new DbAssetLookup(Config::assetItemtypes())), $settings->get('match_mode')),
+            new AlarmAssetResolver(new DbDeviceIndex($cid), new Matcher(new DbAssetLookup(Config::assetItemtypes(), EntityScope::forConnection($conn))), $settings->get('match_mode')),
             new RangeProductionCheck(AddressingRanges::load($cfg['production_addressings']), [AddressingRanges::class, 'assetIps']),
             $cfg,
             new DbTicketRequestStore($cid)
