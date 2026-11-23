@@ -25,6 +25,8 @@ final class PrtgDriver implements Driver
     private PrtgClient $client;
     private Capabilities $capabilities;
     private bool $v2;
+    /** @var array<string, array<string, mixed>>|null */
+    private ?array $devicesById = null;
 
     public function __construct(private Connection $connection, ?PrtgClient $client = null, ?int $timeout = null)
     {
@@ -84,8 +86,7 @@ final class PrtgDriver implements Driver
     {
         $this->requireConfigured();
         $groups  = $this->groups();
-        $setting = $this->settings->get('prtg_alarm_states');
-        $codes   = SensorParser::ALARM_CODES[$setting] ?? SensorParser::ALARM_CODES['down+warning'];
+        $codes   = $this->alarmCodes();
         $sensors = array_values(array_filter(
             $this->client->sensors($codes),
             fn (array $s): bool => $this->inGroups((string) ($s['group'] ?? ''), $groups)
@@ -104,7 +105,7 @@ final class PrtgDriver implements Driver
             return null;
         }
         // The group filter does not apply: AlarmSync must still see a Clear.
-        return SensorParser::current($sensor, $this->devicesById());
+        return SensorParser::current($sensor, $this->devicesById(), $this->alarmCodes());
     }
 
     public function addNote(string $alarm_key, string $text): void
@@ -118,11 +119,14 @@ final class PrtgDriver implements Driver
             throw new UnsupportedOperation('acknowledge is not available with PRTG API v2');
         }
         $this->requireConfigured();
+        // A PrtgApiError on this read is deliberately NOT turned into AckRefused: it is retried (only a refusal
+        // of the acknowledge write itself is permanent).
         $sensor = $this->client->sensor($alarm_key);
         if ($sensor === null) {
             throw new AckRefused('PRTG sensor ' . $alarm_key . ' no longer exists');
         }
-        // Already acknowledged, recovered or not down: nothing to write (idempotent success).
+        // Ruling R6: a sensor that is not Down (Warning, Unusual, already acknowledged, recovered) is not
+        // acknowledged in PRTG: nothing is written and the outbox row is recorded as sent (idempotent success).
         if (!in_array((int) ($sensor['status_raw'] ?? 0), self::NEEDS_ACK, true)) {
             return;
         }
@@ -139,16 +143,25 @@ final class PrtgDriver implements Driver
         throw new UnsupportedOperation('PRTG alarms clear themselves');
     }
 
-    /** @return array<string, array<string, mixed>> normalised devices keyed by id (one devices() call) */
+    /** @return list<int> status codes that count as an alarm (unknown setting -> down+warning) */
+    private function alarmCodes(): array
+    {
+        return SensorParser::ALARM_CODES[$this->settings->get('prtg_alarm_states')] ?? SensorParser::ALARM_CODES['down+warning'];
+    }
+
+    /** @return array<string, array<string, mixed>> normalised devices keyed by id (one devices() call per driver instance) */
     private function devicesById(): array
     {
+        if ($this->devicesById !== null) {
+            return $this->devicesById;
+        }
         $out = [];
         foreach ($this->client->devices() as $d) {
             if (is_array($d) && isset($d['id']) && (string) $d['id'] !== '') {
                 $out[(string) $d['id']] = $d;
             }
         }
-        return $out;
+        return $this->devicesById = $out;
     }
 
     /** @return list<string> empty = no restriction */

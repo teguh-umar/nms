@@ -251,6 +251,61 @@ foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(OPM_ROOT .
 check('no fixture host name in src/', !str_contains($src, 'opm.example.test'));
 check('Hooks::OUTBOX_LOCK removed', !str_contains($src, 'OUTBOX_LOCK'));
 
+// 5b. The capability filter is wired for PRTG (note/clear impossible, ack only on classic).
+foreach (['Driver/UnsupportedOperation', 'Driver/Prtg/PrtgException', 'Driver/Prtg/PrtgApiError', 'Driver/Prtg/PrtgClient',
+    'Driver/Prtg/AckRefused', 'Driver/Prtg/SensorParser', 'Driver/Prtg/PrtgDriver'] as $f) {
+    require_once OPM_ROOT . "/src/{$f}.php";
+}
+
+final class PrtgStubClient implements \GlpiPlugin\Nms\Driver\Prtg\PrtgClient
+{
+    public static array $acks = [];
+    public function version(): string { return '26.4'; }
+    public function authMode(): string { return 'key'; }
+    public function devices(): array { return []; }
+    public function sensors(array $statusCodes): array { return []; }
+    public function sensor(string $id): ?array { return ['id' => $id, 'status_raw' => 5]; }
+    public function acknowledge(string $id, string $message): void { self::$acks[] = $id; }
+}
+$prtgDriver = static fn (Connection $c, ?int $timeout = null) => new \GlpiPlugin\Nms\Driver\Prtg\PrtgDriver($c, new PrtgStubClient(), $timeout);
+$prtgConn = static fn (string $api): array => $connRow(1, 10, [
+    'brand' => 'prtg', 'settings' => json_encode(['service_user' => '10', 'outbound_max_attempts' => '10', 'prtg_api' => $api]),
+]);
+$prtgReset = static function (string $api) use ($reset, $prtgConn): FakeDB {
+    $db = $reset([$prtgConn($api)]);
+    $db->tables['glpi_plugin_nms_alarms'] = [['id' => 1, 'connections_id' => 1, 'alarm_key' => '2001', 'entity_key' => '2001', 'tickets_id' => 100, 'state' => 'active']];
+    $db->tables['glpi_itilsolutions'] = [['id' => 1, 'itemtype' => 'Ticket', 'items_id' => 100, 'users_id' => 5, 'content' => 'replaced the cable']];
+    PrtgStubClient::$acks = [];
+    return $db;
+};
+$solved = new Ticket();
+$solved->fields = ['id' => 100, 'status' => 5];
+$solved->oldvalues = ['status' => 2];
+$solved->updates = ['status'];
+
+DriverFactory::setTestOverride($prtgDriver);
+$db = $prtgReset('classic');
+Hooks::followupAdded($followup);
+check('classic: note dropped, ack kept', $actions($outboxOf($db, 1)) === ['ack'], json_encode($actions($outboxOf($db, 1))));
+check('classic: the kept ack was sent to the client', PrtgStubClient::$acks === ['2001'] && ($outboxOf($db, 1)[0]['state'] ?? '') === 'sent', json_encode($outboxOf($db, 1)));
+$db = $prtgReset('classic');
+Hooks::ticketUpdated($solved);
+check('classic: solve queues nothing (note and clear dropped)', ($db->tables['glpi_plugin_nms_outbox'] ?? []) === []);
+$db = $prtgReset('v2');
+Hooks::followupAdded($followup);
+Hooks::ticketUpdated($solved);
+check('v2: nothing queued at all', ($db->tables['glpi_plugin_nms_outbox'] ?? []) === [] && PrtgStubClient::$acks === []);
+
+// DriverFactory::for throws: the rows are queued unfiltered (as before the filter existed).
+DriverFactory::setTestOverride(static function (Connection $c, ?int $timeout = null): Driver {
+    throw new RuntimeException('driver cannot be built');
+});
+$db = $prtgReset('classic');
+Hooks::followupAdded($followup);
+check('factory failure: note and ack queued unfiltered', $actions($outboxOf($db, 1)) === ['note', 'ack'], json_encode($actions($outboxOf($db, 1))));
+check('factory failure is logged', Toolbox::$log !== [] && str_contains(implode(' ', Toolbox::$log), 'driver cannot be built'));
+DriverFactory::setTestOverride(fn (Connection $c, ?int $timeout = null) => new RecordingDriver($c, $timeout));
+
 // 6. The driver keeps a timeout: the factory's value, else the default.
 DriverFactory::setTestOverride(null);
 $c = new Connection($connRow(1, 10));

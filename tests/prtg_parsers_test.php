@@ -75,6 +75,17 @@ $cur = SensorParser::current($sens[5], $map);
 check('current() of Up is severity 5 Clear', $cur['severity'] === 5 && $cur['severity_label'] === 'Clear' && $cur['alarm_key'] === '2006', json_encode($cur));
 check('current() of Down is the alarm row', SensorParser::current($sens[0], $map)['severity'] === 1);
 
+$empty = $sens[0];
+$empty['message'] = '  <b></b> ';
+check('empty message gives just the sensor name', SensorParser::parse([$empty], $map)[0]['message'] === 'Ping', SensorParser::parse([$empty], $map)[0]['message']);
+
+$warn = $sens[1];
+check('current(): alarmCodes null keeps every SEVERITY code', SensorParser::current($warn, $map)['severity'] === 3);
+check('current(): status outside alarmCodes is Clear', SensorParser::current($warn, $map, [5, 13, 14])['severity'] === 5
+    && SensorParser::current($warn, $map, [5, 13, 14])['severity_label'] === 'Clear');
+check('current(): status inside alarmCodes keeps its severity', SensorParser::current($warn, $map, [5, 13, 14, 4])['severity'] === 3
+    && SensorParser::current($sens[0], $map, [5, 13, 14])['severity'] === 1);
+
 check('ALARM_CODES', SensorParser::ALARM_CODES === ['down' => [5, 13, 14], 'down+warning' => [5, 13, 14, 4], 'down+warning+unusual' => [5, 13, 14, 4, 10]]);
 check('SEVERITY', SensorParser::SEVERITY === [5 => 1, 13 => 1, 14 => 1, 4 => 3, 10 => 3]);
 check('PAUSED', DeviceParser::PAUSED === [7, 8, 9, 11, 12]);

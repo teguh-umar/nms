@@ -166,6 +166,26 @@ $row = $d->alarmByKey('2005');
 check('alarmByKey status 3 is Clear', $row !== null && $row['severity'] === 5 && $row['severity_label'] === 'Clear');
 check('alarmByKey missing sensor is null', $d->alarmByKey('9999') === null);
 
+// --- alarmByKey honours prtg_alarm_states (R5) ---
+[$d] = mk(['prtg_alarm_states' => 'down']);
+$row = $d->alarmByKey('2002');
+check('down setting: warning (4) is Clear', $row !== null && $row['severity'] === 5 && $row['severity_label'] === 'Clear', json_encode($row));
+check('down setting: unusual (10) is Clear', $d->alarmByKey('2003')['severity'] === 5);
+check('down setting: down (5) is severity 1', $d->alarmByKey('2001')['severity'] === 1);
+[$d] = mk(['prtg_alarm_states' => 'down+warning']);
+check('down+warning: status 4 is severity 3', $d->alarmByKey('2002')['severity'] === 3);
+check('down+warning: status 10 is Clear', $d->alarmByKey('2003')['severity'] === 5);
+[$d] = mk(['prtg_alarm_states' => 'down+warning+unusual']);
+check('down+warning+unusual: status 10 is severity 3', $d->alarmByKey('2003')['severity'] === 3);
+[$d] = mk(['prtg_alarm_states' => 'bogus']);
+check('unknown state falls back to down+warning in alarmByKey', $d->alarmByKey('2002')['severity'] === 3 && $d->alarmByKey('2003')['severity'] === 5);
+
+// --- devices table fetched once per driver instance (no N+1 in AlarmSync) ---
+[$d, $cl] = mk();
+$d->alarmByKey('2001');
+$d->alarmByKey('2002');
+check('two alarmByKey calls make one devices() call', $cl->count('devices') === 1 && $cl->count('sensor') === 2, (string) $cl->count('devices'));
+
 // --- acknowledge ---
 [$d, $cl] = mk();
 $d->acknowledge('2001');

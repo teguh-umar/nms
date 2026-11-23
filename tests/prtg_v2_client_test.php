@@ -210,27 +210,36 @@ try {
     check('max pages throws', str_contains($e->getMessage(), 'longer than'));
 }
 
-// secrets absent from traces with exception args on
+// secrets absent from traces with exception args on (getTrace() args, not the truncating getTraceAsString())
+function v2_trace_args(Throwable $e): string
+{
+    $out = '';
+    foreach ($e->getTrace() as $frame) {
+        $out .= var_export($frame['args'] ?? [], true) . "
+";
+    }
+    return $out;
+}
 ini_set('zend.exception_ignore_args', '0');
 $log = [];
 $tk = new V2Client(V2_URL, 'KEY-SECRET-9', '', '', v2_fake($log, ['/experimental/devices' => [401, 'denied']]));
 try {
     $tk->devices();
 } catch (PrtgApiError $e) {
-    check('trace has no key', !str_contains($e->getTraceAsString(), 'KEY-SECRET-9'));
+    check('trace args have no key', !str_contains(v2_trace_args($e), 'KEY-SECRET-9') && $e->getTrace() !== []);
 }
 $tl = new V2Client(V2_URL, '', 'admin', 'PW-SECRET', v2_fake($log, ['/experimental/devices' => [401, 'denied']]));
 try {
     $tl->devices();
 } catch (PrtgApiError $e) {
-    $tr = $e->getTraceAsString();
-    check('trace has no token/password', !str_contains($tr, 'TOKEN-SECRET-1') && !str_contains($tr, 'PW-SECRET'));
+    $tr = v2_trace_args($e);
+    check('trace args have no token/password', !str_contains($tr, 'TOKEN-SECRET-1') && !str_contains($tr, 'PW-SECRET') && $e->getTrace() !== []);
 }
 $tf = new V2Client(V2_URL, '', 'admin', 'PW-SECRET', v2_fake($log, ['/api/v2/session' => [401, 'denied']]));
 try {
     $tf->devices();
 } catch (PrtgApiError $e) {
-    check('login failure trace clean', !str_contains($e->getTraceAsString(), 'PW-SECRET'));
+    check('login failure trace args clean', !str_contains(v2_trace_args($e), 'PW-SECRET') && $e->getTrace() !== []);
 }
 ini_set('zend.exception_ignore_args', '1');
 

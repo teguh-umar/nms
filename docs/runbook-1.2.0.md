@@ -1,7 +1,7 @@
 ---
 date: 2026-11-23
 tags: [nms, runbook, prtg, upgrade]
-status: draft
+status: active
 ---
 
 # nms 1.2.0: upgrade from 1.1.0 and add a PRTG connection
@@ -46,6 +46,8 @@ Order matters: the PRTG block appears only after the connection is saved with br
 - [ ] Reopen the connection and set the PRTG block: **API** (classic is the default; v2 is experimental and read-only), **groups** (one per line; empty reads every group the key can see, so set them before turning Active on), **alarm states**. **Save**.
 - [ ] **Test connection** reports the PRTG version and the auth style.
 - [ ] Only then tick **Active** and save.
+
+Note on write-back (classic API only): acknowledging a sensor that is not Down (Warning, Unusual, already acknowledged) does nothing in PRTG and is recorded as sent.
 
 ## 5. First sync and Coverage per connection
 

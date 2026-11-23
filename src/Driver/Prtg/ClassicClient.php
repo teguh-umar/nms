@@ -163,12 +163,11 @@ final class ClassicClient implements PrtgClient
     }
 
     /** One authenticated GET. @param list<array{0: string, 1: string}> $params */
-    private function get(string $path, array $params): string
+    private function get(string $path, #[\SensitiveParameter] array $params): string
     {
         $headers = [];
         if ($this->authMode() === 'key') {
-            if (preg_match('/[
-]/', $this->apiKey)) {
+            if (preg_match('/[\r\n]/', $this->apiKey)) {
                 throw new PrtgException('PRTG API key contains invalid characters');
             }
             $headers['Authorization'] = 'Bearer ' . $this->apiKey;
@@ -183,7 +182,7 @@ final class ClassicClient implements PrtgClient
      * @param list<array{0: string, 1: string}> $params
      * @param array<string, string> $headers
      */
-    private function raw(string $path, array $params, array $headers): string
+    private function raw(string $path, #[\SensitiveParameter] array $params, #[\SensitiveParameter] array $headers): string
     {
         $pairs = [];
         foreach ($params as [$name, $value]) {

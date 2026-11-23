@@ -45,11 +45,15 @@ final class SensorParser
         return $out;
     }
 
-    /** The alarm row for an alarm state; any other state gives the same row with severity 5 / Clear. */
-    public static function current(array $sensor, array $devicesById): array
+    /**
+     * The alarm row for an alarm state; any other state gives the same row with severity 5 / Clear.
+     * @param list<int>|null $alarmCodes the status codes that count as an alarm (null = every SEVERITY code)
+     */
+    public static function current(array $sensor, array $devicesById, ?array $alarmCodes = null): array
     {
-        $row = self::row($sensor, $devicesById) ?? [];
-        if (!isset(self::SEVERITY[(int) ($sensor['status_raw'] ?? 0)])) {
+        $row  = self::row($sensor, $devicesById) ?? [];
+        $code = (int) ($sensor['status_raw'] ?? 0);
+        if (!isset(self::SEVERITY[$code]) || ($alarmCodes !== null && !in_array($code, $alarmCodes, true))) {
             $row['severity']       = 5;
             $row['severity_label'] = 'Clear';
         }
@@ -81,7 +85,7 @@ final class SensorParser
             'event_type'     => self::str($s, 'type'),
             'severity'       => $severity,
             'severity_label' => self::str($s, 'status') ?: ($severity === 5 ? 'Clear' : 'Down'),
-            'message'        => $name . ': ' . $text,
+            'message'        => $text === '' ? $name : $name . ': ' . $text,
             'mod_time'       => self::modTime($s['lastcheck'] ?? null),
         ];
     }

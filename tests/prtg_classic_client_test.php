@@ -215,6 +215,42 @@ X-Evil: 1", '', '', prtg_fake($log));
 $e = prtg_throws(fn () => $c->devices());
 check('key with CR/LF rejected, no request', $e instanceof PrtgException && $log === [] && !str_contains($e->getMessage(), 'X-Evil'));
 
+// --- CR-only key
+$log = [];
+$c = new ClassicClient(PRTG_URL, "k-1\rX-Evil: 1", '', '', prtg_fake($log));
+$e = prtg_throws(fn () => $c->devices());
+check('key with CR only rejected, no request', $e instanceof PrtgException && $log === []);
+
+// --- trace args (getTrace, not getTraceAsString) never hold a secret
+function prtg_trace_args(Throwable $e): string
+{
+    $out = '';
+    foreach ($e->getTrace() as $frame) {
+        $out .= var_export($frame['args'] ?? [], true) . "
+";
+    }
+    return $out;
+}
+ini_set('zend.exception_ignore_args', '0');
+$traceCases = [
+    'key 401'          => [new ClassicClient(PRTG_URL, 'KEY-SECRET-7', '', '', prtg_fake($log, ['content=devices' => [401, 'denied']])), ['KEY-SECRET-7']],
+    'key transport'    => [new ClassicClient(PRTG_URL, 'KEY-SECRET-7', '', '', prtg_fake($log, ['content=devices' => new RuntimeException('boom')])), ['KEY-SECRET-7']],
+    'login 401 table'  => [new ClassicClient(PRTG_URL, '', 'u', 'PW-SECRET-7', prtg_fake($log, ['content=devices' => [401, 'denied']])), ['PW-SECRET-7', '1234567890']],
+    'login pw refused' => [new ClassicClient(PRTG_URL, '', 'u', 'PW-SECRET-7', prtg_fake($log, ['getpasshash' => [401, 'denied']])), ['PW-SECRET-7']],
+];
+foreach ($traceCases as $label => [$cc, $needles]) {
+    $e = prtg_throws(fn () => $cc->devices());
+    $dump = $e === null ? '' : prtg_trace_args($e);
+    $bad = '';
+    foreach ($needles as $n) {
+        if (str_contains($dump, $n)) {
+            $bad .= $n . ';';
+        }
+    }
+    check('trace args clean: ' . $label, $e !== null && $e->getTrace() !== [] && $bad === '', $bad);
+}
+ini_set('zend.exception_ignore_args', '1');
+
 // --- positive redaction over a variety of failures
 $secrets = ['k-123', 'S3cretPw', '1234567890'];
 $cases = [
