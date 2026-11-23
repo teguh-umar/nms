@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0-rc1 (nms)
+
+- **Not verified against a live PRTG.** The PRTG driver was built from Paessler's documented API with synthetic fixtures for PRTG 26.4, 26.3 and 26.2, and an offline mock endpoint (`tests/mock_prtg/`). The 26.3 and 26.2 build numbers and the timezone of the classic `lastcheck_raw` field (assumed UTC) are unverified.
+- **PRTG driver**: polls devices and sensors (alarms); filters by group and alarm states. The GLPI admin picks the API per connection: classic (default), or API v2, which is experimental and read-only (from PRTG 24.3; the Application Server must be enabled before PRTG 26.4).
+- **Write-back is acknowledge only, on Down sensors.**
+- **Outbox**: it now drops actions a brand cannot do and fails unsupported ones without retry (OpManager and Zabbix unchanged).
+- Deferred: v2 write-back, webhook, serial, MAC and FQDN matching, entity isolation of views. Do not give nms rights to subsidiary users yet.
+
 ## 1.1.0 (nms)
 
 - Final release of the Zabbix driver and per-connection Coverage. Same code as 1.1.0-rc2, which passed the synthetic staging test (install from the zip, a Zabbix connection against the offline mock: Test connection, device and alarm sync, no tickets, cleanup and full restore check). Only the version changes. Not verified against a live Zabbix (user decision 2026-11-22): treat the first sync of a real subsidiary connection as a test, as the runbook says.
