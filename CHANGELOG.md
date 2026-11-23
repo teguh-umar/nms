@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.0 (nms)
+
+- Final release of the PRTG driver. Same code as 1.2.0-rc1, which passed the synthetic staging test (install from the zip; a PRTG connection against the offline mock with the classic API, then switched to API v2: Test connection, device and alarm sync, no tickets, no write calls on v2, cleanup and full restore check). Only the version changes. Not verified against a live PRTG (user decision 2026-11-22): treat the first sync of a real subsidiary connection as a test, as the runbook says.
+- Note: while the opmanager plugin is installed, its automatic actions are also named DeviceSync and AlarmSync. In Setup > Automatic actions, run the rows of the NMS Integration plugin.
+
 ## 1.2.0-rc1 (nms)
 
 - **Not verified against a live PRTG.** The PRTG driver was built from Paessler's documented API with synthetic fixtures for PRTG 26.4, 26.3 and 26.2, and an offline mock endpoint (`tests/mock_prtg/`). The 26.3 and 26.2 build numbers and the timezone of the classic `lastcheck_raw` field (assumed UTC) are unverified.

@@ -15,7 +15,7 @@ Paths assume GLPI in `/data/www/glpi`, run as `nginx`. `<glpi>` is the GLPI base
 Nothing on the VM needs to be set aside.
 
 ```bash
-cd /data/www/glpi/plugins && sudo rm -rf /data/www/glpi/plugins/nms && sudo -u nginx unzip -q /tmp/nmsv1.2.0-rc1.zip && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:install nms --force && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:activate nms && sudo -u nginx php /data/www/glpi/bin/console glpi:cache:clear && sudo systemctl reload php-fpm && sudo -u nginx php /data/www/glpi/plugins/nms/tools/selfcheck.php
+cd /data/www/glpi/plugins && sudo rm -rf /data/www/glpi/plugins/nms && sudo -u nginx unzip -q /tmp/nmsv1.2.0.zip && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:install nms --force && sudo -u nginx php /data/www/glpi/bin/console glpi:plugin:activate nms && sudo -u nginx php /data/www/glpi/bin/console glpi:cache:clear && sudo systemctl reload php-fpm && sudo -u nginx php /data/www/glpi/plugins/nms/tools/selfcheck.php
 ```
 
 - [ ] Selfcheck ends with `ALL PASS`.
@@ -51,7 +51,7 @@ Note on write-back (classic API only): acknowledging a sensor that is not Down (
 
 ## 5. First sync and Coverage per connection
 
-- [ ] Run **DeviceSync** and **AlarmSync** once, as a test.
+- [ ] Run **DeviceSync** and **AlarmSync** once, as a test. Pick the rows of the NMS Integration plugin in Setup > Automatic actions: while opmanager is installed it has automatic actions with the same names.
 - [ ] Coverage > connection filter: the PRTG connection shows its own devices, matching and Coverage %. **All connections** still shows the other connections' numbers plus the new ones.
 - [ ] Check the alarm timestamps against PRTG: if they are shifted by a whole number of hours, report it (the `lastcheck_raw` timezone is assumed UTC).
 
